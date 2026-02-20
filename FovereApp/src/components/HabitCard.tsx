@@ -5,16 +5,6 @@ import { Check, ChevronRight, Minus, Plus } from 'lucide-react-native';
 import { getProgressColor, PROGRESS_COLORS } from '@/lib/progressColors';
 import type { Habit } from '@/types/habit';
 
-/** Throws a descriptive error if `value` is not a real boolean.
- *  Remove these calls once the crash is identified and fixed. */
-function assertBoolean(propName: string, value: unknown): asserts value is boolean {
-  if (typeof value !== 'boolean') {
-    throw new Error(
-      `[PROP TYPE] HabitCard: "${propName}" expected boolean but got ` +
-      `${typeof value} = ${JSON.stringify(value)}`,
-    );
-  }
-}
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 interface HabitCardProps {
@@ -93,13 +83,8 @@ function StatusRing({
   readOnly?: boolean;
 }) {
   const dashOffset = STAT_CIRC * (1 - progressPercentage / 100);
-  // Guards on every boolean that reaches a native component prop.
-  assertBoolean('StatusRing:isCompleted', isCompleted);
-  if (readOnly !== undefined) assertBoolean('StatusRing:readOnly', readOnly);
   const disabledDecrement = (readOnly ?? false) || currentValue <= 0;
   const disabledIncrement = readOnly ?? false;
-  assertBoolean('StatusRing:disabledDecrement', disabledDecrement);
-  assertBoolean('StatusRing:disabledIncrement', disabledIncrement);
 
   if (habit.kind === 'numeric') {
     // Numeric habit: show "−  value  +" controls
@@ -194,9 +179,6 @@ export function HabitCard({
 }: HabitCardProps) {
   const progressPercentage = Math.min(100, Math.round((currentValue / habit.target) * 100));
   const progressColor = getProgressColor(progressPercentage);
-  // Runtime type guards — fire before any native prop receives a possibly-stringified value.
-  assertBoolean('isCompleted', isCompleted);
-  assertBoolean('readOnly', readOnly);
 
   return (
     <Pressable
