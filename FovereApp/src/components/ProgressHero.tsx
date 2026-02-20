@@ -4,6 +4,17 @@ import Svg, { Circle } from 'react-native-svg';
 import { getProgressColor } from '@/lib/progressColors';
 import { formatDateTitle, isToday } from '@/lib/dates';
 
+/** Throws a descriptive error if `value` is not a real boolean.
+ *  Remove these calls once the crash is identified and fixed. */
+function assertBoolean(propName: string, value: unknown): asserts value is boolean {
+  if (typeof value !== 'boolean') {
+    throw new Error(
+      `[PROP TYPE] ProgressHero: "${propName}" expected boolean but got ` +
+      `${typeof value} = ${JSON.stringify(value)}`,
+    );
+  }
+}
+
 interface ProgressHeroProps {
   selectedDate: string;  // YYYY-MM-DD
   completed: number;
@@ -15,6 +26,9 @@ const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
 export function ProgressHero({ selectedDate, completed, total }: ProgressHeroProps) {
   const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
+  // Runtime type guard — will throw with context if isToday returns a non-boolean.
+  const isTodayFlag = isToday(selectedDate);
+  assertBoolean('isToday(selectedDate)', isTodayFlag);
   const strokeDashoffset = CIRCUMFERENCE * (1 - percentage / 100);
   const progressColor = getProgressColor(percentage);
   const title = isToday(selectedDate) ? 'Completed Today' : formatDateTitle(selectedDate);

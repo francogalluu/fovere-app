@@ -231,6 +231,42 @@ export const useHabitStore = create<HabitState>()(
       name: 'fovere-habits',
       storage: createJSONStorage(() => appStorage),
 
+      // Runs on EVERY rehydration (not just schema upgrades).
+      // Coerces any numeric fields that stale AsyncStorage data might have
+      // stored as strings (pre-createJSONStorage era), so that
+      // Number("5") → 5 and Number(null) → 0 → handled below.
+      onRehydrateStorage: () => (state) => {
+        if (!state) return;
+        if (Array.isArray(state.habits)) {
+          state.habits = state.habits.map(h => ({
+            ...h,
+            target:    Number(h.target),
+            sortOrder: Number(h.sortOrder),
+            archivedAt: h.archivedAt ?? null,
+          }));
+        }
+        if (Array.isArray(state.entries)) {
+          state.entries = state.entries.map(e => ({
+            ...e,
+            value: Number(e.value),
+          }));
+        }
+        if (__DEV__) {
+          const sample = state.habits[0];
+          if (sample) {
+            console.log('[habitStore] rehydrated → first habit:', {
+              target:    `${typeof sample.target}(${sample.target})`,
+              sortOrder: `${typeof sample.sortOrder}(${sample.sortOrder})`,
+              archivedAt: `${typeof sample.archivedAt}(${sample.archivedAt})`,
+            });
+          }
+          const entry = state.entries[0];
+          if (entry) {
+            console.log('[habitStore] first entry value:', `${typeof entry.value}(${entry.value})`);
+          }
+        }
+      },
+
       // Schema migration — runs once when the persisted version is older
       version: CURRENT_SCHEMA_VERSION,
       migrate: (persisted: unknown, fromVersion: number): HabitState => {

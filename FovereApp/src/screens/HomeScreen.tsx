@@ -9,7 +9,6 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NavigationProp } from '@react-navigation/native';
-import { Plus } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 
 import { useHabitStore } from '@/store';
@@ -194,7 +193,8 @@ export default function HomeScreen() {
             style={styles.addButton}
             accessibilityLabel="Add new habit"
           >
-<Text style={{ color: '#fff', fontSize: 20, fontWeight: '700' }}>+</Text>          </Pressable>
+            <Text style={{ color: '#fff', fontSize: 20, fontWeight: '700' }}>+</Text>
+          </Pressable>
         </View>
 
         {/* ── Week calendar strip ─────────────────────────────────────────── */}

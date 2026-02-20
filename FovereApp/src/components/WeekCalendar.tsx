@@ -11,6 +11,7 @@ import {
 } from '@/lib/dates';
 import { getProgressColor } from '@/lib/progressColors';
 
+
 interface WeekCalendarProps {
   selectedDate: string;                        // YYYY-MM-DD
   completionByDate: Record<string, number>;    // YYYY-MM-DD → 0–100
