@@ -194,8 +194,7 @@ export default function HomeScreen() {
             style={styles.addButton}
             accessibilityLabel="Add new habit"
           >
-            <Plus size={20} color="#FFFFFF" strokeWidth={2.5} />
-          </Pressable>
+<Text style={{ color: '#fff', fontSize: 20, fontWeight: '700' }}>+</Text>          </Pressable>
         </View>
 
         {/* ── Week calendar strip ─────────────────────────────────────────── */}

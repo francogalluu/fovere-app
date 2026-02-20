@@ -29,6 +29,21 @@ interface SettingsState {
   setNotificationsEnabled: (enabled: boolean) => void;
 }
 
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+/**
+ * Coerce a potentially-stringified boolean back to a real boolean.
+ * AsyncStorage stores everything as strings; if stale data was written without
+ * JSON.stringify, Zustand's JSON storage may rehydrate "true"/"false" strings
+ * instead of booleans, which breaks Fabric's strict native prop type checks.
+ */
+function toBoolean(v: unknown, fallback: boolean): boolean {
+  if (typeof v === 'boolean') return v;
+  if (v === 'true'  || v === '1' || v === 1) return true;
+  if (v === 'false' || v === '0' || v === 0) return false;
+  return fallback;
+}
+
 // ─── Store ────────────────────────────────────────────────────────────────────
 
 export const useSettingsStore = create<SettingsState>()(
@@ -46,6 +61,26 @@ export const useSettingsStore = create<SettingsState>()(
       name: 'fovere-settings',
       storage: createJSONStorage(() => appStorage),
       version: 1,
+
+      // Coerce any stringified booleans produced by stale AsyncStorage data.
+      // This runs after Zustand JSON-parses the stored string, so it catches
+      // values like "true"/"false" that weren't stored via JSON.stringify.
+      onRehydrateStorage: () => (state) => {
+        if (!state) return;
+        state.hapticFeedback      = toBoolean(state.hapticFeedback,      true);
+        state.notificationsEnabled = toBoolean(state.notificationsEnabled, false);
+        // weekStartsOn must be 0 or 1 — clamp just in case
+        const ws = Number(state.weekStartsOn);
+        state.weekStartsOn = (ws === 0 || ws === 1 ? ws : 1) as WeekStartDay;
+
+        if (__DEV__) {
+          console.log('[settingsStore] rehydrated →', {
+            hapticFeedback:      `${typeof state.hapticFeedback}(${state.hapticFeedback})`,
+            notificationsEnabled: `${typeof state.notificationsEnabled}(${state.notificationsEnabled})`,
+            weekStartsOn:        `${typeof state.weekStartsOn}(${state.weekStartsOn})`,
+          });
+        }
+      },
     },
   ),
 );

@@ -237,7 +237,23 @@ export const useHabitStore = create<HabitState>()(
         // When we add fields in future versions, transform here:
         // if (fromVersion < 2) { ... add new fields to persisted habits }
         console.warn(`[HabitStore] migrating schema from v${fromVersion} → v${CURRENT_SCHEMA_VERSION}`);
-        return persisted as HabitState;
+        const s = persisted as HabitState;
+        // Coerce any habits that might have numeric fields stored as strings
+        if (Array.isArray(s?.habits)) {
+          s.habits = s.habits.map(h => ({
+            ...h,
+            target: Number(h.target),
+            sortOrder: Number(h.sortOrder),
+            archivedAt: h.archivedAt ?? null,
+          }));
+        }
+        if (Array.isArray(s?.entries)) {
+          s.entries = s.entries.map(e => ({
+            ...e,
+            value: Number(e.value),
+          }));
+        }
+        return s;
       },
     },
   ),
