@@ -1,8 +1,9 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
-import { Check, ChevronRight, Minus, Plus } from 'lucide-react-native';
+import { Check, ChevronRight } from 'lucide-react-native';
 import { getProgressColor, PROGRESS_COLORS } from '@/lib/progressColors';
+import { C } from '@/lib/tokens';
 import type { Habit } from '@/types/habit';
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -13,155 +14,108 @@ interface HabitCardProps {
   currentValue: number;
   /** Pre-computed completion flag */
   isCompleted: boolean;
-  /** Whether the viewed date is in the future (read-only) */
+  /** Whether the viewed date is in the future (read-only, disables interaction) */
   readOnly?: boolean;
   /** Navigate to HabitDetail */
   onPress: () => void;
-  /** Boolean habit: toggle done/undone */
-  onToggle?: () => void;
-  /** Numeric habit: increase value by 1 */
-  onIncrement?: () => void;
-  /** Numeric habit: decrease value by 1 */
-  onDecrement?: () => void;
 }
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
+// ─── Icon ring constants (decorative ring around the habit icon) ──────────────
 
-const ICON_RING_SIZE = 56;
+const ICON_WRAP = 56; // outer size including ring overflow
 const ICON_INNER = 48;
 const ICON_R = 26;
 const ICON_CIRC = 2 * Math.PI * ICON_R;
 
-const STAT_RING_SIZE = 48;
-const STAT_R = 20;
-const STAT_CIRC = 2 * Math.PI * STAT_R;
+// ─── Status ring constants (right-side progress / completion indicator) ───────
 
-/** Small decorative progress ring drawn around the habit icon */
-function IconProgressRing({ percentage, color }: { percentage: number; color: string }) {
-  const dashOffset = ICON_CIRC * (1 - percentage / 100);
+const RING_SIZE = 48;
+const RING_R = 20;
+const RING_CIRC = 2 * Math.PI * RING_R;
+
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
+/** Thin decorative arc drawn around the habit icon when pct > 0 and not complete */
+function IconArc({ pct, color }: { pct: number; color: string }) {
+  const offset = ICON_CIRC * (1 - pct / 100);
   return (
     <Svg
-      width={ICON_RING_SIZE}
-      height={ICON_RING_SIZE}
-      viewBox={`0 0 ${ICON_RING_SIZE} ${ICON_RING_SIZE}`}
+      width={ICON_WRAP}
+      height={ICON_WRAP}
+      viewBox={`0 0 ${ICON_WRAP} ${ICON_WRAP}`}
       style={{ position: 'absolute', top: -4, left: -4, transform: [{ rotate: '-90deg' }] }}
     >
       <Circle
-        cx={ICON_RING_SIZE / 2} cy={ICON_RING_SIZE / 2} r={ICON_R}
-        fill="none" stroke="#E5E5E5" strokeWidth={2}
+        cx={ICON_WRAP / 2} cy={ICON_WRAP / 2} r={ICON_R}
+        fill="none" stroke={C.ring} strokeWidth={2}
       />
       <Circle
-        cx={ICON_RING_SIZE / 2} cy={ICON_RING_SIZE / 2} r={ICON_R}
+        cx={ICON_WRAP / 2} cy={ICON_WRAP / 2} r={ICON_R}
         fill="none" stroke={color} strokeWidth={2}
-        strokeDasharray={ICON_CIRC} strokeDashoffset={dashOffset}
+        strokeDasharray={ICON_CIRC} strokeDashoffset={offset}
         strokeLinecap="round" opacity={0.4}
       />
     </Svg>
   );
 }
 
-/** Right-side status ring: shows %, checkmark (completed), or empty ring (boolean incomplete) */
-function StatusRing({
-  habit,
-  currentValue,
+/**
+ * Right-side status ring — purely visual, no interactive controls.
+ *
+ * Three states (matching web reference HabitCard exactly):
+ *   completed   → full green ring + ✓ check
+ *   in-progress → partial ring + "XX%" label
+ *   0%          → track-only ring (empty)
+ */
+function ProgressRing({
+  pct,
   isCompleted,
-  progressPercentage,
   progressColor,
-  onToggle,
-  onIncrement,
-  onDecrement,
-  readOnly,
 }: {
-  habit: Habit;
-  currentValue: number;
+  pct: number;
   isCompleted: boolean;
-  progressPercentage: number;
   progressColor: string;
-  onToggle?: () => void;
-  onIncrement?: () => void;
-  onDecrement?: () => void;
-  readOnly?: boolean;
 }) {
-  const dashOffset = STAT_CIRC * (1 - progressPercentage / 100);
-  const disabledDecrement = (readOnly ?? false) || currentValue <= 0;
-  const disabledIncrement = readOnly ?? false;
+  const offset = RING_CIRC * (1 - pct / 100);
+  const ringColor = isCompleted ? PROGRESS_COLORS.HIGH : progressColor;
 
-  if (habit.kind === 'numeric') {
-    // Numeric habit: show "−  value  +" controls
-    return (
-      <View style={styles.numericControls}>
-        <Pressable
-          onPress={onDecrement}
-          disabled={disabledDecrement}
-          hitSlop={8}
-          style={[styles.numericBtn, disabledDecrement ? styles.numericBtnDisabled : null]}
-          accessibilityLabel="Decrease"
-        >
-          <Minus size={16} color={currentValue > 0 && !readOnly ? '#1A1A1A' : '#C7C7CC'} strokeWidth={2.5} />
-        </Pressable>
-
-        <View style={styles.numericValueBox}>
-          <Text style={[styles.numericValue, isCompleted ? { color: PROGRESS_COLORS.HIGH } : null]}>
-            {currentValue}
-          </Text>
-          {habit.unit ? <Text style={styles.numericUnit}>/{habit.target}{habit.unit}</Text> : null}
-        </View>
-
-        <Pressable
-          onPress={onIncrement}
-          disabled={disabledIncrement}
-          hitSlop={8}
-          style={[styles.numericBtn, disabledIncrement ? styles.numericBtnDisabled : null]}
-          accessibilityLabel="Increase"
-        >
-          <Plus size={16} color={readOnly ? '#C7C7CC' : '#1A1A1A'} strokeWidth={2.5} />
-        </Pressable>
-      </View>
-    );
-  }
-
-  // Boolean habit: circular SVG ring with check or % label
   return (
-    <Pressable
-      onPress={readOnly ? undefined : onToggle}
-      hitSlop={8}
-      accessibilityLabel={isCompleted ? 'Mark incomplete' : 'Mark complete'}
-    >
-      <View style={{ width: STAT_RING_SIZE, height: STAT_RING_SIZE }}>
-        <Svg
-          width={STAT_RING_SIZE}
-          height={STAT_RING_SIZE}
-          viewBox={`0 0 ${STAT_RING_SIZE} ${STAT_RING_SIZE}`}
-          style={{ transform: [{ rotate: '-90deg' }] }}
-        >
+    <View style={{ width: RING_SIZE, height: RING_SIZE }}>
+      <Svg
+        width={RING_SIZE}
+        height={RING_SIZE}
+        viewBox={`0 0 ${RING_SIZE} ${RING_SIZE}`}
+        style={{ transform: [{ rotate: '-90deg' }] }}
+      >
+        {/* Track */}
+        <Circle
+          cx={RING_SIZE / 2} cy={RING_SIZE / 2} r={RING_R}
+          fill="none" stroke={C.ring} strokeWidth={3}
+        />
+        {/* Progress arc — only when pct > 0 */}
+        {pct > 0 && (
           <Circle
-            cx={STAT_RING_SIZE / 2} cy={STAT_RING_SIZE / 2} r={STAT_R}
-            fill="none" stroke="#E5E5E5" strokeWidth={3}
+            cx={RING_SIZE / 2} cy={RING_SIZE / 2} r={RING_R}
+            fill="none" stroke={ringColor} strokeWidth={3}
+            strokeDasharray={RING_CIRC} strokeDashoffset={offset}
+            strokeLinecap="round"
           />
-          {progressPercentage > 0 && (
-            <Circle
-              cx={STAT_RING_SIZE / 2} cy={STAT_RING_SIZE / 2} r={STAT_R}
-              fill="none" stroke={isCompleted ? PROGRESS_COLORS.HIGH : progressColor}
-              strokeWidth={3}
-              strokeDasharray={STAT_CIRC}
-              strokeDashoffset={dashOffset}
-              strokeLinecap="round"
-            />
-          )}
-        </Svg>
-        <View style={StyleSheet.absoluteFillObject}>
-          <View style={styles.statRingCenter}>
-            {isCompleted ? (
-              <Check size={18} color={PROGRESS_COLORS.HIGH} strokeWidth={3} />
-            ) : (
-              <Text style={[styles.statPercent, { color: progressColor }]}>
-                {Math.round(progressPercentage)}%
-              </Text>
-            )}
-          </View>
+        )}
+      </Svg>
+
+      {/* Center content */}
+      <View style={StyleSheet.absoluteFillObject}>
+        <View style={s.ringCenter}>
+          {isCompleted ? (
+            <Check size={18} color={PROGRESS_COLORS.HIGH} strokeWidth={3} />
+          ) : pct > 0 ? (
+            <Text style={[s.ringPct, { color: progressColor }]}>
+              {Math.round(pct)}%
+            </Text>
+          ) : null}
         </View>
       </View>
-    </Pressable>
+    </View>
   );
 }
 
@@ -173,59 +127,50 @@ export function HabitCard({
   isCompleted,
   readOnly = false,
   onPress,
-  onToggle,
-  onIncrement,
-  onDecrement,
 }: HabitCardProps) {
-  const progressPercentage = Math.min(100, Math.round((currentValue / habit.target) * 100));
-  const progressColor = getProgressColor(progressPercentage);
+  const pct          = Math.min(100, Math.round((currentValue / habit.target) * 100));
+  const progressColor = getProgressColor(pct);
 
   return (
     <Pressable
       onPress={onPress}
-      style={[styles.card, isCompleted ? styles.cardCompleted : null]}
+      style={({ pressed }) => [
+        s.card,
+        isCompleted && s.cardCompleted,
+        pressed && { opacity: 0.85 },
+      ]}
       accessibilityRole="button"
       accessibilityLabel={habit.name}
     >
-      {/* Icon + optional decorative progress ring */}
-      <View style={styles.iconWrapper}>
-        {progressPercentage > 0 && !isCompleted && (
-          <IconProgressRing percentage={progressPercentage} color={progressColor} />
+      {/* ── Icon + decorative arc ──────────────────────────────────────── */}
+      <View style={s.iconWrapper}>
+        {pct > 0 && !isCompleted && (
+          <IconArc pct={pct} color={progressColor} />
         )}
         <View style={[
-          styles.iconCircle,
-          isCompleted ? { borderColor: PROGRESS_COLORS.HIGH, borderWidth: 1.5 } : null,
+          s.iconCircle,
+          isCompleted && { borderColor: PROGRESS_COLORS.HIGH, borderWidth: 1.5 },
         ]}>
-          <Text style={styles.iconEmoji}>{habit.icon}</Text>
+          <Text style={s.iconEmoji}>{habit.icon}</Text>
         </View>
       </View>
 
-      {/* Name + progress label */}
-      <View style={styles.infoColumn}>
-        <Text style={styles.habitName} numberOfLines={1}>{habit.name}</Text>
+      {/* ── Name + progress text ───────────────────────────────────────── */}
+      <View style={s.infoCol}>
+        <Text style={s.habitName} numberOfLines={1}>{habit.name}</Text>
         {habit.kind === 'numeric' && (
-          <Text style={styles.progressLabel}>
-            {currentValue} / {habit.target} {habit.unit ?? ''}
+          <Text style={s.progressText}>
+            {currentValue} / {habit.target}{habit.unit ? ` ${habit.unit}` : ''}
           </Text>
         )}
       </View>
 
-      {/* Right action area: status ring (boolean) or ± controls (numeric) */}
-      <StatusRing
-        habit={habit}
-        currentValue={currentValue}
-        isCompleted={isCompleted}
-        progressPercentage={progressPercentage}
-        progressColor={progressColor}
-        onToggle={onToggle}
-        onIncrement={onIncrement}
-        onDecrement={onDecrement}
-        readOnly={readOnly}
-      />
+      {/* ── Progress ring (right side) ─────────────────────────────────── */}
+      <ProgressRing pct={pct} isCompleted={isCompleted} progressColor={progressColor} />
 
-      {/* Chevron — wrap in View so marginLeft/opacity never reach lucide's SVG children */}
-      <View style={{ marginLeft: 6, opacity: isCompleted ? 0.4 : 1 }}>
-        <ChevronRight size={20} color="#C7C7CC" strokeWidth={2} />
+      {/* ── Chevron ───────────────────────────────────────────────────── */}
+      <View style={[s.chevron, isCompleted && { opacity: 0.4 }]}>
+        <ChevronRight size={20} color={C.chevron} strokeWidth={2} />
       </View>
     </Pressable>
   );
@@ -233,7 +178,7 @@ export function HabitCard({
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
+const s = StyleSheet.create({
   card: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -241,16 +186,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     borderRadius: 24,
     marginBottom: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: C.bgCard,
+    // Shadow matching web: box-shadow 0 12px 40px rgba(0,0,0,0.08)
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
+    shadowOpacity: 0.08,
     shadowRadius: 12,
     elevation: 3,
   },
   cardCompleted: {
     opacity: 0.92,
   },
+
+  // Icon
   iconWrapper: {
     marginRight: 14,
     width: ICON_INNER,
@@ -261,7 +209,7 @@ const styles = StyleSheet.create({
     width: ICON_INNER,
     height: ICON_INNER,
     borderRadius: ICON_INNER / 2,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: C.bgCard,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
@@ -270,61 +218,26 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 1,
   },
-  iconEmoji: {
-    fontSize: 26,
-  },
-  infoColumn: {
-    flex: 1,
-    minWidth: 0,
-  },
+  iconEmoji: { fontSize: 26 },
+
+  // Info column
+  infoCol: { flex: 1, minWidth: 0 },
   habitName: {
     fontSize: 17,
     fontWeight: '600',
-    color: '#1A1A1A',
+    color: C.text1,
     marginBottom: 2,
   },
-  progressLabel: {
-    fontSize: 14,
+  progressText: {
+    fontSize: 15,
     fontWeight: '400',
-    color: '#8E8E93',
+    color: C.text2,
   },
-  statRingCenter: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  statPercent: {
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  numericControls: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  numericBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#F2F2F7',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  numericBtnDisabled: {
-    opacity: 0.4,
-  },
-  numericValueBox: {
-    alignItems: 'center',
-    minWidth: 44,
-  },
-  numericValue: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: '#1A1A1A',
-  },
-  numericUnit: {
-    fontSize: 11,
-    color: '#8E8E93',
-    fontWeight: '400',
-  },
+
+  // Ring center overlay
+  ringCenter: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  ringPct:    { fontSize: 12, fontWeight: '600' },
+
+  // Chevron
+  chevron: { marginLeft: 8 },
 });
