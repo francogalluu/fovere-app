@@ -17,8 +17,13 @@ function isoDate(y: number, m: number, d: number): string {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function CalendarScreen() {
-  const habits  = useHabitStore(s => s.habits.filter(h => h.archivedAt === null));
-  const entries = useHabitStore(s => s.entries);
+  const rawHabits = useHabitStore(s => s.habits);
+  const entries   = useHabitStore(s => s.entries);
+
+  const habits = useMemo(
+    () => rawHabits.filter(h => h.archivedAt === null),
+    [rawHabits],
+  );
 
   const todayStr  = today();
   const todayDate = new Date(todayStr + 'T00:00:00');
@@ -458,7 +463,11 @@ const s = StyleSheet.create({
     borderRadius: 10, padding: 2, marginBottom: 12,
   },
   segBtn:        { flex: 1, paddingVertical: 8, borderRadius: 8, alignItems: 'center' },
-  segBtnActive:  { backgroundColor: '#fff' },
+  segBtnActive:  {
+    backgroundColor: '#fff',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.10, shadowRadius: 3, elevation: 1,
+  },
   segBtnText:    { fontSize: 15, fontWeight: '500', color: '#666' },
   segBtnTextActive: { color: '#008080' },
 
@@ -493,8 +502,8 @@ const s = StyleSheet.create({
     borderRadius: 24, paddingVertical: 24, paddingHorizontal: 24,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     marginBottom: 12,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08, shadowRadius: 16, elevation: 4,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.08, shadowRadius: 40, elevation: 6,
   },
   completionTitle: {
     fontSize: 22, fontWeight: '700', color: '#000', marginBottom: 6, letterSpacing: -0.4,
@@ -528,7 +537,7 @@ const s = StyleSheet.create({
   // Breakdown
   breakdownTitle: {
     fontSize: 22, fontWeight: '600', color: '#1A1A1A',
-    marginBottom: 12, paddingLeft: 4,
+    marginTop: 16, marginBottom: 12, paddingLeft: 4,
   },
   breakdownCard:  {
     backgroundColor: '#fff', borderRadius: 16,
@@ -555,8 +564,8 @@ const s = StyleSheet.create({
   barCol:    { flex: 1, alignItems: 'center', justifyContent: 'flex-end', gap: 8 },
   barWrapper:{ flex: 1, width: '100%', justifyContent: 'flex-end', alignItems: 'center', position: 'relative' },
   barPct:    { fontSize: 13, textAlign: 'center', marginBottom: 4 },
-  bar:       { width: '80%', borderRadius: 8 },
-  barFloor:  { width: '80%', height: 4, borderRadius: 4 },
+  bar:       { width: '100%', borderRadius: 8 },
+  barFloor:  { width: '100%', height: 4, borderRadius: 4 },
   barLabel:  { fontSize: 12, color: '#999' },
   barLabelToday: { color: '#34C759', fontWeight: '600' },
 

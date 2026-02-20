@@ -76,8 +76,13 @@ function computeHabitStreak(habit: Habit, entries: HabitEntry[], todayStr: strin
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function AnalyticsScreen() {
-  const habits  = useHabitStore(s => s.habits.filter(h => h.archivedAt === null));
-  const entries = useHabitStore(s => s.entries);
+  const rawHabits = useHabitStore(s => s.habits);
+  const entries   = useHabitStore(s => s.entries);
+
+  const habits = useMemo(
+    () => rawHabits.filter(h => h.archivedAt === null),
+    [rawHabits],
+  );
 
   const todayStr = today();
 
@@ -415,7 +420,7 @@ const s = StyleSheet.create({
   scrollContent: { paddingHorizontal: 24, paddingBottom: 20 },
 
   // Header
-  header:      { paddingHorizontal: 24, paddingTop: 8, paddingBottom: 8 },
+  header:      { paddingHorizontal: 24, paddingTop: 24, paddingBottom: 8 },
   headerTitle: {
     fontSize: 34, fontWeight: '700', color: '#1A1A1A',
     letterSpacing: -0.68, marginBottom: 20,
@@ -436,8 +441,8 @@ const s = StyleSheet.create({
     backgroundColor: '#fff', borderRadius: 24,
     paddingVertical: 24, paddingHorizontal: 24, marginBottom: 32,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08, shadowRadius: 16, elevation: 4,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.08, shadowRadius: 40, elevation: 6,
   },
   completionTitle: {
     fontSize: 22, fontWeight: '700', color: '#000', marginBottom: 6, letterSpacing: -0.4,
@@ -458,7 +463,7 @@ const s = StyleSheet.create({
   barChart:  { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', height: 180 },
   barCol:    { flex: 1, alignItems: 'center', height: '100%' },
   barWrapper:{ flex: 1, width: '100%', justifyContent: 'flex-end', paddingBottom: 0 },
-  bar:       { width: '90%', alignSelf: 'center', borderTopLeftRadius: 8, borderTopRightRadius: 8 },
+  bar:       { width: '100%', borderTopLeftRadius: 8, borderTopRightRadius: 8 },
   barLabel:  { fontSize: 12, color: '#8E8E93', fontWeight: '500', marginTop: 8 },
   barLabelToday: { color: '#34C759' },
 
