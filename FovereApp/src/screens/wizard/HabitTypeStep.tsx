@@ -8,7 +8,7 @@
  *   • Section 2: Frequency, Measure By       — chevron rows → sub-steps
  *   • Section 3: Reminder toggle, Time row   — inline toggle + conditional row
  */
-import React, { useLayoutEffect, useEffect } from 'react';
+import React, { useLayoutEffect, useEffect, useCallback } from 'react';
 import {
   View, Text, Switch, Pressable,
   ScrollView, StyleSheet, Alert,
@@ -76,6 +76,50 @@ export default function HabitTypeStep({ navigation }: Props) {
 
   const isEdit = !!habitId;
 
+  // ── Actions ────────────────────────────────────────────────────────────────
+
+  const handleCancel = useCallback(() => {
+    reset();
+    navigation.getParent()?.goBack();
+  }, [reset, navigation]);
+
+  const handleSave = useCallback(() => {
+    const trimmed = name.trim();
+    if (!trimmed) {
+      Alert.alert('Name required', 'Please enter a habit name.');
+      return;
+    }
+    const resolvedTarget = kind === 'boolean' ? 1 : Math.max(1, target);
+    const resolvedUnit   = kind === 'boolean' ? undefined : (unit.trim() || undefined);
+    const resolvedReminder = reminderEnabled ? reminderTime : undefined;
+
+    if (isEdit && habitId) {
+      updateHabit(habitId, {
+        goalType,
+        name: trimmed,
+        icon,
+        kind,
+        frequency,
+        target: resolvedTarget,
+        unit:   resolvedUnit,
+        reminderTime: resolvedReminder,
+      });
+    } else {
+      addHabit({
+        goalType,
+        name: trimmed,
+        icon,
+        kind,
+        frequency,
+        target: resolvedTarget,
+        unit:   resolvedUnit,
+        reminderTime: resolvedReminder,
+      });
+    }
+    reset();
+    navigation.getParent()?.goBack();
+  }, [name, icon, kind, frequency, target, unit, reminderEnabled, reminderTime, isEdit, habitId, addHabit, updateHabit, reset, navigation]);
+
   // ── Header buttons ─────────────────────────────────────────────────────────
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -91,50 +135,7 @@ export default function HabitTypeStep({ navigation }: Props) {
         </Pressable>
       ),
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isEdit, navigation]);
-
-  // ── Actions ────────────────────────────────────────────────────────────────
-
-  const handleCancel = () => {
-    reset();
-    navigation.getParent()?.goBack();
-  };
-
-  const handleSave = () => {
-    const trimmed = name.trim();
-    if (!trimmed) {
-      Alert.alert('Name required', 'Please enter a habit name.');
-      return;
-    }
-    const resolvedTarget = kind === 'boolean' ? 1 : Math.max(1, target);
-    const resolvedUnit   = kind === 'boolean' ? undefined : (unit.trim() || undefined);
-    const resolvedReminder = reminderEnabled ? reminderTime : undefined;
-
-    if (isEdit && habitId) {
-      updateHabit(habitId, {
-        name: trimmed,
-        icon,
-        kind,
-        frequency,
-        target: resolvedTarget,
-        unit:   resolvedUnit,
-        reminderTime: resolvedReminder,
-      });
-    } else {
-      addHabit({
-        name: trimmed,
-        icon,
-        kind,
-        frequency,
-        target: resolvedTarget,
-        unit:   resolvedUnit,
-        reminderTime: resolvedReminder,
-      });
-    }
-    reset();
-    navigation.getParent()?.goBack();
-  };
+  }, [isEdit, navigation, handleSave, handleCancel]);
 
   // ── Derived display values ─────────────────────────────────────────────────
   const freqLabel    = frequency.charAt(0).toUpperCase() + frequency.slice(1);

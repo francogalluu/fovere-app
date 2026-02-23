@@ -57,7 +57,7 @@ export const useWizardStore = create<WizardState>()((set) => ({
 
   loadHabit: (habit) => set({
     habitId:         habit.id,
-    goalType:        'build',
+    goalType:        habit.goalType ?? 'build',
     name:            habit.name,
     icon:            habit.icon,
     kind:            habit.kind,

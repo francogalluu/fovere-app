@@ -128,8 +128,13 @@ export function HabitCard({
   readOnly = false,
   onPress,
 }: HabitCardProps) {
-  const pct          = Math.min(100, Math.round((currentValue / habit.target) * 100));
-  const progressColor = getProgressColor(pct);
+  const isBreak       = habit.goalType === 'break';
+  const isOverLimit   = isBreak && currentValue > habit.target;
+  const pct           = Math.min(100, Math.round((currentValue / habit.target) * 100));
+  // Break habits: ring fills as a danger meter (more = worse). Use warning palette.
+  const progressColor = isBreak
+    ? (pct >= 100 ? PROGRESS_COLORS.LOW : pct >= 50 ? PROGRESS_COLORS.MID : PROGRESS_COLORS.MID_LOW)
+    : getProgressColor(pct);
 
   return (
     <Pressable
@@ -149,7 +154,9 @@ export function HabitCard({
         )}
         <View style={[
           s.iconCircle,
-          isCompleted && { borderColor: PROGRESS_COLORS.HIGH, borderWidth: 1.5 },
+          // Build: green border when done. Break: red border when over limit.
+          !isBreak && isCompleted && { borderColor: PROGRESS_COLORS.HIGH, borderWidth: 1.5 },
+          isOverLimit              && { borderColor: PROGRESS_COLORS.LOW,  borderWidth: 1.5 },
         ]}>
           <Text style={s.iconEmoji}>{habit.icon}</Text>
         </View>
@@ -159,14 +166,20 @@ export function HabitCard({
       <View style={s.infoCol}>
         <Text style={s.habitName} numberOfLines={1}>{habit.name}</Text>
         {habit.kind === 'numeric' && (
-          <Text style={s.progressText}>
+          <Text style={[s.progressText, isOverLimit && { color: PROGRESS_COLORS.LOW }]}>
             {currentValue} / {habit.target}{habit.unit ? ` ${habit.unit}` : ''}
+            {isOverLimit ? '  Over limit' : ''}
           </Text>
         )}
       </View>
 
       {/* ── Progress ring (right side) ─────────────────────────────────── */}
-      <ProgressRing pct={pct} isCompleted={isCompleted} progressColor={progressColor} />
+      {/* Break habits: never show green checkmark; ring is a danger meter */}
+      <ProgressRing
+        pct={pct}
+        isCompleted={!isBreak && isCompleted}
+        progressColor={progressColor}
+      />
 
       {/* ── Chevron ───────────────────────────────────────────────────── */}
       <View style={[s.chevron, isCompleted && { opacity: 0.4 }]}>

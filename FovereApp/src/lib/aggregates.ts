@@ -41,12 +41,45 @@ export const getHabitCurrentValue = (
   return entryValue(entries, habit.id, date);
 };
 
-/** True if the habit is fully completed for the given anchor date/period. */
+/**
+ * True if the habit is "done" for the given anchor date/period.
+ *
+ * Build habits: current value has reached or exceeded the target.
+ * Break habits: current value is within the limit (≤ target).
+ *   - Starts as true at 0, flips to false only if the user exceeds the limit.
+ *   - This means exceeding the limit subtracts from the daily score.
+ */
 export const isHabitCompleted = (
   habit: Habit,
   entries: HabitEntry[],
   date: string,
-): boolean => getHabitCurrentValue(habit, entries, date) >= habit.target;
+): boolean => {
+  const value = getHabitCurrentValue(habit, entries, date);
+  if (habit.goalType === 'break') return value <= habit.target;
+  return value >= habit.target;
+};
+
+/** True when a break habit has exceeded its daily limit. Always false for build habits. */
+export const isOverLimit = (
+  habit: Habit,
+  entries: HabitEntry[],
+  date: string,
+): boolean => {
+  if (habit.goalType !== 'break') return false;
+  return getHabitCurrentValue(habit, entries, date) > habit.target;
+};
+
+/** Count of daily break habits that have exceeded their limit on a given date. */
+export const dailyOverLimitCount = (
+  habits: Habit[],
+  entries: HabitEntry[],
+  date: string,
+): number =>
+  habits.filter(
+    h => h.archivedAt === null && h.createdAt <= date &&
+         h.frequency === 'daily' && h.goalType === 'break' &&
+         isOverLimit(h, entries, date),
+  ).length;
 
 // ─── Day-level aggregates ─────────────────────────────────────────────────────
 
@@ -76,7 +109,51 @@ export const dailyCompletedCount = (
   return { completed, total: active.length };
 };
 
-// ─── Week / month aggregates (used in Calendar + Analytics) ──────────────────
+// ─── Daily-only aggregates (Home screen ring + week-strip dots) ───────────────
+// These intentionally exclude weekly/monthly habits so the ring can reach 100%
+// the moment all daily habits for the day are done.
+
+/** Completed vs. total counts for daily-frequency habits only on a given date. */
+export const dailyOnlyCompletedCount = (
+  habits: Habit[],
+  entries: HabitEntry[],
+  date: string,
+): { completed: number; total: number } => {
+  const active = habits.filter(
+    h => h.archivedAt === null && h.createdAt <= date && h.frequency === 'daily',
+  );
+  return {
+    completed: active.filter(h => isHabitCompleted(h, entries, date)).length,
+    total: active.length,
+  };
+};
+
+/** Completion % (0–100) for daily-frequency habits only on a given date. */
+export const dailyOnlyCompletion = (
+  habits: Habit[],
+  entries: HabitEntry[],
+  date: string,
+): number => {
+  const { completed, total } = dailyOnlyCompletedCount(habits, entries, date);
+  return total === 0 ? 0 : Math.round((completed / total) * 100);
+};
+
+/** Completed vs. total weekly-frequency habits for the week containing `date`. */
+export const weeklyHabitProgress = (
+  habits: Habit[],
+  entries: HabitEntry[],
+  date: string,
+): { completed: number; total: number } => {
+  const active = habits.filter(
+    h => h.archivedAt === null && h.createdAt <= date && h.frequency === 'weekly',
+  );
+  return {
+    completed: active.filter(h => isHabitCompleted(h, entries, date)).length,
+    total: active.length,
+  };
+};
+
+// ─── Week / month aggregates (used in Calendar + Analytics) ───────────────────
 
 /** Mean daily completion % across a 7-day week starting from weekStartDate. */
 export const weeklyScore = (

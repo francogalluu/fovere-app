@@ -79,10 +79,14 @@ export default function AnalyticsScreen() {
   const rawHabits = useHabitStore(s => s.habits);
   const entries   = useHabitStore(s => s.entries);
 
-  const habits = useMemo(
-    () => rawHabits.filter(h => h.archivedAt === null),
-    [rawHabits],
-  );
+  const habits = useMemo(() => {
+    const seen = new Set<string>();
+    return rawHabits.filter(h => {
+      if (h.archivedAt !== null || seen.has(h.id)) return false;
+      seen.add(h.id);
+      return true;
+    });
+  }, [rawHabits]);
 
   const todayStr = today();
 

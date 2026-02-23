@@ -15,8 +15,10 @@ import { Plus } from 'lucide-react-native';
 import { useHabitStore } from '@/store';
 import { useSettingsStore } from '@/store/settingsStore';
 import {
-  dailyCompletion,
-  dailyCompletedCount,
+  dailyOnlyCompletion,
+  dailyOnlyCompletedCount,
+  weeklyHabitProgress,
+  dailyOverLimitCount,
   getHabitCurrentValue,
   isHabitCompleted,
 } from '@/lib/aggregates';
@@ -55,31 +57,68 @@ export default function HomeScreen() {
 
   // ── Derived data ─────────────────────────────────────────────────────────────
 
-  const habits = useMemo(
-    () =>
-      rawHabits
-        .filter(h => h.archivedAt === null)
-        .sort((a, b) => a.sortOrder - b.sortOrder),
-    [rawHabits],
-  );
+  const habits = useMemo(() => {
+    const seen = new Set<string>();
+    return rawHabits
+      .filter(h => {
+        if (h.archivedAt !== null || seen.has(h.id)) return false;
+        seen.add(h.id);
+        return true;
+      })
+      .sort((a, b) => a.sortOrder - b.sortOrder);
+  }, [rawHabits]);
 
   const weekDates = useMemo(() => getWeekDates(selectedDate), [selectedDate]);
 
   const completionByDate = useMemo(() => {
     const result: Record<string, number> = {};
     weekDates.forEach(d => {
-      result[d] = dailyCompletion(habits, entries, d);
+      result[d] = dailyOnlyCompletion(habits, entries, d);
     });
     return result;
   }, [habits, entries, weekDates]);
 
   const { completed, total } = useMemo(
-    () => dailyCompletedCount(habits, entries, selectedDate),
+    () => dailyOnlyCompletedCount(habits, entries, selectedDate),
     [habits, entries, selectedDate],
   );
 
-  const dailyHabits  = useMemo(() => habits.filter(h => h.frequency === 'daily'),  [habits]);
-  const weeklyHabits = useMemo(() => habits.filter(h => h.frequency === 'weekly'), [habits]);
+  // Weekly build only (for Weekly Habits section header %)
+  const weeklyBuildHabitsForProgress = useMemo(
+    () => habits.filter(h => h.frequency === 'weekly' && h.goalType !== 'break'),
+    [habits],
+  );
+  const { completed: weeklyBuildCompleted, total: weeklyBuildTotal } = useMemo(
+    () => weeklyHabitProgress(weeklyBuildHabitsForProgress, entries, selectedDate),
+    [weeklyBuildHabitsForProgress, entries, selectedDate],
+  );
+
+  const dailyBuildHabits  = useMemo(
+    () => habits.filter(h => h.frequency === 'daily' && h.goalType !== 'break'),
+    [habits],
+  );
+  const dailyBreakHabits  = useMemo(
+    () => habits.filter(h => h.frequency === 'daily' && h.goalType === 'break'),
+    [habits],
+  );
+  const weeklyBreakHabits = useMemo(
+    () => habits.filter(h => h.frequency === 'weekly' && h.goalType === 'break'),
+    [habits],
+  );
+  const weeklyBuildHabits = useMemo(
+    () => habits.filter(h => h.frequency === 'weekly' && h.goalType !== 'break'),
+    [habits],
+  );
+  // All break habits (daily + weekly) for the Break Habits section
+  const allBreakHabits = useMemo(
+    () => [...dailyBreakHabits, ...weeklyBreakHabits],
+    [dailyBreakHabits, weeklyBreakHabits],
+  );
+
+  const overLimitCount = useMemo(
+    () => dailyOverLimitCount(habits, entries, selectedDate),
+    [habits, entries, selectedDate],
+  );
 
   const isReadOnly   = isFuture(selectedDate);
   const isToday      = selectedDate === today();
@@ -171,13 +210,13 @@ export default function HomeScreen() {
             selectedDate={selectedDate}
             completed={completed}
             total={total}
+            overLimit={overLimitCount}
           />
         </View>
 
-        {/* ── Daily habits section ─────────────────────────────────────────── */}
-        {dailyHabits.length > 0 && (
+        {/* ── Daily build habits ───────────────────────────────────────────── */}
+        {dailyBuildHabits.length > 0 && (
           <View style={s.section}>
-            {/* Section title row with optional Past/Upcoming badge */}
             <View style={s.sectionTitleRow}>
               <Text style={s.sectionTitle}>{dailySectionLabel}</Text>
               {!isToday && (
@@ -186,19 +225,42 @@ export default function HomeScreen() {
                 </View>
               )}
             </View>
-
             <View style={{ opacity: isReadOnly ? 0.5 : 1 }}>
-              {dailyHabits.map(renderHabitCard)}
+              {dailyBuildHabits.map(renderHabitCard)}
             </View>
           </View>
         )}
 
-        {/* ── Weekly habits section ────────────────────────────────────────── */}
-        {weeklyHabits.length > 0 && (
+        {/* ── Break habits (daily + weekly) ────────────────────────────────── */}
+        {allBreakHabits.length > 0 && (
           <View style={s.section}>
-            <Text style={s.sectionTitle}>Weekly Habits</Text>
+            <View style={s.sectionTitleRow}>
+              <Text style={s.sectionTitle}>Break Habits</Text>
+              {!isToday && (
+                <View style={s.badge}>
+                  <Text style={s.badgeText}>{isReadOnly ? 'Upcoming' : 'Past'}</Text>
+                </View>
+              )}
+            </View>
             <View style={{ opacity: isReadOnly ? 0.5 : 1 }}>
-              {weeklyHabits.map(renderHabitCard)}
+              {allBreakHabits.map(renderHabitCard)}
+            </View>
+          </View>
+        )}
+
+        {/* ── Weekly build habits only ──────────────────────────────────────── */}
+        {weeklyBuildHabits.length > 0 && (
+          <View style={s.section}>
+            <View style={s.sectionTitleRow}>
+              <Text style={s.sectionTitle}>Weekly Habits</Text>
+              {weeklyBuildTotal > 0 && (
+                <Text style={s.weeklyPct}>
+                  {Math.round((weeklyBuildCompleted / weeklyBuildTotal) * 100)}% this week
+                </Text>
+              )}
+            </View>
+            <View style={{ opacity: isReadOnly ? 0.5 : 1 }}>
+              {weeklyBuildHabits.map(renderHabitCard)}
             </View>
           </View>
         )}
@@ -293,6 +355,14 @@ const s = StyleSheet.create({
     fontWeight: '600',
     color: C.text1,
     marginLeft: 4,
+  },
+
+  // Weekly percentage label (right side of Weekly Habits title)
+  weeklyPct: {
+    marginLeft: 'auto',
+    fontSize: 13,
+    fontWeight: '400',
+    color: C.text2,
   },
 
   // Past/Upcoming badge

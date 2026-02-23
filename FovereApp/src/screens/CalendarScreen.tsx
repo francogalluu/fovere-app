@@ -20,10 +20,14 @@ export default function CalendarScreen() {
   const rawHabits = useHabitStore(s => s.habits);
   const entries   = useHabitStore(s => s.entries);
 
-  const habits = useMemo(
-    () => rawHabits.filter(h => h.archivedAt === null),
-    [rawHabits],
-  );
+  const habits = useMemo(() => {
+    const seen = new Set<string>();
+    return rawHabits.filter(h => {
+      if (h.archivedAt !== null || seen.has(h.id)) return false;
+      seen.add(h.id);
+      return true;
+    });
+  }, [rawHabits]);
 
   const todayStr  = today();
   const todayDate = new Date(todayStr + 'T00:00:00');
@@ -275,7 +279,7 @@ export default function CalendarScreen() {
                         {isToday ? (
                           <>
                             <Svg width={40} height={40} viewBox="0 0 40 40">
-                              <Circle cx={20} cy={20} r={20} fill="#34C759" />
+                              <Circle cx={20} cy={20} r={20} fill="#008080" />
                             </Svg>
                             <View style={StyleSheet.absoluteFillObject}>
                               <View style={s.cellCenter}>

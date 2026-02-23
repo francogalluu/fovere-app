@@ -9,12 +9,13 @@ interface ProgressHeroProps {
   selectedDate: string;  // YYYY-MM-DD
   completed: number;
   total: number;
+  overLimit?: number;
 }
 
 const RADIUS = 50;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
-export function ProgressHero({ selectedDate, completed, total }: ProgressHeroProps) {
+export function ProgressHero({ selectedDate, completed, total, overLimit = 0 }: ProgressHeroProps) {
   const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
   const strokeDashoffset = CIRCUMFERENCE * (1 - percentage / 100);
   const progressColor = getProgressColor(percentage);
@@ -36,6 +37,11 @@ export function ProgressHero({ selectedDate, completed, total }: ProgressHeroPro
           </Text>
         ) : (
           <Text style={styles.subtitle}>No habits yet.{'\n'}Add one below!</Text>
+        )}
+        {overLimit > 0 && (
+          <Text style={styles.overLimitWarn}>
+            {overLimit} break {overLimit === 1 ? 'habit' : 'habits'} over limit
+          </Text>
         )}
       </View>
 
@@ -131,5 +137,11 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: '700',
     letterSpacing: -0.8,
+  },
+  overLimitWarn: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#FF3B30',
+    marginTop: 6,
   },
 });

@@ -91,6 +91,12 @@ const todayDateString = (): string => {
 
 const entryId = (habitId: string, date: string) => `${habitId}_${date}`;
 
+// Monotonically-increasing counter ensures unique IDs even when Date.now()
+// returns the same value for multiple calls within the same millisecond
+// (e.g. when addHabit is called in a tight forEach loop).
+let _idSeq = 0;
+const uniqueId = () => `${Date.now()}_${++_idSeq}`;
+
 // ─── Store ────────────────────────────────────────────────────────────────────
 
 export const useHabitStore = create<HabitState>()(
@@ -105,7 +111,7 @@ export const useHabitStore = create<HabitState>()(
 
       // ── addHabit ────────────────────────────────────────────────────────────
       addHabit: (draft) => {
-        const id = Date.now().toString();
+        const id = uniqueId();
         const today = todayDateString();
         const activeCount = get().habits.filter(h => h.archivedAt === null).length;
 
@@ -238,18 +244,30 @@ export const useHabitStore = create<HabitState>()(
       onRehydrateStorage: () => (state) => {
         if (!state) return;
         if (Array.isArray(state.habits)) {
-          state.habits = state.habits.map(h => ({
-            ...h,
-            target:    Number(h.target),
-            sortOrder: Number(h.sortOrder),
-            archivedAt: h.archivedAt ?? null,
-          }));
+          const seenIds = new Set<string>();
+          state.habits = state.habits
+            .map(h => ({
+              ...h,
+              target:    Number(h.target),
+              sortOrder: Number(h.sortOrder),
+              archivedAt: h.archivedAt ?? null,
+              goalType:  (h.goalType === 'break' ? 'break' : 'build') as 'build' | 'break',
+            }))
+            .filter(h => {
+              if (seenIds.has(h.id)) return false;
+              seenIds.add(h.id);
+              return true;
+            });
         }
         if (Array.isArray(state.entries)) {
-          state.entries = state.entries.map(e => ({
-            ...e,
-            value: Number(e.value),
-          }));
+          const seenEntries = new Set<string>();
+          state.entries = state.entries
+            .map(e => ({ ...e, value: Number(e.value) }))
+            .filter(e => {
+              if (seenEntries.has(e.id)) return false;
+              seenEntries.add(e.id);
+              return true;
+            });
         }
       },
 
@@ -264,9 +282,10 @@ export const useHabitStore = create<HabitState>()(
         if (Array.isArray(s?.habits)) {
           s.habits = s.habits.map(h => ({
             ...h,
-            target: Number(h.target),
+            target:    Number(h.target),
             sortOrder: Number(h.sortOrder),
             archivedAt: h.archivedAt ?? null,
+            goalType:  (h.goalType === 'break' ? 'break' : 'build') as 'build' | 'break',
           }));
         }
         if (Array.isArray(s?.entries)) {

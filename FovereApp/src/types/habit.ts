@@ -21,6 +21,13 @@ export interface Habit {
   /** Unique identifier — timestamp string (Date.now().toString()) */
   id: string;
 
+  /**
+   * 'build' = work toward a goal (default, all existing habits)
+   * 'break' = stay within a daily limit (e.g. cigarettes, screen time)
+   * Optional for backward compatibility; treated as 'build' when absent.
+   */
+  goalType?: 'build' | 'break';
+
   /** Display name, e.g. "Morning Run" */
   name: string;
 

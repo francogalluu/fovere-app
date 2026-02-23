@@ -17,7 +17,7 @@ import { C } from '@/lib/tokens';
 type Props = NativeStackScreenProps<WizardStackParamList, 'MeasureBy'>;
 
 export default function MeasureByStep({ navigation }: Props) {
-  const { kind, target, unit, setKind, setTarget, setUnit } = useWizardStore();
+  const { kind, target, unit, goalType, setKind, setTarget, setUnit } = useWizardStore();
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -85,7 +85,7 @@ export default function MeasureByStep({ navigation }: Props) {
               {/* Target stepper */}
               <View style={s.card}>
                 <View style={[s.row, s.rowBorder]}>
-                  <Text style={s.label}>Daily target</Text>
+                  <Text style={s.label}>{goalType === 'break' ? 'Daily limit' : 'Daily target'}</Text>
                   <View style={s.stepper}>
                     <Pressable onPress={handleDecrement} style={s.stepBtn}>
                       <Minus size={18} color={target <= 1 ? '#C7C7CC' : C.teal} strokeWidth={2.5} />

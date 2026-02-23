@@ -46,6 +46,8 @@ export default function HabitDetailScreen({ route, navigation }: Props) {
     [habit, allEntries, todayStr],
   );
 
+  const isBreak           = habit?.goalType === 'break';
+  const overLimit         = isBreak && currentValue > (habit?.target ?? 0);
   const progressPct       = habit ? Math.min((currentValue / habit.target) * 100, 100) : 0;
   const strokeDashoffset  = RING_CIRC * (1 - progressPct / 100);
 
@@ -72,9 +74,11 @@ export default function HabitDetailScreen({ route, navigation }: Props) {
   }, [habit, completed, deleteEntry, logEntry, todayStr]);
 
   const handleIncrement = useCallback(() => {
-    if (!habit || currentValue >= habit.target) return;
+    if (!habit) return;
+    // Break habits allow logging beyond the limit to track actual usage
+    if (!isBreak && currentValue >= habit.target) return;
     incrementEntry(habit.id, todayStr);
-  }, [habit, currentValue, incrementEntry, todayStr]);
+  }, [habit, isBreak, currentValue, incrementEntry, todayStr]);
 
   const handleDecrement = useCallback(() => {
     if (!habit || currentValue <= 0) return;
@@ -108,8 +112,10 @@ export default function HabitDetailScreen({ route, navigation }: Props) {
   }
 
   const freqLabel    = habit.frequency.charAt(0).toUpperCase() + habit.frequency.slice(1);
-  const goalLabel    = habit.frequency === 'daily' ? "Today's Goal" :
-                       habit.frequency === 'weekly' ? "This Week's Goal" : "This Month's Goal";
+  const noun         = isBreak ? 'Limit' : 'Goal';
+  const goalLabel    = habit.frequency === 'daily'   ? `Today's ${noun}` :
+                       habit.frequency === 'weekly'  ? `This Week's ${noun}` :
+                                                       `This Month's ${noun}`;
   const measureLabel = habit.kind === 'boolean' ? 'Yes / No' :
                        habit.unit ? `Count (${habit.unit})` : 'Count';
 
@@ -133,7 +139,12 @@ export default function HabitDetailScreen({ route, navigation }: Props) {
               <Circle
                 cx={RING / 2} cy={RING / 2} r={RING_R}
                 fill="none"
-                stroke={completed ? '#008080' : getProgressColor(progressPct)}
+                stroke={
+                  overLimit    ? '#FF3B30' :
+                  isBreak      ? getProgressColor(progressPct) :
+                  completed    ? '#008080' :
+                                 getProgressColor(progressPct)
+                }
                 strokeWidth={12}
                 strokeDasharray={RING_CIRC}
                 strokeDashoffset={strokeDashoffset}
@@ -160,6 +171,9 @@ export default function HabitDetailScreen({ route, navigation }: Props) {
             </View>
           </View>
           <Text style={s.goalLabel}>{goalLabel}</Text>
+          {overLimit && (
+            <Text style={s.overLimitBadge}>Over limit — {currentValue - habit.target} too many</Text>
+          )}
         </View>
 
         {/* ── Controls ──────────────────────────────────────────────────── */}
@@ -192,8 +206,8 @@ export default function HabitDetailScreen({ route, navigation }: Props) {
 
             <Pressable
               onPress={handleIncrement}
-              disabled={currentValue >= habit.target}
-              style={[s.ctrlBtnPrimary, currentValue >= habit.target && s.ctrlBtnDisabled]}
+              disabled={!isBreak && currentValue >= habit.target}
+              style={[s.ctrlBtnPrimary, (!isBreak && currentValue >= habit.target) && s.ctrlBtnDisabled]}
             >
               <Plus size={24} color="#fff" strokeWidth={2.5} />
             </Pressable>
@@ -206,7 +220,7 @@ export default function HabitDetailScreen({ route, navigation }: Props) {
             <InfoRow label="Frequency"   value={freqLabel}    last={false} />
             <InfoRow label="Measurement" value={measureLabel} last={false} />
             <InfoRow
-              label="Target"
+              label={isBreak ? 'Limit' : 'Target'}
               value={`${habit.target}${habit.unit ? ' ' + habit.unit : ''}`}
               last={true}
             />
@@ -256,7 +270,11 @@ const s = StyleSheet.create({
   ringCurrent: { fontSize: 48, fontWeight: '300', color: '#1A1A1A' },
   ringTarget:  { fontSize: 32, color: '#999' },
   ringUnit:    { fontSize: 15, color: '#999', marginTop: 4 },
-  goalLabel:   { fontSize: 17, color: '#666', marginTop: 8, marginBottom: 24 },
+  goalLabel:   { fontSize: 17, color: '#666', marginTop: 8, marginBottom: 8 },
+  overLimitBadge: {
+    fontSize: 14, fontWeight: '600', color: '#FF3B30',
+    marginBottom: 16, textAlign: 'center',
+  },
 
   // Boolean toggle
   boolRow:     { alignItems: 'center', marginBottom: 32 },
