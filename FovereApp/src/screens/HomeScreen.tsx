@@ -14,8 +14,8 @@ import { Plus } from 'lucide-react-native';
 
 import { useHabitStore } from '@/store';
 import { useSettingsStore } from '@/store/settingsStore';
+import { getDaySummary } from '@/lib/daySummary';
 import {
-  dailyOnlyCompletion,
   dailyOnlyCompletedCount,
   weeklyHabitProgress,
   dailyOverLimitCount,
@@ -73,7 +73,7 @@ export default function HomeScreen() {
   const completionByDate = useMemo(() => {
     const result: Record<string, number> = {};
     weekDates.forEach(d => {
-      result[d] = dailyOnlyCompletion(habits, entries, d);
+      result[d] = getDaySummary(habits, entries, d).dailyOnlyCompletionPct;
     });
     return result;
   }, [habits, entries, weekDates]);

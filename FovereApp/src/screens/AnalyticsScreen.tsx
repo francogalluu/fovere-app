@@ -1,12 +1,23 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import {
-  View, Text, ScrollView, Pressable, StyleSheet,
+  View, Text, ScrollView, Pressable, StyleSheet, Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Svg, { Circle } from 'react-native-svg';
+import Svg, { Circle, Line } from 'react-native-svg';
 import { Flame, CalendarCheck } from 'lucide-react-native';
 import { useHabitStore } from '@/store';
-import { today, datesInRange, addDays, toLocalDateString } from '@/lib/dates';
+import {
+  today,
+  datesInRange,
+  addDays,
+  addMonths,
+  getWeekDates,
+  getWeekRange,
+  getMonthRange,
+  getDayOfWeekIndex,
+  getLastNMonthRanges,
+  SHORT_DAY_LABELS,
+} from '@/lib/dates';
 import {
   dailyCompletion,
   getHabitCurrentValue,
@@ -17,32 +28,135 @@ import type { Habit, HabitEntry } from '@/types/habit';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type TimePeriod = 'week' | 'month' | '30days' | 'all';
+type TimeRange = 'day' | 'week' | 'month' | '6month' | 'year';
+export type ChartBucket = { key: string; label: string; start: string; end: string };
+export type ChartBar = { key: string; label: string; percent: number; completed: number; target: number };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function getPeriodDates(period: TimePeriod, todayStr: string, createdAt?: string): string[] {
-  switch (period) {
+function getBuckets(range: TimeRange, endDate: string): ChartBucket[] {
+  switch (range) {
+    case 'day':
+      return [{ key: endDate, label: 'Today', start: endDate, end: endDate }];
     case 'week': {
-      const d = new Date(todayStr + 'T00:00:00');
-      const dow = d.getDay();
-      const monday = new Date(d);
-      monday.setDate(d.getDate() - (dow === 0 ? 6 : dow - 1));
-      return datesInRange(toLocalDateString(monday), todayStr);
+      const weekDays = getWeekDates(endDate);
+      return weekDays.map((d, i) => ({ key: d, label: SHORT_DAY_LABELS[i], start: d, end: d }));
     }
     case 'month': {
-      const [y, m] = todayStr.split('-').map(Number);
-      return datesInRange(`${y}-${String(m).padStart(2, '0')}-01`, todayStr);
+      const start = addDays(endDate, -29);
+      return datesInRange(start, endDate).map(d => ({ key: d, label: d.split('-')[2], start: d, end: d }));
     }
-    case '30days':
-      return datesInRange(addDays(todayStr, -29), todayStr);
-    case 'all':
-      return datesInRange(createdAt ?? addDays(todayStr, -89), todayStr);
+    case '6month':
+      return getLastNMonthRanges(endDate, 6).map(({ start, end, label, monthKey }) => ({ key: monthKey, label, start, end }));
+    case 'year':
+      return getLastNMonthRanges(endDate, 12).map(({ start, end, label, monthKey }) => ({ key: monthKey, label, start, end }));
   }
 }
 
-function getPeriodLabel(period: TimePeriod): string {
-  return { week: 'This week', month: 'This month', '30days': 'Last 30 days', all: 'All time' }[period];
+function aggregateCompletions(habits: Habit[], entries: HabitEntry[], buckets: ChartBucket[], habitFilter: Habit | null): { completed: number; target: number }[] {
+  return buckets.map(bucket => {
+    const days = datesInRange(bucket.start, bucket.end);
+    let completed = 0, target = 0;
+    for (const d of days) {
+      if (habitFilter) {
+        if (habitFilter.createdAt > d) continue;
+        target += 1;
+        if (isHabitCompleted(habitFilter, entries, d)) completed += 1;
+      } else {
+        const active = habits.filter(h => h.archivedAt === null && h.createdAt <= d);
+        target += active.length;
+        completed += active.filter(h => isHabitCompleted(h, entries, d)).length;
+      }
+    }
+    return { completed, target };
+  });
+}
+
+function computePercent(completed: number, target: number): number {
+  if (target <= 0) return 0;
+  return Math.min(100, Math.round((completed / target) * 100));
+}
+
+/** Clamp percent to [0, 100] for rendering. Bars must never extend below baseline. */
+function safePercent(percent: number | null | undefined): number {
+  const n = Number(percent);
+  if (n !== n) return 0;
+  return Math.max(0, Math.min(100, n));
+}
+
+function buildChartBars(habits: Habit[], entries: HabitEntry[], range: TimeRange, endDate: string, habitFilter: Habit | null): ChartBar[] {
+  const buckets = getBuckets(range, endDate);
+  const agg = aggregateCompletions(habits, entries, buckets, habitFilter);
+  return buckets.map((b, i) => {
+    const raw = computePercent(agg[i].completed, agg[i].target);
+    return {
+      key: b.key, label: b.label,
+      percent: safePercent(raw),
+      completed: agg[i].completed, target: agg[i].target,
+    };
+  });
+}
+
+function getPeriodDates(range: TimeRange, todayStr: string): string[] {
+  switch (range) {
+    case 'day': return [todayStr];
+    case 'week': return getWeekDates(todayStr).filter(d => d <= todayStr);
+    case 'month': return datesInRange(getMonthRange(todayStr).start, todayStr);
+    case '6month': {
+      const start = addMonths(todayStr, -5);
+      const [y, m] = start.split('-').map(Number);
+      return datesInRange(`${y}-${String(m).padStart(2, '0')}-01`, todayStr);
+    }
+    case 'year': {
+      const start = addMonths(todayStr, -11);
+      const [y, m] = start.split('-').map(Number);
+      return datesInRange(`${y}-${String(m).padStart(2, '0')}-01`, todayStr);
+    }
+  }
+}
+
+function getPeriodLabel(range: TimeRange): string {
+  return { day: 'Today', week: 'This week', month: 'This month', '6month': 'Last 6 months', year: 'Last year' }[range];
+}
+
+// ─── X-axis ticks and labels (Apple Health–style: sparse for month, single-letter for year) ───
+
+const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const;
+const MONTH_INITIALS = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'] as const;
+
+/** Indices of buckets that should show an x-axis label. Month: no per-bar labels (only range caption). */
+function getXAxisTicks(range: TimeRange, bars: ChartBar[]): number[] {
+  if (range === 'month') return [];
+  if (range === 'week' || range === '6month' || range === 'year') {
+    return bars.map((_, i) => i);
+  }
+  return [];
+}
+
+/** Format date key YYYY-MM-DD as "Feb 1" (locale short month + day). */
+function formatMonthDay(dateKey: string): string {
+  const d = new Date(dateKey + 'T00:00:00');
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+/** Label text for the x-axis at this bucket. Single line, no wrap. */
+function formatXAxisLabel(range: TimeRange, bar: ChartBar, index: number): string {
+  if (range === 'week') return WEEKDAY_LABELS[index] ?? bar.label;
+  if (range === 'month') return formatMonthDay(bar.key);
+  if (range === '6month') return bar.label;
+  if (range === 'year') {
+    const [, mm] = bar.key.split('-');
+    const m = parseInt(mm, 10);
+    return MONTH_INITIALS[m - 1] ?? bar.label;
+  }
+  return bar.label;
+}
+
+/** Indices where a vertical gridline should be drawn. Month: same ~4 as x-axis labels; Year: between months. */
+function getVerticalGridlineIndices(range: TimeRange, bars: ChartBar[]): number[] {
+  if (range === 'month') return getXAxisTicks('month', bars);
+  if (range === 'year') return bars.map((_, i) => i).filter(i => i > 0);
+  return [];
 }
 
 /** Compute streak: consecutive days ending today/yesterday with 100% completion */
@@ -91,18 +205,18 @@ export default function AnalyticsScreen() {
   const todayStr = today();
 
   const [selectedHabitId, setSelectedHabitId] = useState<string>('all');
-  const [period, setPeriod]                   = useState<TimePeriod>('week');
+  const [timeRange, setTimeRange] = useState<TimeRange>('week');
+  const [pressedBarIndex, setPressedBarIndex] = useState<number | null>(null);
+  const [chartLayout, setChartLayout] = useState({ width: 0, height: 0 });
 
   const selectedHabit = useMemo(
     () => habits.find(h => h.id === selectedHabitId) ?? null,
     [habits, selectedHabitId],
   );
 
-  // ── Period dates ─────────────────────────────────────────────────────────
-
   const periodDates = useMemo(
-    () => getPeriodDates(period, todayStr, selectedHabit?.createdAt ?? habits[0]?.createdAt),
-    [period, todayStr, selectedHabit, habits],
+    () => getPeriodDates(timeRange, todayStr),
+    [timeRange, todayStr],
   );
 
   // ── Completion ring ───────────────────────────────────────────────────────
@@ -116,7 +230,7 @@ export default function AnalyticsScreen() {
         completionTitle: `${selectedHabit.name} completion`,
       };
     }
-    if (habits.length === 0) return { completionPct: 0, completionText: '0 of 0 habits', completionTitle: getPeriodLabel(period) };
+    if (habits.length === 0) return { completionPct: 0, completionText: '0 of 0 habits', completionTitle: getPeriodLabel(timeRange) };
     const scores   = periodDates.map(d => dailyCompletion(habits, entries, d));
     const pct      = Math.round(scores.reduce((a, b) => a + b, 0) / (scores.length || 1));
     const totalPossible = periodDates.length * habits.length;
@@ -127,54 +241,24 @@ export default function AnalyticsScreen() {
     return {
       completionPct:   pct,
       completionText:  `${totalCompleted} of ${totalPossible} habits`,
-      completionTitle: getPeriodLabel(period) + ' completion',
+      completionTitle: getPeriodLabel(timeRange) + ' completion',
     };
-  }, [selectedHabit, habits, entries, periodDates, period]);
+  }, [selectedHabit, habits, entries, periodDates, timeRange]);
 
-  // ── Bar chart (this-week data) ────────────────────────────────────────────
+  const chartBars = useMemo(
+    () => buildChartBars(habits, entries, timeRange, todayStr, selectedHabit ?? null),
+    [habits, entries, timeRange, todayStr, selectedHabit],
+  );
 
-  const weekDates = useMemo(() => {
-    const d = new Date(todayStr + 'T00:00:00');
-    const dow = d.getDay();
-    const monday = new Date(d);
-    monday.setDate(d.getDate() - (dow === 0 ? 6 : dow - 1));
-    return datesInRange(toLocalDateString(monday), todayStr);
-  }, [todayStr]);
+  const totalCompleted = useMemo(
+    () => chartBars.reduce((s, b) => s + b.completed, 0),
+    [chartBars],
+  );
+  const barSectionTitle = selectedHabit ? `${selectedHabit.name} completion` : 'Habits completed';
+  const hasChartData = chartBars.some(b => b.target > 0);
 
-  const barData = useMemo(() => {
-    const labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    return labels.map((label, i) => {
-      const dateStr = addDays(
-        (() => {
-          const d = new Date(todayStr + 'T00:00:00');
-          const dow = d.getDay();
-          const monday = new Date(d);
-          monday.setDate(d.getDate() - (dow === 0 ? 6 : dow - 1));
-          return toLocalDateString(monday);
-        })(),
-        i,
-      );
-      const isFuture = dateStr > todayStr;
-      let value = 0;
-      let max   = 1;
-      if (!isFuture) {
-        if (selectedHabit) {
-          value = getHabitCurrentValue(selectedHabit, entries, dateStr);
-          max   = selectedHabit.target;
-        } else {
-          value = habits.filter(h => isHabitCompleted(h, entries, dateStr)).length;
-          max   = habits.length || 1;
-        }
-      }
-      return { label, value, max, isFuture, isToday: dateStr === todayStr };
-    });
-  }, [todayStr, selectedHabit, habits, entries]);
-
-  const barTotal = barData.reduce((a, b) => a + b.value, 0);
-  const barTotalLabel = selectedHabit
-    ? `${barTotal}${selectedHabit.unit ? ' ' + selectedHabit.unit : ''} this week`
-    : `${barTotal} total completed habits`;
-  const barSectionTitle = selectedHabit ? `${selectedHabit.name} logged` : 'Habits completed';
+  const xAxisTickIndices = useMemo(() => new Set(getXAxisTicks(timeRange, chartBars)), [timeRange, chartBars]);
+  const verticalGridlineIndices = useMemo(() => new Set(getVerticalGridlineIndices(timeRange, chartBars)), [timeRange, chartBars]);
 
   // ── Single-habit streak ───────────────────────────────────────────────────
 
@@ -254,21 +338,20 @@ export default function AnalyticsScreen() {
           ))}
         </ScrollView>
 
-        {/* Time period pills */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={[s.pillsRow, { marginTop: 8 }]}
-        >
-          {(['week', 'month', '30days', 'all'] as TimePeriod[]).map(p => (
-            <Pill
-              key={p}
-              label={getPeriodLabel(p)}
-              active={period === p}
-              onPress={() => setPeriod(p)}
-            />
+        {/* Time range: W / M / 6M / Y (no Daily) */}
+        <View style={s.timeRangeRow}>
+          {(['week', 'month', '6month', 'year'] as TimeRange[]).map(r => (
+            <Pressable
+              key={r}
+              onPress={() => setTimeRange(r)}
+              style={[s.timeRangeSeg, timeRange === r && s.timeRangeSegActive]}
+            >
+              <Text style={[s.timeRangeSegText, timeRange === r && s.timeRangeSegTextActive]}>
+                {r === 'week' ? 'W' : r === 'month' ? 'M' : r === '6month' ? '6M' : 'Y'}
+              </Text>
+            </Pressable>
           ))}
-        </ScrollView>
+        </View>
       </View>
 
       <ScrollView style={s.scroll} contentContainerStyle={s.scrollContent} showsVerticalScrollIndicator={false}>
@@ -285,33 +368,55 @@ export default function AnalyticsScreen() {
         {/* ── Bar chart ─────────────────────────────────────────────── */}
         <Text style={s.sectionTitle}>{barSectionTitle}</Text>
         <View style={s.barCard}>
-          <Text style={s.barTotal}>{barTotal}</Text>
-          <Text style={s.barTotalLabel}>{barTotalLabel}</Text>
-          <View style={s.barChart}>
-            {barData.map((d, i) => {
-              const heightPct = d.max > 0 ? Math.round((d.value / d.max) * 100) : 0;
-              const actualH   = d.value > 0 ? Math.max(heightPct, 15) : 8;
-              const color     = d.value > 0 ? '#34C759' : '#E8E8ED';
-              return (
-                <View key={i} style={s.barCol}>
-                  <View style={s.barWrapper}>
-                    <View
-                      style={[
-                        s.bar,
-                        {
-                          height: `${actualH}%` as any,
-                          backgroundColor: color,
-                          borderBottomLeftRadius: d.value > 0 ? 4 : 8,
-                          borderBottomRightRadius: d.value > 0 ? 4 : 8,
-                        },
-                      ]}
-                    />
-                  </View>
-                  <Text style={[s.barLabel, d.isToday && s.barLabelToday]}>{d.label}</Text>
-                </View>
-              );
-            })}
-          </View>
+          <Text style={s.barTotal}>{totalCompleted}</Text>
+          <Text style={s.barTotalLabel}>Total completed habits</Text>
+          {!hasChartData ? (
+            <View style={s.barEmpty}>
+              <Text style={s.barEmptyText}>No data for this period</Text>
+            </View>
+          ) : (
+            <View style={s.barChartContainer} onLayout={e => setChartLayout(e.nativeEvent.layout)}>
+              {(timeRange === 'month' || timeRange === 'year') && chartLayout.width > 0 && (
+                <ChartGridlines
+                  range={timeRange}
+                  barCount={chartBars.length}
+                  chartWidth={chartLayout.width}
+                  chartHeight={timeRange === 'month' ? 240 : 220}
+                  gridlineIndices={verticalGridlineIndices}
+                />
+              )}
+              {pressedBarIndex !== null && chartBars[pressedBarIndex] && chartLayout.width > 0 && (
+                <ChartTooltip
+                  bar={chartBars[pressedBarIndex]}
+                  index={pressedBarIndex}
+                  chartWidth={chartLayout.width}
+                  barCount={chartBars.length}
+                  chartAreaHeight={timeRange === 'month' ? 240 : 220}
+                  timeRange={timeRange}
+                />
+              )}
+              <View style={[s.barChartRow, timeRange === 'month' && s.barChartRowMonth]}>
+                {chartBars.map((bar, i) => (
+                  <BarWithTooltip
+                    key={bar.key}
+                    bar={bar}
+                    index={i}
+                    chartAreaHeight={timeRange === 'month' ? 240 : 220}
+                    axisLabel={xAxisTickIndices.has(i) ? formatXAxisLabel(timeRange, bar, i) : null}
+                    isHighlighted={pressedBarIndex === i}
+                    isToday={timeRange === 'week' && i === getDayOfWeekIndex(todayStr)}
+                    onPressIn={() => setPressedBarIndex(i)}
+                    onPressOut={() => setPressedBarIndex(null)}
+                  />
+                ))}
+              </View>
+              {timeRange === 'month' && chartBars.length >= 2 && (
+                <Text style={s.barChartRangeCaption}>
+                  {formatMonthDay(chartBars[0].key)} — {formatMonthDay(chartBars[chartBars.length - 1].key)}
+                </Text>
+              )}
+            </View>
+          )}
         </View>
 
         {/* ── Streak card (single habit only) ───────────────────────── */}
@@ -377,6 +482,151 @@ export default function AnalyticsScreen() {
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
+function ChartGridlines({
+  range,
+  barCount,
+  chartWidth,
+  chartHeight,
+  gridlineIndices,
+}: {
+  range: TimeRange;
+  barCount: number;
+  chartWidth: number;
+  chartHeight: number;
+  gridlineIndices: Set<number>;
+}) {
+  if (chartWidth <= 0 || barCount <= 0) return null;
+  const step = chartWidth / barCount;
+  const stroke = 'rgba(0,0,0,0.06)';
+  return (
+    <View style={[StyleSheet.absoluteFill, s.chartGridlinesWrap, { height: chartHeight }]} pointerEvents="none">
+      <Svg width={chartWidth} height={chartHeight} style={s.chartGridlinesSvg}>
+        {Array.from(gridlineIndices).map(i => {
+          const x = i * step;
+          return (
+            <Line
+              key={i}
+              x1={x}
+              y1={0}
+              x2={x}
+              y2={chartHeight}
+              stroke={stroke}
+              strokeWidth={1}
+            />
+          );
+        })}
+      </Svg>
+    </View>
+  );
+}
+
+const TOOLTIP_MIN_WIDTH = 120;
+const TOOLTIP_GAP_PX = 8;
+const TOOLTIP_PADDING_LEFT = 8;
+const TOOLTIP_PADDING_RIGHT = 8;
+const POINTER_HALF_WIDTH = 8;
+const POINTER_MIN_PADDING = 10;
+
+/** Rendered bar height in px (must match BarWithTooltip logic). */
+function getBarHeightPx(percent: number, plotAreaHeightPx: number): number {
+  const pct = safePercent(percent);
+  const targetH = pct > 0 ? Math.max(pct, 15) : 8;
+  const maxBarPx = plotAreaHeightPx - 20;
+  return Math.max(0, (targetH / 100) * maxBarPx);
+}
+
+function ChartTooltip({
+  bar,
+  index,
+  chartWidth,
+  barCount,
+  chartAreaHeight,
+  timeRange,
+}: {
+  bar: ChartBar;
+  index: number;
+  chartWidth: number;
+  barCount: number;
+  chartAreaHeight: number;
+  timeRange: TimeRange;
+}) {
+  const opacity = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(6)).current;
+  const [tooltipSize, setTooltipSize] = useState({ width: TOOLTIP_MIN_WIDTH, height: 56 });
+
+  useEffect(() => {
+    opacity.setValue(0);
+    translateY.setValue(6);
+    Animated.parallel([
+      Animated.timing(opacity, { toValue: 1, duration: 200, useNativeDriver: true }),
+      Animated.timing(translateY, { toValue: 0, duration: 200, useNativeDriver: true }),
+    ]).start();
+  }, [index]);
+
+  const barHeightPx = getBarHeightPx(bar.percent, chartAreaHeight);
+  const barTopYPx = chartAreaHeight - barHeightPx;
+  let tooltipTopPx = barTopYPx - tooltipSize.height - TOOLTIP_GAP_PX;
+  const flipBelow = tooltipTopPx < -tooltipSize.height;
+  if (flipBelow) {
+    tooltipTopPx = barTopYPx + barHeightPx + TOOLTIP_GAP_PX;
+  }
+
+  const barCenterX = barCount > 0 ? (index + 0.5) * (chartWidth / barCount) : 0;
+  const width = Math.max(TOOLTIP_MIN_WIDTH, tooltipSize.width);
+  const desiredX = barCenterX - width / 2;
+  const left = Math.max(
+    TOOLTIP_PADDING_LEFT,
+    Math.min(chartWidth - width - TOOLTIP_PADDING_RIGHT, desiredX)
+  );
+
+  const pointerXWithinTooltip = barCenterX - left;
+  const pointerLeftPx = Math.max(
+    POINTER_MIN_PADDING,
+    Math.min(width - POINTER_MIN_PADDING, pointerXWithinTooltip)
+  ) - POINTER_HALF_WIDTH;
+
+  const dateLabel =
+    timeRange === 'month'
+      ? formatMonthDay(bar.key)
+      : timeRange === 'week'
+        ? (WEEKDAY_LABELS[index] ?? bar.label)
+        : bar.label;
+
+  const pointerHeight = 6;
+  const pointerOverlap = 1;
+  return (
+    <Animated.View
+      style={[
+        s.chartTooltipWrap,
+        {
+          left,
+          top: tooltipTopPx,
+          width,
+          minHeight: tooltipSize.height + pointerHeight - pointerOverlap,
+          opacity,
+          transform: [{ translateY }],
+        },
+      ]}
+      pointerEvents="none"
+    >
+      <View
+        style={s.chartTooltip}
+        onLayout={e => {
+          const { width: w, height: h } = e.nativeEvent.layout;
+          setTooltipSize(prev => (prev.width === w && prev.height === h ? prev : { width: w, height: h }));
+        }}
+      >
+        <Text style={s.chartTooltipDate}>{dateLabel}</Text>
+        <Text style={s.chartTooltipPct}>{Math.round(safePercent(bar.percent))}%</Text>
+        {bar.target > 0 && (
+          <Text style={s.chartTooltipDetail}>{bar.completed} of {bar.target}</Text>
+        )}
+      </View>
+      <View style={[s.chartTooltipPointer, { position: 'absolute', left: pointerLeftPx, bottom: pointerOverlap }]} />
+    </Animated.View>
+  );
+}
+
 function Pill({
   label, icon, active, onPress,
 }: {
@@ -389,6 +639,75 @@ function Pill({
     >
       {icon && <Text style={s.pillIcon}>{icon}</Text>}
       <Text style={[s.pillText, active && s.pillTextActive]}>{label}</Text>
+    </Pressable>
+  );
+}
+
+function BarWithTooltip({
+  bar,
+  index,
+  chartAreaHeight = 220,
+  axisLabel,
+  isHighlighted,
+  isToday,
+  onPressIn,
+  onPressOut,
+}: {
+  bar: ChartBar;
+  index: number;
+  chartAreaHeight?: number;
+  axisLabel: string | null;
+  isHighlighted: boolean;
+  isToday: boolean;
+  onPressIn: () => void;
+  onPressOut: () => void;
+}) {
+  const MAX_BAR_PX = chartAreaHeight - 20;
+  const animHeight = useRef(new Animated.Value(0)).current;
+  const pct = safePercent(bar.percent);
+  const targetH = pct > 0 ? Math.max(pct, 15) : 8;
+  const targetPx = Math.max(0, (targetH / 100) * MAX_BAR_PX);
+
+  useEffect(() => {
+    Animated.timing(animHeight, {
+      toValue: targetPx,
+      duration: 280,
+      useNativeDriver: false,
+    }).start();
+  }, [targetPx]);
+
+  const color = getProgressColor(Math.round(pct));
+  return (
+    <Pressable
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
+      style={[s.barCol, isHighlighted && s.barColHighlighted]}
+    >
+      <View style={[s.barWrapper, { height: chartAreaHeight }]}>
+        <View style={s.barGroup}>
+          <View style={s.barSpacer} />
+          <Animated.View
+            style={[
+              s.bar,
+              {
+                height: animHeight,
+                backgroundColor: color,
+                borderTopLeftRadius: 3,
+                borderTopRightRadius: 3,
+                borderBottomLeftRadius: pct > 0 ? 2 : 3,
+                borderBottomRightRadius: pct > 0 ? 2 : 3,
+              },
+            ]}
+          />
+        </View>
+      </View>
+      {axisLabel !== null ? (
+        <Text style={[s.barLabel, isToday && s.barLabelToday]} numberOfLines={1}>
+          {axisLabel}
+        </Text>
+      ) : (
+        <View style={s.barLabelPlaceholder} />
+      )}
     </Pressable>
   );
 }
@@ -430,6 +749,22 @@ const s = StyleSheet.create({
     letterSpacing: -0.68, marginBottom: 20,
   },
   pillsRow:    { gap: 8, paddingBottom: 4 },
+  timeRangeRow: {
+    flexDirection: 'row',
+    marginTop: 8,
+    backgroundColor: '#EFEFEF',
+    borderRadius: 12,
+    padding: 4,
+    alignSelf: 'flex-start',
+  },
+  timeRangeSeg: {
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+  },
+  timeRangeSegActive: { backgroundColor: '#fff', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 },
+  timeRangeSegText: { fontSize: 14, fontWeight: '600', color: '#8E8E93' },
+  timeRangeSegTextActive: { color: '#1A1A1A' },
   pill:        {
     flexDirection: 'row', alignItems: 'center', gap: 6,
     paddingHorizontal: 16, paddingVertical: 10,
@@ -462,14 +797,53 @@ const s = StyleSheet.create({
     shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04, shadowRadius: 8, elevation: 2,
   },
-  barTotal:      { fontSize: 40, fontWeight: '700', color: '#1A1A1A', letterSpacing: -0.8, lineHeight: 44, marginBottom: 4 },
-  barTotalLabel: { fontSize: 13, color: '#8E8E93', marginBottom: 24 },
-  barChart:  { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', height: 180 },
-  barCol:    { flex: 1, alignItems: 'center', height: '100%' },
-  barWrapper:{ flex: 1, width: '100%', justifyContent: 'flex-end', paddingBottom: 0 },
-  bar:       { width: '100%', borderTopLeftRadius: 8, borderTopRightRadius: 8 },
-  barLabel:  { fontSize: 12, color: '#8E8E93', fontWeight: '500', marginTop: 8 },
+  barTotal: { fontSize: 40, fontWeight: '700', color: '#1A1A1A', letterSpacing: -0.8, lineHeight: 44, marginBottom: 4 },
+  barTotalLabel: { fontSize: 13, color: '#8E8E93', marginBottom: 12 },
+  barEmpty: { minHeight: 200, justifyContent: 'center', alignItems: 'center' },
+  barEmptyText: { fontSize: 15, color: '#8E8E93' },
+  barChartContainer: { position: 'relative', width: '100%', overflow: 'visible' },
+  chartGridlinesWrap: { top: 0, left: 0, right: 0, height: 220 },
+  chartGridlinesSvg: { position: 'absolute', top: 0, left: 0 },
+  barChartRow: { flexDirection: 'row', alignItems: 'flex-end', minHeight: 240, width: '100%' },
+  barChartRowMonth: { minHeight: 260 },
+  barCol:    { flex: 1, alignItems: 'center', marginHorizontal: 2 },
+  barColHighlighted: { backgroundColor: 'rgba(0,0,0,0.04)', borderRadius: 8 },
+  barWrapper:{ width: '100%', justifyContent: 'flex-end', alignItems: 'center' },
+  barGroup:  { width: '100%', height: '100%', justifyContent: 'flex-end', alignItems: 'center' },
+  barSpacer: { flex: 1, minHeight: 4 },
+  bar:       { width: '75%', maxWidth: 48, borderTopLeftRadius: 8, borderTopRightRadius: 8 },
+  chartTooltipWrap: {
+    position: 'absolute',
+    minWidth: TOOLTIP_MIN_WIDTH,
+    zIndex: 20,
+    alignItems: 'stretch',
+  },
+  chartTooltip: {
+    backgroundColor: '#1A1A1A',
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    minWidth: TOOLTIP_MIN_WIDTH,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  chartTooltipDate: { fontSize: 12, color: 'rgba(255,255,255,0.9)', marginBottom: 2 },
+  chartTooltipPct: { fontSize: 22, fontWeight: '700', color: '#fff', letterSpacing: -0.5 },
+  chartTooltipDetail: { fontSize: 11, color: 'rgba(255,255,255,0.75)', marginTop: 4 },
+  chartTooltipPointer: {
+    width: 0, height: 0,
+    borderLeftWidth: 8, borderRightWidth: 8, borderTopWidth: 6,
+    borderLeftColor: 'transparent', borderRightColor: 'transparent',
+    borderTopColor: '#1A1A1A',
+  },
+  barLabel:  { fontSize: 11, color: '#8E8E93', fontWeight: '500', marginTop: 6 },
+  barLabelPlaceholder: { height: 18, marginTop: 6 },
   barLabelToday: { color: '#34C759' },
+  barChartRangeCaption: { fontSize: 11, color: '#8E8E93', marginTop: 8, textAlign: 'center' },
 
   // Streak card
   streakCard: {

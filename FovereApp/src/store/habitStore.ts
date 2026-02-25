@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { appStorage } from './storage';
+import { getTodayNormalized, normalizeDate, getWeekRange, getMonthRange, datesInRange } from '@/lib/dates';
 import type { Habit, HabitEntry } from '@/types/habit';
 
 // ─── Schema versioning ────────────────────────────────────────────────────────
@@ -17,8 +18,8 @@ interface HabitState {
 
   /**
    * The date currently viewed on the Home screen (YYYY-MM-DD).
-   * Persisted so the user returns to the same date after a short background.
-   * Resets to today whenever the user taps "today" in the WeekCalendar.
+   * Not persisted: always initializes to today on cold start so the app opens
+   * on the current day. User can change it during the session via WeekCalendar.
    */
   selectedDate: string;
   setSelectedDate: (date: string) => void;
@@ -55,6 +56,21 @@ interface HabitState {
   // ── Entry mutations ─────────────────────────────────────────────────────────
 
   /**
+   * Upsert a log entry for a given habit + date (normalizes date to YYYY-MM-DD).
+   * Writes or updates the single entry for that habit+date; sets loggedAt to now.
+   * After upsert, calls recomputeDaySummaries for the affected date range (edited day,
+   * or full week for weekly-limit bad habit, or full month for monthly-limit bad habit).
+   */
+  upsertEntry: (habitId: string, date: string, value: number) => void;
+
+  /**
+   * Called after entry edits to invalidate derived data for the given dates.
+   * Derived values (daily score, completion, calendar rings) are computed on read
+   * from entries; this hook is for future cache invalidation if needed.
+   */
+  recomputeDaySummaries: (dates: string[]) => void;
+
+  /**
    * Upsert a log entry for a given habit + date.
    * Uses deterministic id = `${habitId}_${date}` so there can only
    * ever be one entry per habit per day.
@@ -80,16 +96,21 @@ interface HabitState {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-// Inline helper — avoids a circular import with lib/dates
-const todayDateString = (): string => {
-  const d = new Date();
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-};
-
 const entryId = (habitId: string, date: string) => `${habitId}_${date}`;
+
+/** Dates whose derived day summary is affected by editing this habit on this date. */
+function getAffectedDatesForEntryEdit(habit: Habit | undefined, date: string): string[] {
+  if (!habit) return [date];
+  if (habit.frequency === 'monthly') {
+    const { start, end } = getMonthRange(date);
+    return datesInRange(start, end);
+  }
+  if (habit.frequency === 'weekly') {
+    const { start, end } = getWeekRange(date);
+    return datesInRange(start, end);
+  }
+  return [date];
+}
 
 // Monotonically-increasing counter ensures unique IDs even when Date.now()
 // returns the same value for multiple calls within the same millisecond
@@ -106,13 +127,13 @@ export const useHabitStore = create<HabitState>()(
       habits: [],
       entries: [],
 
-      selectedDate: todayDateString(),
+      selectedDate: getTodayNormalized(),
       setSelectedDate: (date) => set({ selectedDate: date }),
 
       // ── addHabit ────────────────────────────────────────────────────────────
       addHabit: (draft) => {
         const id = uniqueId();
-        const today = todayDateString();
+        const today = getTodayNormalized();
         const activeCount = get().habits.filter(h => h.archivedAt === null).length;
 
         const newHabit: Habit = {
@@ -137,7 +158,7 @@ export const useHabitStore = create<HabitState>()(
       archiveHabit: (id) =>
         set(s => ({
           habits: s.habits.map(h =>
-            h.id === id ? { ...h, archivedAt: todayDateString() } : h,
+            h.id === id ? { ...h, archivedAt: getTodayNormalized() } : h,
           ),
         })),
 
@@ -169,32 +190,48 @@ export const useHabitStore = create<HabitState>()(
           }),
         })),
 
-      // ── logEntry ────────────────────────────────────────────────────────────
-      logEntry: (habitId, date, value) => {
-        const id = entryId(habitId, date);
+      // ── upsertEntry ─────────────────────────────────────────────────────────
+      upsertEntry: (habitId, date, value) => {
+        const normalized = normalizeDate(date);
+        const id = entryId(habitId, normalized);
         const entry: HabitEntry = {
           id,
           habitId,
-          date,
+          date: normalized,
           value,
           loggedAt: new Date().toISOString(),
         };
-        // Remove any existing entry for this habit+date and push the new one
         set(s => ({
           entries: [...s.entries.filter(e => e.id !== id), entry],
         }));
+        const habit = get().habits.find(h => h.id === habitId);
+        const affected = getAffectedDatesForEntryEdit(habit, normalized);
+        get().recomputeDaySummaries(affected);
+      },
+
+      // ── recomputeDaySummaries ───────────────────────────────────────────────
+      recomputeDaySummaries: (_dates) => {
+        // Derived values (daily score, completion, rings) are computed on read
+        // from entries. State update from upsertEntry already triggers re-renders.
+        // Use this hook for future cache invalidation if we add a summary cache.
+      },
+
+      // ── logEntry ────────────────────────────────────────────────────────────
+      logEntry: (habitId, date, value) => {
+        get().upsertEntry(habitId, date, value);
       },
 
       // ── incrementEntry ──────────────────────────────────────────────────────
       incrementEntry: (habitId, date, step = 1) => {
-        const id = entryId(habitId, date);
+        const d = normalizeDate(date);
+        const id = entryId(habitId, d);
         const existing = get().entries.find(e => e.id === id);
         const newValue = (existing?.value ?? 0) + step;
 
         const entry: HabitEntry = {
           id,
           habitId,
-          date,
+          date: d,
           value: newValue,
           loggedAt: new Date().toISOString(),
         };
@@ -205,7 +242,8 @@ export const useHabitStore = create<HabitState>()(
 
       // ── decrementEntry ──────────────────────────────────────────────────────
       decrementEntry: (habitId, date, step = 1) => {
-        const id = entryId(habitId, date);
+        const d = normalizeDate(date);
+        const id = entryId(habitId, d);
         const existing = get().entries.find(e => e.id === id);
         const newValue = Math.max(0, (existing?.value ?? 0) - step);
 
@@ -216,7 +254,7 @@ export const useHabitStore = create<HabitState>()(
           const entry: HabitEntry = {
             id,
             habitId,
-            date,
+            date: d,
             value: newValue,
             loggedAt: new Date().toISOString(),
           };
@@ -228,7 +266,8 @@ export const useHabitStore = create<HabitState>()(
 
       // ── deleteEntry ─────────────────────────────────────────────────────────
       deleteEntry: (habitId, date) => {
-        const id = entryId(habitId, date);
+        const d = normalizeDate(date);
+        const id = entryId(habitId, d);
         set(s => ({ entries: s.entries.filter(e => e.id !== id) }));
       },
     }),
@@ -236,6 +275,20 @@ export const useHabitStore = create<HabitState>()(
     {
       name: 'fovere-habits',
       storage: createJSONStorage(() => appStorage),
+
+      // Do not persist selectedDate: app always opens on today.
+      partialize: (state) => ({
+        _schemaVersion: state._schemaVersion,
+        habits: state.habits,
+        entries: state.entries,
+      }),
+
+      // Restore habits/entries from storage but always set selectedDate to today.
+      merge: (persisted, current) => ({
+        ...current,
+        ...(persisted as object),
+        selectedDate: getTodayNormalized(),
+      }),
 
       // Runs on EVERY rehydration (not just schema upgrades).
       // Coerces any numeric fields that stale AsyncStorage data might have

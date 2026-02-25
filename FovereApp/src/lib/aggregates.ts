@@ -3,7 +3,8 @@ import { getWeekDates, datesInRange } from './dates';
 
 // ─── Entry lookup ─────────────────────────────────────────────────────────────
 
-const entryValue = (entries: HabitEntry[], habitId: string, date: string): number =>
+/** Value logged for a single habit on a single date (0 if no entry). */
+export const entryValue = (entries: HabitEntry[], habitId: string, date: string): number =>
   entries.find(e => e.id === `${habitId}_${date}`)?.value ?? 0;
 
 // ─── Habit-level value for a given date/period ────────────────────────────────

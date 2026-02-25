@@ -5,7 +5,8 @@ import Svg, { Circle } from 'react-native-svg';
 import { ChevronLeft, ChevronRight, Flame, CalendarCheck } from 'lucide-react-native';
 import { useHabitStore } from '@/store';
 import { today, datesInRange, addDays, toLocalDateString } from '@/lib/dates';
-import { dailyCompletion, getHabitCurrentValue } from '@/lib/aggregates';
+import { getDaySummary } from '@/lib/daySummary';
+import { getHabitCurrentValue } from '@/lib/aggregates';
 import { getProgressColor } from '@/lib/progressColors';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -69,7 +70,7 @@ export default function CalendarScreen() {
     const to     = isoDate(y, m, lastD);
     const dates  = datesInRange(from, todayStr < to ? todayStr : to);
     if (dates.length === 0) return { pct: 0, completed: 0, total: 0 };
-    const scores    = dates.map(d => dailyCompletion(habits, entries, d));
+    const scores    = dates.map(d => getDaySummary(habits, entries, d).completionPct);
     const completed = scores.filter(v => v === 100).length;
     const pct       = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
     return { pct, completed, total: dates.length };
@@ -92,7 +93,7 @@ export default function CalendarScreen() {
       return {
         label:      labels[i],
         dateStr,
-        completion: dateStr <= todayStr ? dailyCompletion(habits, entries, dateStr) : 0,
+        completion: dateStr <= todayStr ? getDaySummary(habits, entries, dateStr).completionPct : 0,
         isFuture:   dateStr > todayStr,
         isToday:    dateStr === todayStr,
       };
@@ -123,9 +124,9 @@ export default function CalendarScreen() {
     let streak = 0;
     let cursor = todayStr;
     // Grace: if today isn't 100% done yet, don't break the streak
-    if (dailyCompletion(habits, entries, cursor) < 100) cursor = addDays(cursor, -1);
+    if (getDaySummary(habits, entries, cursor).completionPct < 100) cursor = addDays(cursor, -1);
     while (cursor >= '2020-01-01') {
-      if (dailyCompletion(habits, entries, cursor) === 100) {
+      if (getDaySummary(habits, entries, cursor).completionPct === 100) {
         streak++;
         cursor = addDays(cursor, -1);
       } else break;
@@ -268,7 +269,7 @@ export default function CalendarScreen() {
                   if (!dateStr) return <View key={`e-${idx}`} style={s.calCell} />;
                   const isToday  = dateStr === todayStr;
                   const isFuture = dateStr > todayStr;
-                  const pct      = isFuture ? 0 : dailyCompletion(habits, entries, dateStr);
+                  const pct      = isFuture ? 0 : getDaySummary(habits, entries, dateStr).completionPct;
                   const color    = getProgressColor(pct);
                   const r = 14;
                   const circ = 2 * Math.PI * r;
