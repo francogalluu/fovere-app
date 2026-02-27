@@ -3,7 +3,7 @@ import {
   View, Text, ScrollView, Pressable, StyleSheet, Animated as RNAnimated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Svg, { Circle, Line } from 'react-native-svg';
+import Svg, { Line } from 'react-native-svg';
 import { Flame, CalendarCheck } from 'lucide-react-native';
 import { useHabitStore } from '@/store';
 import {
@@ -26,6 +26,7 @@ import {
 import { getProgressColor } from '@/lib/progressColors';
 import type { Habit, HabitEntry } from '@/types/habit';
 import { BarChartWithTooltip, type ChartBar } from '@/components/charts/BarChartWithTooltip';
+import { ScoreRing } from '@/components/ScoreRing';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -361,7 +362,16 @@ export default function AnalyticsScreen() {
             <Text style={s.completionTitle}>{completionTitle}</Text>
             <Text style={s.completionSub}>{completionText}{'\n'}completed</Text>
           </View>
-          <CompletionRing pct={completionPct} />
+          <View style={s.completionRingWrap}>
+            <ScoreRing
+              value={completionPct}
+              size={130}
+              strokeWidth={14}
+              radius={50}
+              animationSlot="analytics"
+              labelStyle={s.ringPct}
+            />
+          </View>
         </View>
 
         {/* ── Bar chart ─────────────────────────────────────────────── */}
@@ -528,29 +538,6 @@ function Pill({
   );
 }
 
-const CR = 50;
-const CC = 2 * Math.PI * CR;
-
-function CompletionRing({ pct }: { pct: number }) {
-  const color  = getProgressColor(pct);
-  const offset = CC * (1 - pct / 100);
-  return (
-    <View style={{ width: 130, height: 130, flexShrink: 0 }}>
-      <Svg width={130} height={130} viewBox="0 0 130 130"
-        style={{ transform: [{ rotate: '-90deg' }] }}>
-        <Circle cx={65} cy={65} r={CR} fill="none" stroke="#E5E5E7" strokeWidth={14} />
-        <Circle cx={65} cy={65} r={CR} fill="none" stroke={color} strokeWidth={14}
-          strokeDasharray={CC} strokeDashoffset={offset} strokeLinecap="round" />
-      </Svg>
-      <View style={StyleSheet.absoluteFillObject}>
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-          <Text style={s.ringPct}>{pct}%</Text>
-        </View>
-      </View>
-    </View>
-  );
-}
-
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
@@ -603,7 +590,12 @@ const s = StyleSheet.create({
     fontSize: 22, fontWeight: '700', color: '#000', marginBottom: 6, letterSpacing: -0.4,
   },
   completionSub: { fontSize: 17, color: '#8E8E93', lineHeight: 22 },
-  ringPct: { fontSize: 30, fontWeight: '700', color: '#000', letterSpacing: -0.9 },
+  completionRingWrap: {
+    width: 130,
+    height: 130,
+    flexShrink: 0,
+  },
+  ringPct: { fontSize: 28, fontWeight: '700', color: '#000', letterSpacing: -0.8 },
 
   // Bar chart
   sectionTitle: { fontSize: 20, fontWeight: '600', color: '#1A1A1A', marginBottom: 16 },

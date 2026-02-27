@@ -4,6 +4,7 @@ import Svg, { Circle } from 'react-native-svg';
 import { Check, ChevronRight } from 'lucide-react-native';
 import { getProgressColor, PROGRESS_COLORS } from '@/lib/progressColors';
 import { C } from '@/lib/tokens';
+import { ScoreRing } from '@/components/ScoreRing';
 import type { Habit } from '@/types/habit';
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -26,12 +27,6 @@ const ICON_WRAP = 56; // outer size including ring overflow
 const ICON_INNER = 48;
 const ICON_R = 26;
 const ICON_CIRC = 2 * Math.PI * ICON_R;
-
-// ─── Status ring constants (right-side progress / completion indicator) ───────
-
-const RING_SIZE = 48;
-const RING_R = 20;
-const RING_CIRC = 2 * Math.PI * RING_R;
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
@@ -56,66 +51,6 @@ function IconArc({ pct, color }: { pct: number; color: string }) {
         strokeLinecap="round" opacity={0.4}
       />
     </Svg>
-  );
-}
-
-/**
- * Right-side status ring — purely visual, no interactive controls.
- *
- * Three states (matching web reference HabitCard exactly):
- *   completed   → full green ring + ✓ check
- *   in-progress → partial ring + "XX%" label
- *   0%          → track-only ring (empty)
- */
-function ProgressRing({
-  pct,
-  isCompleted,
-  progressColor,
-}: {
-  pct: number;
-  isCompleted: boolean;
-  progressColor: string;
-}) {
-  const offset = RING_CIRC * (1 - pct / 100);
-  const ringColor = isCompleted ? PROGRESS_COLORS.HIGH : progressColor;
-
-  return (
-    <View style={{ width: RING_SIZE, height: RING_SIZE }}>
-      <Svg
-        width={RING_SIZE}
-        height={RING_SIZE}
-        viewBox={`0 0 ${RING_SIZE} ${RING_SIZE}`}
-        style={{ transform: [{ rotate: '-90deg' }] }}
-      >
-        {/* Track */}
-        <Circle
-          cx={RING_SIZE / 2} cy={RING_SIZE / 2} r={RING_R}
-          fill="none" stroke={C.ring} strokeWidth={3}
-        />
-        {/* Progress arc — only when pct > 0 */}
-        {pct > 0 && (
-          <Circle
-            cx={RING_SIZE / 2} cy={RING_SIZE / 2} r={RING_R}
-            fill="none" stroke={ringColor} strokeWidth={3}
-            strokeDasharray={RING_CIRC} strokeDashoffset={offset}
-            strokeLinecap="round"
-          />
-        )}
-      </Svg>
-
-      {/* Center content */}
-      <View style={StyleSheet.absoluteFillObject}>
-        <View style={s.ringCenter}>
-          {isCompleted ? (
-            <Check size={18} color={PROGRESS_COLORS.HIGH} strokeWidth={3} />
-          ) : pct > 0 ? (
-            <Text style={[s.ringPct, { color: progressColor }]}>
-              {Math.round(pct)}%
-            </Text>
-          ) : null}
-        </View>
-      </View>
-    </View>
   );
 }
 
@@ -175,10 +110,19 @@ export function HabitCard({
 
       {/* ── Progress ring (right side) ─────────────────────────────────── */}
       {/* Break habits: never show green checkmark; ring is a danger meter */}
-      <ProgressRing
-        pct={pct}
-        isCompleted={!isBreak && isCompleted}
-        progressColor={progressColor}
+      <ScoreRing
+        value={pct}
+        size={48}
+        strokeWidth={3}
+        radius={20}
+        strokeColor={!isBreak && isCompleted ? PROGRESS_COLORS.HIGH : progressColor}
+        renderCenter={(displayPercent) =>
+          !isBreak && isCompleted ? (
+            <Check size={18} color={PROGRESS_COLORS.HIGH} strokeWidth={3} />
+          ) : pct > 0 ? (
+            <Text style={[s.ringPct, { color: progressColor }]}>{displayPercent}%</Text>
+          ) : null
+        }
       />
 
       {/* ── Chevron ───────────────────────────────────────────────────── */}

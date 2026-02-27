@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback, useEffect, useRef } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -39,26 +39,11 @@ const SAMPLE_HABITS: Array<Omit<Habit, 'id' | 'createdAt' | 'archivedAt' | 'sort
   { name: 'Yoga Class',   icon: '🧘', kind: 'numeric',  frequency: 'weekly', target: 3,  unit: 'times' },
 ];
 
-// Session-scoped: resets on app restart. Used for one-time Daily Score animation on Home.
-let hasAnimatedHomeScoreThisSession = false;
-
 // ─── HomeScreen ───────────────────────────────────────────────────────────────
 
 export default function HomeScreen() {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const haptic = Boolean(useSettingsStore(s => s.hapticFeedback));
-  const [shouldAnimateScore, setShouldAnimateScore] = React.useState(() => !hasAnimatedHomeScoreThisSession);
-  const hasStartedAnimation = useRef(false);
-
-  useEffect(() => {
-    if (!shouldAnimateScore || hasStartedAnimation.current) return;
-    hasStartedAnimation.current = true;
-    const t = setTimeout(() => {
-      hasAnimatedHomeScoreThisSession = true;
-      setShouldAnimateScore(false);
-    }, 600); // after ring animation (550ms) + small buffer
-    return () => clearTimeout(t);
-  }, [shouldAnimateScore]);
 
   // ── Store slices — each selector returns a single stable value ──────────────
   const rawHabits       = useHabitStore(s => s.habits);
@@ -226,7 +211,6 @@ export default function HomeScreen() {
             completed={completed}
             total={total}
             overLimit={overLimitCount}
-            animateFromZero={shouldAnimateScore}
           />
         </View>
 

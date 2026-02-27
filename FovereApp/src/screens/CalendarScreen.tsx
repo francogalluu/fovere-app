@@ -9,6 +9,7 @@ import { getDaySummary } from '@/lib/daySummary';
 import { getHabitCurrentValue, dailyCompletedCount } from '@/lib/aggregates';
 import { getProgressColor } from '@/lib/progressColors';
 import { BarChartWithTooltip, type ChartBar } from '@/components/charts/BarChartWithTooltip';
+import { ScoreRing } from '@/components/ScoreRing';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -352,6 +353,7 @@ export default function CalendarScreen() {
               title="Monthly completion"
               subtitle={`${monthStats.completed} of ${monthStats.total} days\ncompleted`}
               pct={monthStats.pct}
+              animationSlot="calendar-monthly"
             />
             <StreakCard streak={currentStreak} daysCompleted={monthStats.completed} />
           </>
@@ -372,6 +374,7 @@ export default function CalendarScreen() {
               title="Weekly completion"
               subtitle={`${weekStats.completed} of ${weekStats.total} days\ncompleted`}
               pct={weekStats.pct}
+              animationSlot="calendar-weekly"
             />
             <StreakCard streak={currentStreak} daysCompleted={weekStats.completed} />
           </>
@@ -411,34 +414,27 @@ export default function CalendarScreen() {
 
 // ─── Shared cards ─────────────────────────────────────────────────────────────
 
-const STAT_R    = 50;
-const STAT_CIRC = 2 * Math.PI * STAT_R;
-
 function CompletionRingCard({
-  title, subtitle, pct,
+  title, subtitle, pct, animationSlot = 'calendar',
 }: {
-  title: string; subtitle: string; pct: number;
+  title: string; subtitle: string; pct: number; animationSlot?: string;
 }) {
-  const color  = getProgressColor(pct);
-  const offset = STAT_CIRC * (1 - pct / 100);
   return (
     <View style={s.completionCard}>
       <View style={{ flex: 1 }}>
         <Text style={s.completionTitle}>{title}</Text>
         <Text style={s.completionSub}>{subtitle}</Text>
       </View>
-      <View style={{ width: 130, height: 130 }}>
-        <Svg width={130} height={130} viewBox="0 0 130 130"
-          style={{ transform: [{ rotate: '-90deg' }] }}>
-          <Circle cx={65} cy={65} r={STAT_R} fill="none" stroke="#E5E5E7" strokeWidth={14} />
-          <Circle cx={65} cy={65} r={STAT_R} fill="none" stroke={color} strokeWidth={14}
-            strokeDasharray={STAT_CIRC} strokeDashoffset={offset} strokeLinecap="round" />
-        </Svg>
-        <View style={StyleSheet.absoluteFillObject}>
-          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-            <Text style={s.completionPct}>{pct}%</Text>
-          </View>
-        </View>
+      <View style={s.completionRingWrap}>
+        <ScoreRing
+          key={animationSlot}
+          value={pct}
+          size={130}
+          strokeWidth={14}
+          radius={50}
+          animationSlot={animationSlot}
+          labelStyle={s.completionPct}
+        />
       </View>
     </View>
   );
@@ -531,8 +527,13 @@ const s = StyleSheet.create({
     fontSize: 22, fontWeight: '700', color: '#000', marginBottom: 6, letterSpacing: -0.4,
   },
   completionSub: { fontSize: 17, color: '#8E8E93', lineHeight: 22 },
+  completionRingWrap: {
+    width: 130,
+    height: 130,
+    flexShrink: 0,
+  },
   completionPct: {
-    fontSize: 30, fontWeight: '700', color: '#000', letterSpacing: -0.9,
+    fontSize: 28, fontWeight: '700', color: '#000', letterSpacing: -0.8,
   },
 
   // Streak card

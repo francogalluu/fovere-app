@@ -8,7 +8,6 @@ import {
   StyleSheet,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Svg, { Circle } from 'react-native-svg';
 import { Minus, Plus } from 'lucide-react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '@/navigation/types';
@@ -16,12 +15,9 @@ import { useHabitStore } from '@/store';
 import { today } from '@/lib/dates';
 import { getHabitCurrentValue, isHabitCompleted } from '@/lib/aggregates';
 import { getProgressColor } from '@/lib/progressColors';
+import { ScoreRing } from '@/components/ScoreRing';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'HabitDetail'>;
-
-const RING = 220;
-const RING_R = 80;
-const RING_CIRC = 2 * Math.PI * RING_R;
 
 export default function HabitDetailScreen({ route, navigation }: Props) {
   const { id } = route.params;
@@ -49,7 +45,7 @@ export default function HabitDetailScreen({ route, navigation }: Props) {
   const isBreak           = habit?.goalType === 'break';
   const overLimit         = isBreak && currentValue > (habit?.target ?? 0);
   const progressPct       = habit ? Math.min((currentValue / habit.target) * 100, 100) : 0;
-  const strokeDashoffset  = RING_CIRC * (1 - progressPct / 100);
+  const ringStrokeColor   = overLimit ? '#FF3B30' : completed ? '#008080' : getProgressColor(progressPct);
 
   // Wire the navigation header title and Edit button
   useLayoutEffect(() => {
@@ -125,34 +121,13 @@ export default function HabitDetailScreen({ route, navigation }: Props) {
 
         {/* ── Progress ring ─────────────────────────────────────────────── */}
         <View style={s.ringSection}>
-          <View style={{ width: RING, height: RING }}>
-            <Svg
-              width={RING}
-              height={RING}
-              viewBox={`0 0 ${RING} ${RING}`}
-              style={{ transform: [{ rotate: '-90deg' }] }}
-            >
-              <Circle
-                cx={RING / 2} cy={RING / 2} r={RING_R}
-                fill="none" stroke="#E5E5E5" strokeWidth={12}
-              />
-              <Circle
-                cx={RING / 2} cy={RING / 2} r={RING_R}
-                fill="none"
-                stroke={
-                  overLimit    ? '#FF3B30' :
-                  isBreak      ? getProgressColor(progressPct) :
-                  completed    ? '#008080' :
-                                 getProgressColor(progressPct)
-                }
-                strokeWidth={12}
-                strokeDasharray={RING_CIRC}
-                strokeDashoffset={strokeDashoffset}
-                strokeLinecap="round"
-              />
-            </Svg>
-            {/* Center text */}
-            <View style={StyleSheet.absoluteFillObject}>
+          <ScoreRing
+            value={progressPct}
+            size={220}
+            strokeWidth={12}
+            radius={80}
+            strokeColor={ringStrokeColor}
+            renderCenter={() => (
               <View style={s.ringCenter}>
                 {habit.kind === 'boolean' ? (
                   <Text style={[s.ringBoolMark, { color: completed ? '#008080' : '#C7C7CC' }]}>
@@ -168,8 +143,8 @@ export default function HabitDetailScreen({ route, navigation }: Props) {
                   <Text style={s.ringUnit}>{habit.unit}</Text>
                 ) : null}
               </View>
-            </View>
-          </View>
+            )}
+          />
           <Text style={s.goalLabel}>{goalLabel}</Text>
           {overLimit && (
             <Text style={s.overLimitBadge}>Over limit — {currentValue - habit.target} too many</Text>
