@@ -4,15 +4,21 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
 import { ChevronLeft, ChevronRight, Flame, CalendarCheck } from 'lucide-react-native';
 import { useHabitStore } from '@/store';
-import { today, datesInRange, addDays, toLocalDateString } from '@/lib/dates';
+import { today, datesInRange, addDays, toLocalDateString, SHORT_DAY_LABELS, getDayOfWeekIndex } from '@/lib/dates';
 import { getDaySummary } from '@/lib/daySummary';
-import { getHabitCurrentValue } from '@/lib/aggregates';
+import { getHabitCurrentValue, dailyCompletedCount } from '@/lib/aggregates';
 import { getProgressColor } from '@/lib/progressColors';
+import { BarChartWithTooltip, type ChartBar } from '@/components/charts/BarChartWithTooltip';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function isoDate(y: number, m: number, d: number): string {
   return `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+}
+
+function formatMonthDay(dateKey: string): string {
+  const d = new Date(dateKey + 'T00:00:00');
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -83,6 +89,31 @@ export default function CalendarScreen() {
     d.setDate(d.getDate() + 6);
     return d;
   }, [weekStart]);
+
+  const weekStartStr = toLocalDateString(weekStart);
+
+  const weekChartBars = useMemo((): ChartBar[] => {
+    const datesSunFirst = [
+      addDays(weekStartStr, -1),
+      weekStartStr,
+      addDays(weekStartStr, 1),
+      addDays(weekStartStr, 2),
+      addDays(weekStartStr, 3),
+      addDays(weekStartStr, 4),
+      addDays(weekStartStr, 5),
+    ];
+    return datesSunFirst.map((dateStr, i) => {
+      const pct = dateStr <= todayStr ? getDaySummary(habits, entries, dateStr).completionPct : 0;
+      const { completed, total } = dailyCompletedCount(habits, entries, dateStr);
+      return {
+        key: dateStr,
+        label: SHORT_DAY_LABELS[i],
+        percent: pct,
+        completed,
+        target: total,
+      };
+    });
+  }, [weekStartStr, habits, entries, todayStr]);
 
   const weekDays = useMemo(() => {
     const labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -195,7 +226,11 @@ export default function CalendarScreen() {
           ))}
         </View>
 
-        {/* Period navigation */}
+      </View>
+
+      <ScrollView style={s.scroll} contentContainerStyle={s.scrollContent} showsVerticalScrollIndicator={false}>
+
+        {/* Period navigation — inside ScrollView so tooltip can overlap it */}
         <View style={s.periodNav}>
           <Pressable
             onPress={() => {
@@ -251,9 +286,6 @@ export default function CalendarScreen() {
             />
           </Pressable>
         </View>
-      </View>
-
-      <ScrollView style={s.scroll} contentContainerStyle={s.scrollContent} showsVerticalScrollIndicator={false}>
 
         {view === 'monthly' ? (
           <>
@@ -325,30 +357,15 @@ export default function CalendarScreen() {
           </>
         ) : (
           <>
-            {/* ── Weekly bar chart ───────────────────────────────────── */}
+            {/* ── Weekly bar chart (shared with Analytics) ───────────────────── */}
             <View style={s.barCard}>
-              <View style={s.barChart}>
-                {weekDays.map((day, i) => {
-                  const color = day.isFuture ? '#E8E8ED' : getProgressColor(day.completion);
-                  return (
-                    <View key={i} style={s.barCol}>
-                      <View style={s.barWrapper}>
-                        {day.completion > 0 && !day.isFuture ? (
-                          <>
-                            <Text style={[s.barPct, { color }]}>{day.completion}%</Text>
-                            <View style={[s.bar, { height: `${day.completion}%` as any, backgroundColor: color }]} />
-                          </>
-                        ) : (
-                          <View style={[s.barFloor, { backgroundColor: color }]} />
-                        )}
-                      </View>
-                      <Text style={[s.barLabel, day.isToday && s.barLabelToday]}>
-                        {day.label}
-                      </Text>
-                    </View>
-                  );
-                })}
-              </View>
+              <BarChartWithTooltip
+                bars={weekChartBars}
+                chartAreaHeight={220}
+                getTooltipDateLabel={(bar) => formatMonthDay(bar.key)}
+                todayIndex={getDayOfWeekIndex(todayStr)}
+                emptyMessage="No data for this week"
+              />
             </View>
 
             <CompletionRingCard
@@ -477,7 +494,7 @@ const s = StyleSheet.create({
   segBtnTextActive: { color: '#008080' },
 
   // Period navigation
-  periodNav:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  periodNav:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, paddingHorizontal: 8 },
   navBtn:      { padding: 8 },
   periodLabel: { fontSize: 17, fontWeight: '600', color: '#1A1A1A' },
 
@@ -561,18 +578,12 @@ const s = StyleSheet.create({
   breakdownName:  { flex: 1, fontSize: 15, fontWeight: '500', color: '#1A1A1A' },
   breakdownValue: { fontSize: 15, color: '#666' },
 
-  // Weekly bar chart
+  // Weekly bar chart (shared component; barCard wraps it)
   barCard: {
     backgroundColor: '#fff', borderRadius: 20, padding: 24, marginBottom: 12,
+    overflow: 'visible',
+    zIndex: 10,
   },
-  barChart:  { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', height: 200 },
-  barCol:    { flex: 1, alignItems: 'center', justifyContent: 'flex-end', gap: 8 },
-  barWrapper:{ flex: 1, width: '100%', justifyContent: 'flex-end', alignItems: 'center', position: 'relative' },
-  barPct:    { fontSize: 13, textAlign: 'center', marginBottom: 4 },
-  bar:       { width: '100%', borderRadius: 8 },
-  barFloor:  { width: '100%', height: 4, borderRadius: 4 },
-  barLabel:  { fontSize: 12, color: '#999' },
-  barLabelToday: { color: '#34C759', fontWeight: '600' },
 
   // Empty state
   emptyCard: {
