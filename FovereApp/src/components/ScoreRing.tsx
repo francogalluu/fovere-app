@@ -36,6 +36,8 @@ export interface ScoreRingProps {
   renderCenter?: (displayPercent: number) => React.ReactNode;
   /** Text style for default center "%" label (when renderCenter is not used). */
   labelStyle?: object;
+  /** Optional extra style when value is 100% (e.g. smaller fontSize so "100%" doesn’t touch the ring). */
+  labelStyleWhenFull?: object;
 }
 
 export function ScoreRing({
@@ -48,6 +50,7 @@ export function ScoreRing({
   animationSlot = DEFAULT_SLOT,
   renderCenter,
   labelStyle,
+  labelStyleWhenFull,
 }: ScoreRingProps) {
   const target = Math.max(0, Math.min(100, Math.round(value)));
   const radius = radiusProp ?? size / 2 - strokeWidth;
@@ -131,7 +134,12 @@ export function ScoreRing({
           {renderCenter
             ? renderCenter(displayPercent)
             : (
-              <Text style={[styles.label, labelStyle, { color: displayPercent > 0 ? '#000000' : '#8E8E93' }]}>
+              <Text style={[
+                styles.label,
+                labelStyle,
+                displayPercent === 100 && labelStyleWhenFull,
+                { color: displayPercent > 0 ? '#000000' : '#8E8E93' },
+              ]}>
                 {displayPercent}%
               </Text>
             )}

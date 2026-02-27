@@ -434,6 +434,7 @@ function CompletionRingCard({
           radius={50}
           animationSlot={animationSlot}
           labelStyle={s.completionPct}
+          labelStyleWhenFull={s.completionPctFull}
         />
       </View>
     </View>
@@ -534,6 +535,9 @@ const s = StyleSheet.create({
   },
   completionPct: {
     fontSize: 28, fontWeight: '700', color: '#000', letterSpacing: -0.8,
+  },
+  completionPctFull: {
+    fontSize: 22, letterSpacing: -0.5,
   },
 
   // Streak card

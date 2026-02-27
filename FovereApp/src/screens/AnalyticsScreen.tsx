@@ -370,6 +370,7 @@ export default function AnalyticsScreen() {
               radius={50}
               animationSlot="analytics"
               labelStyle={s.ringPct}
+              labelStyleWhenFull={s.ringPctFull}
             />
           </View>
         </View>
@@ -411,6 +412,12 @@ export default function AnalyticsScreen() {
                     : undefined
                 }
                 barChartRowMonth={timeRange === 'month'}
+                xAxisTickIndices={xAxisTickIndices}
+                getAxisLabel={timeRange === 'year' ? (bar) => {
+                  const [, mm] = bar.key.split('-');
+                  const m = parseInt(mm, 10);
+                  return MONTH_INITIALS[m - 1] ?? bar.label;
+                } : undefined}
               />
               {timeRange === 'month' && chartBars.length >= 2 && (
                 <Text style={s.barChartRangeCaption}>
@@ -596,6 +603,7 @@ const s = StyleSheet.create({
     flexShrink: 0,
   },
   ringPct: { fontSize: 28, fontWeight: '700', color: '#000', letterSpacing: -0.8 },
+  ringPctFull: { fontSize: 22, letterSpacing: -0.5 },
 
   // Bar chart
   sectionTitle: { fontSize: 20, fontWeight: '600', color: '#1A1A1A', marginBottom: 16 },

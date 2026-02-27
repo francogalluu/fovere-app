@@ -246,6 +246,10 @@ export interface BarChartWithTooltipProps {
   emptyMessage?: string;
   renderTopContent?: (layout: { width: number; height: number }) => React.ReactNode;
   barChartRowMonth?: boolean;
+  /** Which bars show an x-axis label. If omitted, all bars show their label. */
+  xAxisTickIndices?: Set<number>;
+  /** Custom label for each bar (x-axis). If omitted, bar.label is used. */
+  getAxisLabel?: (bar: ChartBar, index: number) => string;
 }
 
 export function BarChartWithTooltip({
@@ -256,6 +260,8 @@ export function BarChartWithTooltip({
   emptyMessage = 'No data for this period',
   renderTopContent,
   barChartRowMonth = false,
+  xAxisTickIndices: xAxisTickIndicesProp,
+  getAxisLabel,
 }: BarChartWithTooltipProps) {
   const [pressedBarIndex, setPressedBarIndex] = useState<number | null>(null);
   const [chartLayout, setChartLayout] = useState({ width: 0, height: 0 });
@@ -296,7 +302,14 @@ export function BarChartWithTooltip({
   }, [pressedBarIndex, bars.length, barGeometry]);
 
   const hasChartData = bars.some(b => b.target > 0);
-  const xAxisTickIndices = React.useMemo(() => new Set(bars.map((_, i) => i)), [bars.length]);
+  const xAxisTickIndices = React.useMemo(
+    () => xAxisTickIndicesProp ?? new Set(bars.map((_, i) => i)),
+    [xAxisTickIndicesProp, bars.length],
+  );
+  const getBarAxisLabel = React.useCallback(
+    (bar: ChartBar, index: number) => (getAxisLabel ? getAxisLabel(bar, index) : bar.label),
+    [getAxisLabel],
+  );
 
   if (bars.length === 0) {
     return (
@@ -378,7 +391,7 @@ export function BarChartWithTooltip({
               bar={bar}
               index={i}
               chartAreaHeight={chartAreaHeight}
-              axisLabel={xAxisTickIndices.has(i) ? bar.label : null}
+              axisLabel={xAxisTickIndices.has(i) ? getBarAxisLabel(bar, i) : null}
               isHighlighted={pressedBarIndex === i}
               isToday={todayIndex !== null && todayIndex !== undefined && i === todayIndex}
               onPressIn={() => setPressedBarIndex(i)}
