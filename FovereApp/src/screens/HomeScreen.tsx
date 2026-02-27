@@ -14,7 +14,10 @@ import { Plus } from 'lucide-react-native';
 
 import { useHabitStore } from '@/store';
 import { useSettingsStore } from '@/store/settingsStore';
+import { getDaySummary } from '@/lib/daySummary';
 import {
+  dailyOnlyCompletedCount,
+  dailyOverLimitCount,
   getHabitCurrentValue,
   isHabitCompleted,
 } from '@/lib/aggregates';
@@ -69,30 +72,28 @@ export default function HomeScreen() {
   const completionByDate = useMemo(() => {
     const result: Record<string, number> = {};
     weekDates.forEach(d => {
-      const daily = habits.filter(h => h.frequency === 'daily');
-      const done = daily.filter(h => isHabitCompleted(h, entries, d)).length;
-      result[d] = daily.length === 0 ? 0 : Math.round((done / daily.length) * 100);
+      result[d] = getDaySummary(habits, entries, d).dailyOnlyCompletionPct;
     });
     return result;
   }, [habits, entries, weekDates]);
 
-  const { completed, total } = useMemo(() => {
-    const daily = habits.filter(h => h.frequency === 'daily');
-    return {
-      completed: daily.filter(h => isHabitCompleted(h, entries, selectedDate)).length,
-      total: daily.length,
-    };
-  }, [habits, entries, selectedDate]);
+  const { completed, total } = useMemo(
+    () => dailyOnlyCompletedCount(habits, entries, selectedDate),
+    [habits, entries, selectedDate],
+  );
 
   // Weekly build only (for Weekly Habits section header %)
   const weeklyBuildHabitsForProgress = useMemo(
     () => habits.filter(h => h.frequency === 'weekly' && h.goalType !== 'break'),
     [habits],
   );
-  const { completed: weeklyBuildCompleted, total: weeklyBuildTotal } = useMemo(() => ({
-    completed: weeklyBuildHabitsForProgress.filter(h => isHabitCompleted(h, entries, selectedDate)).length,
-    total: weeklyBuildHabitsForProgress.length,
-  }), [weeklyBuildHabitsForProgress, entries, selectedDate]);
+  const { completed: weeklyBuildCompleted, total: weeklyBuildTotal } = useMemo(() => {
+    const active = weeklyBuildHabitsForProgress.filter(h => h.createdAt <= selectedDate);
+    return {
+      completed: active.filter(h => isHabitCompleted(h, entries, selectedDate)).length,
+      total: active.length,
+    };
+  }, [weeklyBuildHabitsForProgress, entries, selectedDate]);
 
   const dailyBuildHabits  = useMemo(
     () => habits.filter(h => h.frequency === 'daily' && h.goalType !== 'break'),
@@ -116,12 +117,10 @@ export default function HomeScreen() {
     [dailyBreakHabits, weeklyBreakHabits],
   );
 
-  const overLimitCount = useMemo(() => {
-    return habits.filter(
-      h => h.frequency === 'daily' && h.goalType === 'break' &&
-           getHabitCurrentValue(h, entries, selectedDate) > h.target,
-    ).length;
-  }, [habits, entries, selectedDate]);
+  const overLimitCount = useMemo(
+    () => dailyOverLimitCount(habits, entries, selectedDate),
+    [habits, entries, selectedDate],
+  );
 
   const isReadOnly   = isFuture(selectedDate);
   const isToday      = selectedDate === today();
@@ -159,8 +158,10 @@ export default function HomeScreen() {
 
   const handleDateSelect = (date: string) => setSelectedDate(date);
 
-  const handleNavigateToDetail = (habitId: string) =>
+  const handleNavigateToDetail = (habitId: string) => {
+    if (isReadOnly) return;
     navigation.navigate('HabitDetail', { id: habitId, date: selectedDate });
+  };
 
   // ── Render helpers ───────────────────────────────────────────────────────────
 

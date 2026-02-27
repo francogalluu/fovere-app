@@ -109,6 +109,17 @@ export const datesInRange = (from: string, to: string): string[] => {
   return result;
 };
 
+/** Dates in range grouped by day-of-week (0=Sun .. 6=Sat). For "Last 30 Days" by-weekday charts. */
+export const datesInRangeGroupedByWeekday = (from: string, to: string): string[][] => {
+  const days = datesInRange(from, to);
+  const byDow: string[][] = [[], [], [], [], [], [], []];
+  for (const d of days) {
+    const dow = new Date(d + 'T00:00:00').getDay();
+    byDow[dow].push(d);
+  }
+  return byDow;
+};
+
 /**
  * Normalize a date to YYYY-MM-DD at midnight local.
  * Accepts YYYY-MM-DD string or Date; returns YYYY-MM-DD.

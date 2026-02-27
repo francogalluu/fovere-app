@@ -1,21 +1,19 @@
-import React, { useMemo, useState, useEffect, useRef } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import {
-  View, Text, ScrollView, Pressable, StyleSheet, Animated as RNAnimated,
+  View, Text, ScrollView, Pressable, StyleSheet,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Line } from 'react-native-svg';
 import { Flame, CalendarCheck } from 'lucide-react-native';
-import { useHabitStore } from '@/store';
 import {
   today,
   datesInRange,
   addDays,
   addMonths,
   getWeekDates,
-  getWeekRange,
-  getMonthRange,
   getDayOfWeekIndex,
   getLastNMonthRanges,
+  datesInRangeGroupedByWeekday,
   SHORT_DAY_LABELS,
 } from '@/lib/dates';
 import {
@@ -23,18 +21,20 @@ import {
   getHabitCurrentValue,
   isHabitCompleted,
 } from '@/lib/aggregates';
-import { getProgressColor } from '@/lib/progressColors';
 import type { Habit, HabitEntry } from '@/types/habit';
 import { BarChartWithTooltip, type ChartBar } from '@/components/charts/BarChartWithTooltip';
 import { ScoreRing } from '@/components/ScoreRing';
+import { useHabitLogs } from '@/hooks/useHabitLogs';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type TimeRange = 'day' | 'week' | 'month' | '6month' | 'year';
-export type ChartBucket = { key: string; label: string; start: string; end: string };
+export type ChartBucket = { key: string; label: string; start: string; end: string; dates?: string[] };
 export type { ChartBar };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+
+const WEEKDAY_LABELS_ANALYTICS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const;
 
 function getBuckets(range: TimeRange, endDate: string): ChartBucket[] {
   switch (range) {
@@ -46,7 +46,14 @@ function getBuckets(range: TimeRange, endDate: string): ChartBucket[] {
     }
     case 'month': {
       const start = addDays(endDate, -29);
-      return datesInRange(start, endDate).map(d => ({ key: d, label: d.split('-')[2], start: d, end: d }));
+      const byWeekday = datesInRangeGroupedByWeekday(start, endDate);
+      return byWeekday.map((dates, i) => ({
+        key: String(i),
+        label: WEEKDAY_LABELS_ANALYTICS[i],
+        start,
+        end: endDate,
+        dates,
+      }));
     }
     case '6month':
       return getLastNMonthRanges(endDate, 6).map(({ start, end, label, monthKey }) => ({ key: monthKey, label, start, end }));
@@ -55,10 +62,19 @@ function getBuckets(range: TimeRange, endDate: string): ChartBucket[] {
   }
 }
 
-function aggregateCompletions(habits: Habit[], entries: HabitEntry[], buckets: ChartBucket[], habitFilter: Habit | null): { completed: number; target: number }[] {
+/** All habits = current non-archived list; percentages from actual stored entries (no createdAt filter). */
+function aggregateCompletions(
+  habits: Habit[],
+  entries: HabitEntry[],
+  buckets: ChartBucket[],
+  habitFilter: Habit | null,
+): { completed: number; target: number; averagePercent?: number }[] {
   return buckets.map(bucket => {
-    const days = datesInRange(bucket.start, bucket.end);
-    let completed = 0, target = 0;
+    const days = bucket.dates ?? datesInRange(bucket.start, bucket.end);
+    let completed = 0;
+    let target = 0;
+    const dailyPcts: number[] = [];
+
     for (const d of days) {
       if (habitFilter) {
         if (habitFilter.createdAt > d) continue;
@@ -66,11 +82,20 @@ function aggregateCompletions(habits: Habit[], entries: HabitEntry[], buckets: C
         if (isHabitCompleted(habitFilter, entries, d)) completed += 1;
       } else {
         const active = habits.filter(h => h.archivedAt === null && h.createdAt <= d);
-        target += active.length;
-        completed += active.filter(h => isHabitCompleted(h, entries, d)).length;
+        const n = active.length;
+        const c = active.filter(h => isHabitCompleted(h, entries, d)).length;
+        target += n;
+        completed += c;
+        dailyPcts.push(n > 0 ? (c / n) * 100 : 0);
       }
     }
-    return { completed, target };
+
+    const avgPct =
+      bucket.dates && dailyPcts.length > 0
+        ? dailyPcts.reduce((a, b) => a + b, 0) / dailyPcts.length
+        : undefined;
+
+    return { completed, target, averagePercent: avgPct };
   });
 }
 
@@ -90,11 +115,16 @@ function buildChartBars(habits: Habit[], entries: HabitEntry[], range: TimeRange
   const buckets = getBuckets(range, endDate);
   const agg = aggregateCompletions(habits, entries, buckets, habitFilter);
   return buckets.map((b, i) => {
-    const raw = computePercent(agg[i].completed, agg[i].target);
+    const raw =
+      agg[i].averagePercent != null
+        ? agg[i].averagePercent
+        : computePercent(agg[i].completed, agg[i].target);
     return {
-      key: b.key, label: b.label,
+      key: b.key,
+      label: b.label,
       percent: safePercent(raw),
-      completed: agg[i].completed, target: agg[i].target,
+      completed: agg[i].completed,
+      target: agg[i].target,
     };
   });
 }
@@ -103,7 +133,7 @@ function getPeriodDates(range: TimeRange, todayStr: string): string[] {
   switch (range) {
     case 'day': return [todayStr];
     case 'week': return getWeekDates(todayStr).filter(d => d <= todayStr);
-    case 'month': return datesInRange(getMonthRange(todayStr).start, todayStr);
+    case 'month': return datesInRange(addDays(todayStr, -29), todayStr);
     case '6month': {
       const start = addMonths(todayStr, -5);
       const [y, m] = start.split('-').map(Number);
@@ -118,7 +148,7 @@ function getPeriodDates(range: TimeRange, todayStr: string): string[] {
 }
 
 function getPeriodLabel(range: TimeRange): string {
-  return { day: 'Today', week: 'This week', month: 'This month', '6month': 'Last 6 months', year: 'Last year' }[range];
+  return { day: 'Today', week: 'This week', month: 'Last 30 days', '6month': 'Last 6 months', year: 'Last year' }[range];
 }
 
 // ─── X-axis ticks and labels (Apple Health–style: sparse for month, single-letter for year) ───
@@ -135,16 +165,10 @@ function getXAxisTicks(range: TimeRange, bars: ChartBar[]): number[] {
   return [];
 }
 
-/** Format date key YYYY-MM-DD as "Feb 1" (locale short month + day). */
-function formatMonthDay(dateKey: string): string {
-  const d = new Date(dateKey + 'T00:00:00');
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-}
-
 /** Label text for the x-axis at this bucket. Single line, no wrap. */
 function formatXAxisLabel(range: TimeRange, bar: ChartBar, index: number): string {
   if (range === 'week') return WEEKDAY_LABELS[index] ?? bar.label;
-  if (range === 'month') return formatMonthDay(bar.key);
+  if (range === 'month') return WEEKDAY_LABELS_ANALYTICS[index] ?? bar.label;
   if (range === '6month') return bar.label;
   if (range === 'year') {
     const [, mm] = bar.key.split('-');
@@ -192,18 +216,7 @@ function computeHabitStreak(habit: Habit, entries: HabitEntry[], todayStr: strin
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function AnalyticsScreen() {
-  const rawHabits = useHabitStore(s => s.habits);
-  const entries   = useHabitStore(s => s.entries);
-
-  const habits = useMemo(() => {
-    const seen = new Set<string>();
-    return rawHabits.filter(h => {
-      if (h.archivedAt !== null || seen.has(h.id)) return false;
-      seen.add(h.id);
-      return true;
-    });
-  }, [rawHabits]);
-
+  const { habits, entries, focusKey } = useHabitLogs();
   const todayStr = today();
 
   const [selectedHabitId, setSelectedHabitId] = useState<string>('all');
@@ -233,21 +246,25 @@ export default function AnalyticsScreen() {
     if (habits.length === 0) return { completionPct: 0, completionText: '0 of 0 habits', completionTitle: getPeriodLabel(timeRange) };
     const scores   = periodDates.map(d => dailyCompletion(habits, entries, d));
     const pct      = Math.round(scores.reduce((a, b) => a + b, 0) / (scores.length || 1));
-    const totalPossible = periodDates.length * habits.length;
+    let totalPossible = 0;
+    for (const d of periodDates) {
+      totalPossible += habits.filter(h => h.archivedAt === null && h.createdAt <= d).length;
+    }
     let totalCompleted = 0;
     for (const d of periodDates) {
-      totalCompleted += habits.filter(h => isHabitCompleted(h, entries, d)).length;
+      const active = habits.filter(h => h.archivedAt === null && h.createdAt <= d);
+      totalCompleted += active.filter(h => isHabitCompleted(h, entries, d)).length;
     }
     return {
       completionPct:   pct,
       completionText:  `${totalCompleted} of ${totalPossible} habits`,
       completionTitle: getPeriodLabel(timeRange) + ' completion',
     };
-  }, [selectedHabit, habits, entries, periodDates, timeRange]);
+  }, [selectedHabit, habits, entries, periodDates, timeRange, focusKey]);
 
   const chartBars = useMemo(
     () => buildChartBars(habits, entries, timeRange, todayStr, selectedHabit ?? null),
-    [habits, entries, timeRange, todayStr, selectedHabit],
+    [habits, entries, timeRange, todayStr, selectedHabit, focusKey],
   );
 
   const totalCompleted = useMemo(
@@ -264,13 +281,13 @@ export default function AnalyticsScreen() {
 
   const habitStreak = useMemo(
     () => selectedHabit ? computeHabitStreak(selectedHabit, entries, todayStr) : null,
-    [selectedHabit, entries, todayStr],
+    [selectedHabit, entries, todayStr, focusKey],
   );
 
   const habitDaysCompleted = useMemo(() => {
     if (!selectedHabit) return null;
     return periodDates.filter(d => isHabitCompleted(selectedHabit, entries, d)).length;
-  }, [selectedHabit, entries, periodDates]);
+  }, [selectedHabit, entries, periodDates, focusKey]);
 
   // ── Heatmap (current month) ───────────────────────────────────────────────
 
@@ -306,7 +323,7 @@ export default function AnalyticsScreen() {
     const rows: { dateStr: string | null; color: string }[][] = [];
     for (let i = 0; i < cells.length; i += 7) rows.push(cells.slice(i, i + 7));
     return rows;
-  }, [todayStr, selectedHabit, habits, entries]);
+  }, [todayStr, selectedHabit, habits, entries, focusKey]);
 
   const heatmapMonthLabel = new Date(todayStr + 'T00:00:00').toLocaleDateString('en-US', { month: 'short' });
 
@@ -391,7 +408,7 @@ export default function AnalyticsScreen() {
                 chartAreaHeight={timeRange === 'month' ? 240 : 220}
                 getTooltipDateLabel={(bar, index) =>
                   timeRange === 'month'
-                    ? formatMonthDay(bar.key)
+                    ? (WEEKDAY_LABELS[index] ?? bar.label)
                     : timeRange === 'week'
                       ? (WEEKDAY_LABELS[index] ?? bar.label)
                       : bar.label
@@ -420,9 +437,7 @@ export default function AnalyticsScreen() {
                 } : undefined}
               />
               {timeRange === 'month' && chartBars.length >= 2 && (
-                <Text style={s.barChartRangeCaption}>
-                  {formatMonthDay(chartBars[0].key)} — {formatMonthDay(chartBars[chartBars.length - 1].key)}
-                </Text>
+                <Text style={s.barChartRangeCaption}>Last 30 days by weekday</Text>
               )}
             </>
           )}

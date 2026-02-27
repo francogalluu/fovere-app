@@ -73,14 +73,16 @@ export function HabitCard({
 
   return (
     <Pressable
-      onPress={onPress}
+      onPress={readOnly ? undefined : onPress}
+      disabled={readOnly}
       style={({ pressed }) => [
         s.card,
         isCompleted && s.cardCompleted,
-        pressed && { opacity: 0.85 },
+        !readOnly && pressed && { opacity: 0.85 },
       ]}
       accessibilityRole="button"
       accessibilityLabel={habit.name}
+      accessibilityState={{ disabled: readOnly }}
     >
       {/* ── Icon + decorative arc ──────────────────────────────────────── */}
       <View style={s.iconWrapper}>

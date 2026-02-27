@@ -12,7 +12,7 @@ import { Minus, Plus } from 'lucide-react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '@/navigation/types';
 import { useHabitStore } from '@/store';
-import { today } from '@/lib/dates';
+import { today, isFuture } from '@/lib/dates';
 import { getHabitCurrentValue, isHabitCompleted } from '@/lib/aggregates';
 import { getProgressColor, PROGRESS_COLORS } from '@/lib/progressColors';
 import { ScoreRing } from '@/components/ScoreRing';
@@ -23,6 +23,7 @@ export default function HabitDetailScreen({ route, navigation }: Props) {
   const { id, date: paramDate } = route.params;
   const todayStr = today();
   const viewDate = paramDate ?? todayStr;
+  const isViewingFuture = isFuture(viewDate);
 
   const habit          = useHabitStore(s => s.habits.find(h => h.id === id));
   const allEntries     = useHabitStore(s => s.entries);
@@ -71,22 +72,21 @@ export default function HabitDetailScreen({ route, navigation }: Props) {
   }, [habit, navigation, accentColor]);
 
   const handleToggle = useCallback(() => {
-    if (!habit) return;
+    if (!habit || isViewingFuture) return;
     if (completed) deleteEntry(habit.id, viewDate);
     else logEntry(habit.id, viewDate, 1);
-  }, [habit, completed, deleteEntry, logEntry, viewDate]);
+  }, [habit, completed, deleteEntry, logEntry, viewDate, isViewingFuture]);
 
   const handleIncrement = useCallback(() => {
-    if (!habit) return;
-    // Break habits allow logging beyond the limit to track actual usage
+    if (!habit || isViewingFuture) return;
     if (!isBreak && currentValue >= habit.target) return;
     incrementEntry(habit.id, viewDate);
-  }, [habit, isBreak, currentValue, incrementEntry, viewDate]);
+  }, [habit, isBreak, currentValue, incrementEntry, viewDate, isViewingFuture]);
 
   const handleDecrement = useCallback(() => {
-    if (!habit || currentValue <= 0) return;
+    if (!habit || currentValue <= 0 || isViewingFuture) return;
     decrementEntry(habit.id, viewDate);
-  }, [habit, currentValue, decrementEntry, viewDate]);
+  }, [habit, currentValue, decrementEntry, viewDate, isViewingFuture]);
 
   const handleDelete = () => {
     if (!habit) return;
@@ -162,15 +162,20 @@ export default function HabitDetailScreen({ route, navigation }: Props) {
         </View>
 
         {/* ── Controls ──────────────────────────────────────────────────── */}
+        {isViewingFuture && (
+          <Text style={s.futureDateNote}>You can't add progress for future dates.</Text>
+        )}
         {habit.kind === 'boolean' ? (
           <View style={s.boolRow}>
             <Pressable
-              onPress={handleToggle}
+              onPress={isViewingFuture ? undefined : handleToggle}
+              disabled={isViewingFuture}
               style={({ pressed }) => [
                 s.boolBtn,
                 { borderColor: accentColor },
                 completed && [s.boolBtnDone, { backgroundColor: accentColor }],
-                pressed && { opacity: 0.75 },
+                !isViewingFuture && pressed && { opacity: 0.75 },
+                isViewingFuture && s.ctrlBtnDisabled,
               ]}
             >
               <Text style={[s.boolBtnText, { color: accentColor }, completed && s.boolBtnTextDone]}>
@@ -181,9 +186,9 @@ export default function HabitDetailScreen({ route, navigation }: Props) {
         ) : (
           <View style={s.numRow}>
             <Pressable
-              onPress={handleDecrement}
-              disabled={currentValue === 0}
-              style={[s.ctrlBtn, currentValue === 0 && s.ctrlBtnDisabled]}
+              onPress={isViewingFuture ? undefined : handleDecrement}
+              disabled={currentValue === 0 || isViewingFuture}
+              style={[s.ctrlBtn, (currentValue === 0 || isViewingFuture) && s.ctrlBtnDisabled]}
             >
               <Minus size={24} color={accentColor} strokeWidth={2.5} />
             </Pressable>
@@ -191,12 +196,12 @@ export default function HabitDetailScreen({ route, navigation }: Props) {
             <Text style={s.numValue}>{currentValue}</Text>
 
             <Pressable
-              onPress={handleIncrement}
-              disabled={!isBreak && currentValue >= habit.target}
+              onPress={isViewingFuture ? undefined : handleIncrement}
+              disabled={(!isBreak && currentValue >= habit.target) || isViewingFuture}
               style={[
                 s.ctrlBtnPrimary,
                 { backgroundColor: accentColor, shadowColor: accentColor },
-                (!isBreak && currentValue >= habit.target) && s.ctrlBtnDisabled,
+                ((!isBreak && currentValue >= habit.target) || isViewingFuture) && s.ctrlBtnDisabled,
               ]}
             >
               <Plus size={24} color="#fff" strokeWidth={2.5} />
@@ -264,6 +269,9 @@ const s = StyleSheet.create({
   overLimitBadge: {
     fontSize: 14, fontWeight: '600', color: '#FF3B30',
     marginBottom: 16, textAlign: 'center',
+  },
+  futureDateNote: {
+    fontSize: 15, color: '#8E8E93', textAlign: 'center', marginBottom: 16,
   },
 
   // Boolean toggle
