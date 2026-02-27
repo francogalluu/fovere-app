@@ -52,6 +52,7 @@ export default function HomeScreen() {
 
   const logEntry    = useHabitStore(s => s.logEntry);
   const deleteEntry = useHabitStore(s => s.deleteEntry);
+  const deleteHabit = useHabitStore(s => s.deleteHabit);
   const addHabit    = useHabitStore(s => s.addHabit);
 
   // ── Derived data ─────────────────────────────────────────────────────────────
@@ -176,6 +177,7 @@ export default function HomeScreen() {
         readOnly={isReadOnly}
         onPress={() => handleNavigateToDetail(habit.id)}
         onComplete={() => handleComplete(habit)}
+        onDelete={() => deleteHabit(habit.id)}
       />
     );
   };

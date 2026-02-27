@@ -77,7 +77,6 @@ export function HabitCard({
       disabled={readOnly}
       style={({ pressed }) => [
         s.card,
-        isCompleted && s.cardCompleted,
         !readOnly && pressed && { opacity: 0.85 },
       ]}
       accessibilityRole="button"
@@ -147,16 +146,12 @@ const s = StyleSheet.create({
     paddingHorizontal: 20,
     borderRadius: 24,
     marginBottom: 12,
-    backgroundColor: C.bgCard,
-    // Shadow matching web: box-shadow 0 12px 40px rgba(0,0,0,0.08)
+    backgroundColor: '#FFFFFF',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08,
     shadowRadius: 12,
     elevation: 3,
-  },
-  cardCompleted: {
-    opacity: 0.92,
   },
 
   // Icon
