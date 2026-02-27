@@ -311,7 +311,9 @@ const s = StyleSheet.create({
     backgroundColor: C.bgHome,
   },
   scrollContent: {
-    paddingBottom: 40,
+    // Extra padding so card shadows (shadowRadius ~12, offset 4) aren’t cropped
+    paddingHorizontal: 28,
+    paddingBottom: 52,
   },
 
   // Header
@@ -339,9 +341,8 @@ const s = StyleSheet.create({
     justifyContent: 'center',
   },
 
-  // Sections
+  // Sections (no extra horizontal padding; scrollContent provides it for shadow room)
   section: {
-    paddingHorizontal: 16,
     marginTop: 24,
   },
   sectionTitleRow: {

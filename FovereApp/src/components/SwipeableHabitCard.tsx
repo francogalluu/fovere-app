@@ -47,6 +47,8 @@ export function SwipeableHabitCard({
       rightThreshold={60}
       overshootRight={false}
       enabled={!readOnly}
+      containerStyle={s.swipeContainer}
+      childrenContainerStyle={s.swipeChildren}
     >
       <HabitCard
         habit={habit}
@@ -60,6 +62,12 @@ export function SwipeableHabitCard({
 }
 
 const s = StyleSheet.create({
+  swipeContainer: {
+    overflow: 'visible',
+  },
+  swipeChildren: {
+    overflow: 'visible',
+  },
   rightAction: {
     width: 90,
     marginBottom: 12,
