@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
-import { Check, ChevronRight } from 'lucide-react-native';
+import { Check, ChevronRight, TriangleAlert } from 'lucide-react-native';
 import { getProgressColor, PROGRESS_COLORS } from '@/lib/progressColors';
 import { C } from '@/lib/tokens';
 import { ScoreRing } from '@/components/ScoreRing';
@@ -119,6 +119,8 @@ export function HabitCard({
         renderCenter={(displayPercent) =>
           !isBreak && isCompleted ? (
             <Check size={18} color={PROGRESS_COLORS.HIGH} strokeWidth={3} />
+          ) : isBreak && pct >= 100 ? (
+            <TriangleAlert size={18} color={PROGRESS_COLORS.LOW} strokeWidth={2.5} />
           ) : pct > 0 ? (
             <Text style={[s.ringPct, { color: progressColor }]}>{displayPercent}%</Text>
           ) : null

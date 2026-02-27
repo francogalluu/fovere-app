@@ -14,7 +14,7 @@ import type { RootStackParamList } from '@/navigation/types';
 import { useHabitStore } from '@/store';
 import { today } from '@/lib/dates';
 import { getHabitCurrentValue, isHabitCompleted } from '@/lib/aggregates';
-import { getProgressColor } from '@/lib/progressColors';
+import { getProgressColor, PROGRESS_COLORS } from '@/lib/progressColors';
 import { ScoreRing } from '@/components/ScoreRing';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'HabitDetail'>;
@@ -45,23 +45,30 @@ export default function HabitDetailScreen({ route, navigation }: Props) {
   const isBreak           = habit?.goalType === 'break';
   const overLimit         = isBreak && currentValue > (habit?.target ?? 0);
   const progressPct       = habit ? Math.min((currentValue / habit.target) * 100, 100) : 0;
-  const ringStrokeColor   = overLimit ? '#FF3B30' : completed ? '#008080' : getProgressColor(progressPct);
+  // Break: red at/over limit. Build: apple green when completed, else progress color.
+  const ringStrokeColor   = isBreak && (progressPct >= 100 || overLimit)
+    ? PROGRESS_COLORS.LOW
+    : !isBreak && completed
+      ? PROGRESS_COLORS.HIGH
+      : getProgressColor(progressPct);
+  const accentColor = isBreak ? PROGRESS_COLORS.LOW : (completed ? PROGRESS_COLORS.HIGH : '#008080');
 
   // Wire the navigation header title and Edit button
   useLayoutEffect(() => {
     if (!habit) return;
     navigation.setOptions({
       headerTitle: habit.name,
+      headerTintColor: accentColor,
       headerRight: () => (
         <Pressable
           onPress={() => navigation.navigate('EditHabit', { id: habit.id, screen: 'HabitType' })}
           hitSlop={8}
         >
-          <Text style={s.headerEdit}>Edit</Text>
+          <Text style={[s.headerEdit, { color: accentColor }]}>Edit</Text>
         </Pressable>
       ),
     });
-  }, [habit, navigation]);
+  }, [habit, navigation, accentColor]);
 
   const handleToggle = useCallback(() => {
     if (!habit) return;
@@ -130,7 +137,7 @@ export default function HabitDetailScreen({ route, navigation }: Props) {
             renderCenter={() => (
               <View style={s.ringCenter}>
                 {habit.kind === 'boolean' ? (
-                  <Text style={[s.ringBoolMark, { color: completed ? '#008080' : '#C7C7CC' }]}>
+                  <Text style={[s.ringBoolMark, { color: completed || (isBreak && progressPct >= 100) ? accentColor : '#C7C7CC' }]}>
                     {completed ? '✓' : '○'}
                   </Text>
                 ) : (
@@ -158,11 +165,12 @@ export default function HabitDetailScreen({ route, navigation }: Props) {
               onPress={handleToggle}
               style={({ pressed }) => [
                 s.boolBtn,
-                completed && s.boolBtnDone,
+                { borderColor: accentColor },
+                completed && [s.boolBtnDone, { backgroundColor: accentColor }],
                 pressed && { opacity: 0.75 },
               ]}
             >
-              <Text style={[s.boolBtnText, completed && s.boolBtnTextDone]}>
+              <Text style={[s.boolBtnText, { color: accentColor }, completed && s.boolBtnTextDone]}>
                 {completed ? 'Done ✓' : 'Mark Done'}
               </Text>
             </Pressable>
@@ -174,7 +182,7 @@ export default function HabitDetailScreen({ route, navigation }: Props) {
               disabled={currentValue === 0}
               style={[s.ctrlBtn, currentValue === 0 && s.ctrlBtnDisabled]}
             >
-              <Minus size={24} color="#008080" strokeWidth={2.5} />
+              <Minus size={24} color={accentColor} strokeWidth={2.5} />
             </Pressable>
 
             <Text style={s.numValue}>{currentValue}</Text>
@@ -182,7 +190,11 @@ export default function HabitDetailScreen({ route, navigation }: Props) {
             <Pressable
               onPress={handleIncrement}
               disabled={!isBreak && currentValue >= habit.target}
-              style={[s.ctrlBtnPrimary, (!isBreak && currentValue >= habit.target) && s.ctrlBtnDisabled]}
+              style={[
+                s.ctrlBtnPrimary,
+                { backgroundColor: accentColor, shadowColor: accentColor },
+                (!isBreak && currentValue >= habit.target) && s.ctrlBtnDisabled,
+              ]}
             >
               <Plus size={24} color="#fff" strokeWidth={2.5} />
             </Pressable>

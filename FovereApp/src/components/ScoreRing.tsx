@@ -68,11 +68,16 @@ export function ScoreRing({
 
   // Sync to target when not in “first mount animation” phase
   useEffect(() => {
-    if (!animateOnSessionStart || hasAnimatedThisMount.current) {
+    const slotAlreadyUsed = hasAnimatedBySlot[animationSlot] === true;
+    const shouldSync =
+      !animateOnSessionStart ||
+      hasAnimatedThisMount.current ||
+      slotAlreadyUsed;
+    if (shouldSync) {
       animValue.setValue(target);
       setDisplayPercent(target);
     }
-  }, [animateOnSessionStart, target, animValue]);
+  }, [animateOnSessionStart, animationSlot, target, animValue]);
 
   // One-time session animation for this slot
   useEffect(() => {
