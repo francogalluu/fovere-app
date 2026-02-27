@@ -31,7 +31,7 @@ export default function HabitDetailScreen({ route, navigation }: Props) {
   const decrementEntry = useHabitStore(s => s.decrementEntry);
   const logEntry       = useHabitStore(s => s.logEntry);
   const deleteEntry    = useHabitStore(s => s.deleteEntry);
-  const deleteHabit    = useHabitStore(s => s.deleteHabit);
+  const pauseHabit     = useHabitStore(s => s.pauseHabit);
   const archiveHabit   = useHabitStore(s => s.archiveHabit);
 
   const currentValue = useMemo(
@@ -96,7 +96,7 @@ export default function HabitDetailScreen({ route, navigation }: Props) {
       `"${habit.name}" will be hidden from your daily list. You can resume it anytime from the Paused section on the home screen.`,
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Pause', onPress: () => { archiveHabit(id); navigation.goBack(); } },
+        { text: 'Pause', onPress: () => { pauseHabit(id); navigation.goBack(); } },
       ],
     );
   };
@@ -105,14 +105,13 @@ export default function HabitDetailScreen({ route, navigation }: Props) {
     if (!habit) return;
     Alert.alert(
       'Delete Habit',
-      `"${habit.name}" and all its history will be permanently deleted. You can pause it instead to keep the habit and its history.`,
+      `"${habit.name}" will be removed from your Home screen from today onward, but its past history will stay in Calendar and Analytics.`,
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Pause instead', onPress: () => { archiveHabit(id); navigation.goBack(); } },
         {
           text: 'Delete',
           style: 'destructive',
-          onPress: () => { deleteHabit(id); navigation.goBack(); },
+          onPress: () => { archiveHabit(id); navigation.goBack(); },
         },
       ],
     );

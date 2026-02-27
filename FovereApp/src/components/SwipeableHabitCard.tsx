@@ -76,10 +76,11 @@ export function SwipeableHabitCard({
     if (onPause) {
       buttons.push({ text: 'Pause', onPress: () => onPause() });
     }
+    // "Delete" is a soft-delete: hide from Home from today onward, keep history.
     buttons.push({ text: 'Delete', style: 'destructive', onPress: () => onDelete?.() });
     Alert.alert(
       'Delete habit',
-      `Are you sure you want to delete "${habit.name}"? This habit and its history will be permanently removed.${onPause ? ' You can also pause it to hide it and resume later.' : ''}`,
+      `Are you sure you want to delete "${habit.name}"? It will be removed from your Home screen from today onward, but its past history will stay in Calendar and Analytics.${onPause ? ' You can also pause it to hide it and resume later.' : ''}`,
       buttons
     );
   };

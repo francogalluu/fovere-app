@@ -5,6 +5,7 @@ import type { RootStackParamList } from './types';
 import TabNavigator from './TabNavigator';
 import WizardNavigator from './WizardNavigator';
 import HabitDetailScreen from '@/screens/HabitDetailScreen';
+import DeletedHabitsScreen from '@/screens/DeletedHabitsScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -45,6 +46,20 @@ export default function RootNavigator() {
         name="EditHabit"
         component={WizardNavigator}
         options={{ presentation: 'modal' }}
+      />
+
+      {/* Deleted habits list */}
+      <Stack.Screen
+        name="DeletedHabits"
+        component={DeletedHabitsScreen}
+        options={{
+          headerShown: true,
+          headerBackTitle: 'Back',
+          headerTintColor: '#008080',
+          headerStyle: { backgroundColor: '#F2F2F7' },
+          headerShadowVisible: false,
+          headerTitle: 'Deleted Habits',
+        }}
       />
     </Stack.Navigator>
   );

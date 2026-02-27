@@ -19,11 +19,13 @@ import {
 import {
   dailyCompletion,
   getHabitCurrentValue,
+  isHabitActiveOnDate,
   isHabitCompleted,
 } from '@/lib/aggregates';
 import type { Habit, HabitEntry } from '@/types/habit';
 import { BarChartWithTooltip, type ChartBar } from '@/components/charts/BarChartWithTooltip';
 import { ScoreRing } from '@/components/ScoreRing';
+import { useHabitStore } from '@/store';
 import { useHabitLogs } from '@/hooks/useHabitLogs';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -62,7 +64,7 @@ function getBuckets(range: TimeRange, endDate: string): ChartBucket[] {
   }
 }
 
-/** All habits = current non-archived list; percentages from actual stored entries (no createdAt filter). */
+/** Uses all habits; for each date d, counts only habits active on that date (isHabitActiveOnDate). */
 function aggregateCompletions(
   habits: Habit[],
   entries: HabitEntry[],
@@ -81,7 +83,7 @@ function aggregateCompletions(
         target += 1;
         if (isHabitCompleted(habitFilter, entries, d)) completed += 1;
       } else {
-        const active = habits.filter(h => h.archivedAt === null && h.createdAt <= d);
+        const active = habits.filter(h => isHabitActiveOnDate(h, d) && h.createdAt <= d);
         const n = active.length;
         const c = active.filter(h => isHabitCompleted(h, entries, d)).length;
         target += n;
@@ -217,6 +219,7 @@ function computeHabitStreak(habit: Habit, entries: HabitEntry[], todayStr: strin
 
 export default function AnalyticsScreen() {
   const { habits, entries, focusKey } = useHabitLogs();
+  const allHabits = useHabitStore(s => s.habits);
   const todayStr = today();
 
   const [selectedHabitId, setSelectedHabitId] = useState<string>('all');
@@ -243,16 +246,16 @@ export default function AnalyticsScreen() {
         completionTitle: `${selectedHabit.name} completion`,
       };
     }
-    if (habits.length === 0) return { completionPct: 0, completionText: '0 of 0 habits', completionTitle: getPeriodLabel(timeRange) };
-    const scores   = periodDates.map(d => dailyCompletion(habits, entries, d));
+    if (allHabits.length === 0) return { completionPct: 0, completionText: '0 of 0 habits', completionTitle: getPeriodLabel(timeRange) };
+    const scores   = periodDates.map(d => dailyCompletion(allHabits, entries, d));
     const pct      = Math.round(scores.reduce((a, b) => a + b, 0) / (scores.length || 1));
     let totalPossible = 0;
     for (const d of periodDates) {
-      totalPossible += habits.filter(h => h.archivedAt === null && h.createdAt <= d).length;
+      totalPossible += allHabits.filter(h => isHabitActiveOnDate(h, d) && h.createdAt <= d).length;
     }
     let totalCompleted = 0;
     for (const d of periodDates) {
-      const active = habits.filter(h => h.archivedAt === null && h.createdAt <= d);
+      const active = allHabits.filter(h => isHabitActiveOnDate(h, d) && h.createdAt <= d);
       totalCompleted += active.filter(h => isHabitCompleted(h, entries, d)).length;
     }
     return {
@@ -260,11 +263,11 @@ export default function AnalyticsScreen() {
       completionText:  `${totalCompleted} of ${totalPossible} habits`,
       completionTitle: getPeriodLabel(timeRange) + ' completion',
     };
-  }, [selectedHabit, habits, entries, periodDates, timeRange, focusKey]);
+  }, [selectedHabit, allHabits, entries, periodDates, timeRange, focusKey]);
 
   const chartBars = useMemo(
-    () => buildChartBars(habits, entries, timeRange, todayStr, selectedHabit ?? null),
-    [habits, entries, timeRange, todayStr, selectedHabit, focusKey],
+    () => buildChartBars(allHabits, entries, timeRange, todayStr, selectedHabit ?? null),
+    [allHabits, entries, timeRange, todayStr, selectedHabit, focusKey],
   );
 
   const totalCompleted = useMemo(

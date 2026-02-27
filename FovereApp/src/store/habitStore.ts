@@ -6,9 +6,10 @@ import type { Habit, HabitEntry } from '@/types/habit';
 
 // ─── Schema versioning ────────────────────────────────────────────────────────
 
-const CURRENT_SCHEMA_VERSION = 1;
+// v2 adds Habit.pausedAt (nullable) for pause vs delete semantics.
+const CURRENT_SCHEMA_VERSION = 2;
 
-type SchemaVersion = 1;
+type SchemaVersion = 1 | 2;
 
 // ─── State + actions interface ────────────────────────────────────────────────
 
@@ -30,10 +31,16 @@ interface HabitState {
   // ── Habit CRUD ──────────────────────────────────────────────────────────────
 
   addHabit: (
-    draft: Omit<Habit, 'id' | 'createdAt' | 'archivedAt' | 'sortOrder'>,
+    draft: Omit<Habit, 'id' | 'createdAt' | 'pausedAt' | 'archivedAt' | 'sortOrder'>,
   ) => string;                              // returns the new habit id
 
   updateHabit: (id: string, patch: Partial<Omit<Habit, 'id' | 'createdAt'>>) => void;
+
+  /** Temporarily hide a habit from Home from today forward (can be resumed). */
+  pauseHabit: (id: string) => void;
+
+  /** Clear paused state so the habit shows again on Home. */
+  unpauseHabit: (id: string) => void;
 
   /**
    * Soft-delete: sets archivedAt to today's date string.
@@ -140,6 +147,7 @@ export const useHabitStore = create<HabitState>()(
           ...draft,
           id,
           createdAt: today,
+          pausedAt: null,
           archivedAt: null,
           sortOrder: activeCount,
         };
@@ -152,6 +160,21 @@ export const useHabitStore = create<HabitState>()(
       updateHabit: (id, patch) =>
         set(s => ({
           habits: s.habits.map(h => (h.id === id ? { ...h, ...patch } : h)),
+        })),
+
+      // ── pauseHabit / unpauseHabit ───────────────────────────────────────────
+      pauseHabit: (id) =>
+        set(s => ({
+          habits: s.habits.map(h =>
+            h.id === id ? { ...h, pausedAt: getTodayNormalized() } : h,
+          ),
+        })),
+
+      unpauseHabit: (id) =>
+        set(s => ({
+          habits: s.habits.map(h =>
+            h.id === id ? { ...h, pausedAt: null } : h,
+          ),
         })),
 
       // ── archiveHabit ────────────────────────────────────────────────────────
@@ -303,6 +326,7 @@ export const useHabitStore = create<HabitState>()(
               ...h,
               target:    Number(h.target),
               sortOrder: Number(h.sortOrder),
+              pausedAt:  (h as any).pausedAt ?? null,
               archivedAt: h.archivedAt ?? null,
               goalType:  (h.goalType === 'break' ? 'break' : 'build') as 'build' | 'break',
             }))
@@ -337,6 +361,7 @@ export const useHabitStore = create<HabitState>()(
             ...h,
             target:    Number(h.target),
             sortOrder: Number(h.sortOrder),
+            pausedAt:  (h as any).pausedAt ?? null,
             archivedAt: h.archivedAt ?? null,
             goalType:  (h.goalType === 'break' ? 'break' : 'build') as 'build' | 'break',
           }));
@@ -360,7 +385,7 @@ export const useHabitStore = create<HabitState>()(
 /** Active (non-archived) habits sorted by sortOrder */
 export const selectActiveHabits = (s: HabitState): Habit[] =>
   s.habits
-    .filter(h => h.archivedAt === null)
+    .filter(h => h.archivedAt === null && !h.pausedAt)
     .sort((a, b) => a.sortOrder - b.sortOrder);
 
 /** Archived habits, newest first */

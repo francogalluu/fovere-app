@@ -6,7 +6,7 @@ import { ChevronLeft, ChevronRight, Flame, CalendarCheck } from 'lucide-react-na
 import { useHabitStore } from '@/store';
 import { today, datesInRange, addDays, toLocalDateString, SHORT_DAY_LABELS, getDayOfWeekIndex } from '@/lib/dates';
 import { getDaySummary } from '@/lib/daySummary';
-import { getHabitCurrentValue, dailyCompletedCount } from '@/lib/aggregates';
+import { getHabitCurrentValue, dailyCompletedCount, isHabitActiveOnDate } from '@/lib/aggregates';
 import { getProgressColor } from '@/lib/progressColors';
 import { BarChartWithTooltip, type ChartBar } from '@/components/charts/BarChartWithTooltip';
 import { ScoreRing } from '@/components/ScoreRing';
@@ -28,16 +28,17 @@ export default function CalendarScreen() {
   const rawHabits = useHabitStore(s => s.habits);
   const entries   = useHabitStore(s => s.entries);
 
+  const todayStr = today();
+
   const habits = useMemo(() => {
     const seen = new Set<string>();
     return rawHabits.filter(h => {
-      if (h.archivedAt !== null || seen.has(h.id)) return false;
+      if (!isHabitActiveOnDate(h, todayStr) || seen.has(h.id)) return false;
       seen.add(h.id);
       return true;
     });
-  }, [rawHabits]);
+  }, [rawHabits, todayStr]);
 
-  const todayStr  = today();
   const todayDate = new Date(todayStr + 'T00:00:00');
 
   const [view, setView] = useState<'monthly' | 'weekly'>('monthly');
@@ -77,11 +78,11 @@ export default function CalendarScreen() {
     const to     = isoDate(y, m, lastD);
     const dates  = datesInRange(from, todayStr < to ? todayStr : to);
     if (dates.length === 0) return { pct: 0, completed: 0, total: 0 };
-    const scores    = dates.map(d => getDaySummary(habits, entries, d).completionPct);
+    const scores    = dates.map(d => getDaySummary(rawHabits, entries, d).completionPct);
     const completed = scores.filter(v => v === 100).length;
     const pct       = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
     return { pct, completed, total: dates.length };
-  }, [currentMonth, habits, entries, todayStr]);
+  }, [currentMonth, rawHabits, entries, todayStr]);
 
   // ── Weekly bar data ───────────────────────────────────────────────────────
 
@@ -104,8 +105,8 @@ export default function CalendarScreen() {
       addDays(weekStartStr, 5),
     ];
     return datesSunFirst.map((dateStr, i) => {
-      const pct = dateStr <= todayStr ? getDaySummary(habits, entries, dateStr).completionPct : 0;
-      const { completed, total } = dailyCompletedCount(habits, entries, dateStr);
+      const pct = dateStr <= todayStr ? getDaySummary(rawHabits, entries, dateStr).completionPct : 0;
+      const { completed, total } = dailyCompletedCount(rawHabits, entries, dateStr);
       return {
         key: dateStr,
         label: SHORT_DAY_LABELS[i],
@@ -114,7 +115,7 @@ export default function CalendarScreen() {
         target: total,
       };
     });
-  }, [weekStartStr, habits, entries, todayStr]);
+  }, [weekStartStr, rawHabits, entries, todayStr]);
 
   const weekDays = useMemo(() => {
     const labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -125,12 +126,12 @@ export default function CalendarScreen() {
       return {
         label:      labels[i],
         dateStr,
-        completion: dateStr <= todayStr ? getDaySummary(habits, entries, dateStr).completionPct : 0,
+        completion: dateStr <= todayStr ? getDaySummary(rawHabits, entries, dateStr).completionPct : 0,
         isFuture:   dateStr > todayStr,
         isToday:    dateStr === todayStr,
       };
     });
-  }, [weekStart, habits, entries, todayStr]);
+  }, [weekStart, rawHabits, entries, todayStr]);
 
   const weekStats = useMemo(() => {
     const past = weekDays.filter(d => !d.isFuture);
@@ -152,19 +153,19 @@ export default function CalendarScreen() {
   // ── Streak (consecutive fully-completed days ending today/yesterday) ───────
 
   const currentStreak = useMemo(() => {
-    if (habits.length === 0) return 0;
+    if (rawHabits.length === 0) return 0;
     let streak = 0;
     let cursor = todayStr;
     // Grace: if today isn't 100% done yet, don't break the streak
-    if (getDaySummary(habits, entries, cursor).completionPct < 100) cursor = addDays(cursor, -1);
+    if (getDaySummary(rawHabits, entries, cursor).completionPct < 100) cursor = addDays(cursor, -1);
     while (cursor >= '2020-01-01') {
-      if (getDaySummary(habits, entries, cursor).completionPct === 100) {
+      if (getDaySummary(rawHabits, entries, cursor).completionPct === 100) {
         streak++;
         cursor = addDays(cursor, -1);
       } else break;
     }
     return streak;
-  }, [habits, entries, todayStr]);
+  }, [rawHabits, entries, todayStr]);
 
   // ── Habit breakdown ───────────────────────────────────────────────────────
 
@@ -302,7 +303,7 @@ export default function CalendarScreen() {
                   if (!dateStr) return <View key={`e-${idx}`} style={s.calCell} />;
                   const isToday  = dateStr === todayStr;
                   const isFuture = dateStr > todayStr;
-                  const pct      = isFuture ? 0 : getDaySummary(habits, entries, dateStr).completionPct;
+                  const pct      = isFuture ? 0 : getDaySummary(rawHabits, entries, dateStr).completionPct;
                   const color    = getProgressColor(pct);
                   const r = 14;
                   const circ = 2 * Math.PI * r;

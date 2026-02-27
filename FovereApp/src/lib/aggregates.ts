@@ -1,6 +1,23 @@
 import type { Habit, HabitEntry } from '@/types/habit';
 import { getWeekDates, datesInRange } from './dates';
 
+// ─── Active-on-date (pause/delete are forward-looking) ────────────────────────
+
+/**
+ * True if the habit was active on the given date.
+ * A habit is active on `date` when:
+ * - it was already created (`createdAt <= date`), and
+ * - it has not yet been paused or archived on/before that date.
+ *
+ * Callers usually also check `createdAt <= date` separately when needed; this
+ * helper focuses on the pause/delete window.
+ */
+export const isHabitActiveOnDate = (habit: Habit, date: string): boolean => {
+  const notPaused   = !habit.pausedAt || habit.pausedAt > date;
+  const notDeleted  = habit.archivedAt === null || habit.archivedAt > date;
+  return notPaused && notDeleted;
+};
+
 // ─── Entry lookup ─────────────────────────────────────────────────────────────
 
 /** Value logged for a single habit on a single date (0 if no entry). */
@@ -77,7 +94,7 @@ export const dailyOverLimitCount = (
   date: string,
 ): number =>
   habits.filter(
-    h => h.archivedAt === null && h.createdAt <= date &&
+    h => isHabitActiveOnDate(h, date) && h.createdAt <= date &&
          h.frequency === 'daily' && h.goalType === 'break' &&
          isOverLimit(h, entries, date),
   ).length;
@@ -93,7 +110,7 @@ export const dailyCompletion = (
   entries: HabitEntry[],
   date: string,
 ): number => {
-  const active = habits.filter(h => h.archivedAt === null && h.createdAt <= date);
+  const active = habits.filter(h => isHabitActiveOnDate(h, date) && h.createdAt <= date);
   if (active.length === 0) return 0;
   const completed = active.filter(h => isHabitCompleted(h, entries, date)).length;
   return Math.round((completed / active.length) * 100);
@@ -105,7 +122,7 @@ export const dailyCompletedCount = (
   entries: HabitEntry[],
   date: string,
 ): { completed: number; total: number } => {
-  const active = habits.filter(h => h.archivedAt === null && h.createdAt <= date);
+  const active = habits.filter(h => isHabitActiveOnDate(h, date) && h.createdAt <= date);
   const completed = active.filter(h => isHabitCompleted(h, entries, date)).length;
   return { completed, total: active.length };
 };
@@ -121,7 +138,7 @@ export const dailyOnlyCompletedCount = (
   date: string,
 ): { completed: number; total: number } => {
   const active = habits.filter(
-    h => h.archivedAt === null && h.createdAt <= date && h.frequency === 'daily',
+    h => isHabitActiveOnDate(h, date) && h.createdAt <= date && h.frequency === 'daily',
   );
   return {
     completed: active.filter(h => isHabitCompleted(h, entries, date)).length,
@@ -146,7 +163,7 @@ export const weeklyHabitProgress = (
   date: string,
 ): { completed: number; total: number } => {
   const active = habits.filter(
-    h => h.archivedAt === null && h.createdAt <= date && h.frequency === 'weekly',
+    h => isHabitActiveOnDate(h, date) && h.createdAt <= date && h.frequency === 'weekly',
   );
   return {
     completed: active.filter(h => isHabitCompleted(h, entries, date)).length,

@@ -56,8 +56,16 @@ export interface Habit {
   createdAt: string;
 
   /**
-   * ISO date string YYYY-MM-DD when archived, or null if active.
-   * Archived habits are hidden from normal flows but preserved for analytics.
+   * ISO date string YYYY-MM-DD when paused, or null if active.
+   * Paused habits are hidden from Home from that day forward, but can be
+   * resumed. Their past history is always preserved.
+   */
+  pausedAt?: string | null;
+
+  /**
+   * ISO date string YYYY-MM-DD when archived (soft-deleted), or null if active.
+   * Archived habits are hidden from Home / entry flows but preserved for
+   * analytics and calendar so historical scores remain accurate.
    */
   archivedAt: string | null;
 

@@ -4,11 +4,16 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronRight } from 'lucide-react-native';
+import { useNavigation } from '@react-navigation/native';
+import type { NavigationProp } from '@react-navigation/native';
+import type { RootStackParamList } from '@/navigation/types';
 import { useSettingsStore } from '@/store/settingsStore';
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function SettingsScreen() {
+  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+
   const {
     hapticFeedback,     setHapticFeedback,
     notificationsEnabled, setNotificationsEnabled,
@@ -85,6 +90,11 @@ export default function SettingsScreen() {
           <SettingRow
             label="Backup"
             onPress={() => handleComingSoon('Backup')}
+            showChevron
+          />
+          <SettingRow
+            label="Deleted Habits"
+            onPress={() => navigation.navigate('DeletedHabits')}
             showChevron
             last
           />

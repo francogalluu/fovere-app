@@ -10,7 +10,7 @@
  */
 
 import type { Habit, HabitEntry } from '@/types/habit';
-import { getHabitCurrentValue, isHabitCompleted, entryValue } from './aggregates';
+import { getHabitCurrentValue, isHabitCompleted, entryValue, isHabitActiveOnDate } from './aggregates';
 
 const DEFAULT_PENALTY_FACTOR = 1;
 
@@ -66,7 +66,7 @@ function getOverflowCountToday(
 /**
  * Computes the daily score for the given date (0–100).
  *
- * @param habits - All habits (will use only active: archivedAt === null, createdAt <= date)
+ * @param habits - All habits (will use only active on date: isHabitActiveOnDate, createdAt <= date)
  * @param entries - All log entries
  * @param date - The day to score (YYYY-MM-DD)
  * @param options - Optional: penaltyFactor (default 1), allowNegativeBad (default false)
@@ -82,7 +82,7 @@ export function calculateDailyScore(
   const allowNegativeBad = options.allowNegativeBad ?? false;
 
   const active = habits.filter(
-    h => h.archivedAt === null && h.createdAt <= date,
+    h => isHabitActiveOnDate(h, date) && h.createdAt <= date,
   );
   const totalActive = active.length;
   if (totalActive === 0) return 0;

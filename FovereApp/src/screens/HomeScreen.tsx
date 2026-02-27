@@ -19,6 +19,7 @@ import {
   dailyOnlyCompletedCount,
   dailyOverLimitCount,
   getHabitCurrentValue,
+  isHabitActiveOnDate,
   isHabitCompleted,
 } from '@/lib/aggregates';
 import { today, isFuture, getWeekDates, formatDateTitle } from '@/lib/dates';
@@ -52,9 +53,9 @@ export default function HomeScreen() {
 
   const logEntry       = useHabitStore(s => s.logEntry);
   const deleteEntry    = useHabitStore(s => s.deleteEntry);
-  const deleteHabit     = useHabitStore(s => s.deleteHabit);
-  const archiveHabit    = useHabitStore(s => s.archiveHabit);
-  const unarchiveHabit  = useHabitStore(s => s.unarchiveHabit);
+  const pauseHabit     = useHabitStore(s => s.pauseHabit);
+  const unpauseHabit   = useHabitStore(s => s.unpauseHabit);
+  const archiveHabit   = useHabitStore(s => s.archiveHabit);
   const addHabit       = useHabitStore(s => s.addHabit);
 
   // ── Derived data ─────────────────────────────────────────────────────────────
@@ -63,18 +64,18 @@ export default function HomeScreen() {
     const seen = new Set<string>();
     return rawHabits
       .filter(h => {
-        if (h.archivedAt !== null || seen.has(h.id)) return false;
+        if (!isHabitActiveOnDate(h, selectedDate) || seen.has(h.id)) return false;
         seen.add(h.id);
         return true;
       })
       .sort((a, b) => a.sortOrder - b.sortOrder);
-  }, [rawHabits]);
+  }, [rawHabits, selectedDate]);
 
   const pausedHabits = useMemo(
     () =>
       rawHabits
-        .filter(h => h.archivedAt !== null)
-        .sort((a, b) => (b.archivedAt! > a.archivedAt! ? 1 : -1)),
+        .filter(h => h.pausedAt && !h.archivedAt)
+        .sort((a, b) => (b.pausedAt! > a.pausedAt! ? 1 : -1)),
     [rawHabits],
   );
 
@@ -83,14 +84,14 @@ export default function HomeScreen() {
   const completionByDate = useMemo(() => {
     const result: Record<string, number> = {};
     weekDates.forEach(d => {
-      result[d] = getDaySummary(habits, entries, d).dailyOnlyCompletionPct;
+      result[d] = getDaySummary(rawHabits, entries, d).dailyOnlyCompletionPct;
     });
     return result;
-  }, [habits, entries, weekDates]);
+  }, [rawHabits, entries, weekDates]);
 
   const { completed, total } = useMemo(
-    () => dailyOnlyCompletedCount(habits, entries, selectedDate),
-    [habits, entries, selectedDate],
+    () => dailyOnlyCompletedCount(rawHabits, entries, selectedDate),
+    [rawHabits, entries, selectedDate],
   );
 
   // Weekly build only (for Weekly Habits section header %)
@@ -129,8 +130,8 @@ export default function HomeScreen() {
   );
 
   const overLimitCount = useMemo(
-    () => dailyOverLimitCount(habits, entries, selectedDate),
-    [habits, entries, selectedDate],
+    () => dailyOverLimitCount(rawHabits, entries, selectedDate),
+    [rawHabits, entries, selectedDate],
   );
 
   const isReadOnly   = isFuture(selectedDate);
@@ -187,8 +188,11 @@ export default function HomeScreen() {
         readOnly={isReadOnly}
         onPress={() => handleNavigateToDetail(habit.id)}
         onComplete={() => handleComplete(habit)}
-        onDelete={() => deleteHabit(habit.id)}
-        onPause={() => archiveHabit(habit.id)}
+        // Delete: archive (soft-delete) so it disappears from Home from today on,
+        // but its history remains in Calendar/Analytics.
+        onDelete={() => archiveHabit(habit.id)}
+        // Pause: set pausedAt so it moves into the Paused section on Home.
+        onPause={() => pauseHabit(habit.id)}
       />
     );
   };
@@ -312,8 +316,8 @@ export default function HomeScreen() {
           </Pressable>
         )}
 
-        {/* ── Paused habits ─────────────────────────────────────────────────── */}
-        {pausedHabits.length > 0 && (
+        {/* ── Paused habits (only when viewing today) ───────────────────────── */}
+        {isToday && pausedHabits.length > 0 && (
           <View style={s.section}>
             <View style={s.sectionTitleRow}>
               <Text style={s.sectionTitle}>Paused</Text>
@@ -326,7 +330,7 @@ export default function HomeScreen() {
                   <Pressable
                     onPress={() => {
                       if (haptic) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                      unarchiveHabit(h.id);
+                      unpauseHabit(h.id);
                     }}
                     style={({ pressed }) => [s.resumeBtn, pressed && { opacity: 0.8 }]}
                   >
