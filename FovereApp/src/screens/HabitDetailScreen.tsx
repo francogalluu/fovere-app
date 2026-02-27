@@ -20,7 +20,9 @@ import { ScoreRing } from '@/components/ScoreRing';
 type Props = NativeStackScreenProps<RootStackParamList, 'HabitDetail'>;
 
 export default function HabitDetailScreen({ route, navigation }: Props) {
-  const { id } = route.params;
+  const { id, date: paramDate } = route.params;
+  const todayStr = today();
+  const viewDate = paramDate ?? todayStr;
 
   const habit          = useHabitStore(s => s.habits.find(h => h.id === id));
   const allEntries     = useHabitStore(s => s.entries);
@@ -30,16 +32,14 @@ export default function HabitDetailScreen({ route, navigation }: Props) {
   const deleteEntry    = useHabitStore(s => s.deleteEntry);
   const deleteHabit    = useHabitStore(s => s.deleteHabit);
 
-  const todayStr = today();
-
   const currentValue = useMemo(
-    () => habit ? getHabitCurrentValue(habit, allEntries, todayStr) : 0,
-    [habit, allEntries, todayStr],
+    () => habit ? getHabitCurrentValue(habit, allEntries, viewDate) : 0,
+    [habit, allEntries, viewDate],
   );
 
   const completed = useMemo(
-    () => habit ? isHabitCompleted(habit, allEntries, todayStr) : false,
-    [habit, allEntries, todayStr],
+    () => habit ? isHabitCompleted(habit, allEntries, viewDate) : false,
+    [habit, allEntries, viewDate],
   );
 
   const isBreak           = habit?.goalType === 'break';
@@ -72,21 +72,21 @@ export default function HabitDetailScreen({ route, navigation }: Props) {
 
   const handleToggle = useCallback(() => {
     if (!habit) return;
-    if (completed) deleteEntry(habit.id, todayStr);
-    else logEntry(habit.id, todayStr, 1);
-  }, [habit, completed, deleteEntry, logEntry, todayStr]);
+    if (completed) deleteEntry(habit.id, viewDate);
+    else logEntry(habit.id, viewDate, 1);
+  }, [habit, completed, deleteEntry, logEntry, viewDate]);
 
   const handleIncrement = useCallback(() => {
     if (!habit) return;
     // Break habits allow logging beyond the limit to track actual usage
     if (!isBreak && currentValue >= habit.target) return;
-    incrementEntry(habit.id, todayStr);
-  }, [habit, isBreak, currentValue, incrementEntry, todayStr]);
+    incrementEntry(habit.id, viewDate);
+  }, [habit, isBreak, currentValue, incrementEntry, viewDate]);
 
   const handleDecrement = useCallback(() => {
     if (!habit || currentValue <= 0) return;
-    decrementEntry(habit.id, todayStr);
-  }, [habit, currentValue, decrementEntry, todayStr]);
+    decrementEntry(habit.id, viewDate);
+  }, [habit, currentValue, decrementEntry, viewDate]);
 
   const handleDelete = () => {
     if (!habit) return;
@@ -116,9 +116,12 @@ export default function HabitDetailScreen({ route, navigation }: Props) {
 
   const freqLabel    = habit.frequency.charAt(0).toUpperCase() + habit.frequency.slice(1);
   const noun         = isBreak ? 'Limit' : 'Goal';
-  const goalLabel    = habit.frequency === 'daily'   ? `Today's ${noun}` :
-                       habit.frequency === 'weekly'  ? `This Week's ${noun}` :
-                                                       `This Month's ${noun}`;
+  const isViewingToday = viewDate === todayStr;
+  const goalLabel    = habit.frequency === 'daily'
+    ? (isViewingToday ? `Today's ${noun}` : `That day's ${noun}`)
+    : habit.frequency === 'weekly'
+      ? (isViewingToday ? `This Week's ${noun}` : `That week's ${noun}`)
+      : (isViewingToday ? `This Month's ${noun}` : `That month's ${noun}`);
   const measureLabel = habit.kind === 'boolean' ? 'Yes / No' :
                        habit.unit ? `Count (${habit.unit})` : 'Count';
 

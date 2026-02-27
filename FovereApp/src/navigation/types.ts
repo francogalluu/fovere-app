@@ -14,7 +14,7 @@ export type WizardStackParamList = {
 // ─── Root stack (sits above tabs, used for push/modal screens) ────────────────
 export type RootStackParamList = {
   Tabs: NavigatorScreenParams<TabParamList>;
-  HabitDetail: { id: string };
+  HabitDetail: { id: string; date?: string };
   NewHabit: NavigatorScreenParams<WizardStackParamList>;
   EditHabit: { id: string } & NavigatorScreenParams<WizardStackParamList>;
 };
