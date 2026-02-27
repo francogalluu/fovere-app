@@ -1,34 +1,82 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import { getProgressColor } from '@/lib/progressColors';
 import { formatDateTitle, isToday } from '@/lib/dates';
 
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
+
+const RADIUS = 50;
+const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
+const ANIM_DURATION_MS = 550;
+const ANIM_EASING = Easing.out(Easing.ease);
 
 interface ProgressHeroProps {
   selectedDate: string;  // YYYY-MM-DD
   completed: number;
   total: number;
   overLimit?: number;
+  /** When true, animate ring and % from 0 to current value once. When false, show final value immediately. */
+  animateFromZero?: boolean;
 }
 
-const RADIUS = 50;
-const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
-
-export function ProgressHero({ selectedDate, completed, total, overLimit = 0 }: ProgressHeroProps) {
-  const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
-  const strokeDashoffset = CIRCUMFERENCE * (1 - percentage / 100);
-  const progressColor = getProgressColor(percentage);
+export function ProgressHero({
+  selectedDate,
+  completed,
+  total,
+  overLimit = 0,
+  animateFromZero = false,
+}: ProgressHeroProps) {
+  const targetPercentage = total > 0 ? Math.round((completed / total) * 100) : 0;
+  const progressColor = getProgressColor(targetPercentage);
   const title = isToday(selectedDate) ? 'Completed Today' : formatDateTitle(selectedDate);
 
+  const animValue = useRef(new Animated.Value(0)).current;
+  const [displayPercent, setDisplayPercent] = useState(animateFromZero ? 0 : targetPercentage);
+  const hasAnimatedThisMount = useRef(false);
+
+  // Sync ring and label to target when not in “first mount animation” phase
+  useEffect(() => {
+    if (!animateFromZero || hasAnimatedThisMount.current) {
+      animValue.setValue(targetPercentage);
+      setDisplayPercent(targetPercentage);
+    }
+  }, [animateFromZero, targetPercentage, animValue]);
+
+  // One-time animation on mount when animateFromZero is true
+  useEffect(() => {
+    if (!animateFromZero || hasAnimatedThisMount.current) return;
+    hasAnimatedThisMount.current = true;
+    animValue.setValue(0);
+    setDisplayPercent(0);
+
+    const listenerId = animValue.addListener(({ value }) => {
+      setDisplayPercent(Math.round(value));
+    });
+
+    const toValue = targetPercentage;
+    Animated.timing(animValue, {
+      toValue,
+      duration: ANIM_DURATION_MS,
+      easing: ANIM_EASING,
+      useNativeDriver: false,
+    }).start(() => {
+      animValue.removeListener(listenerId);
+      setDisplayPercent(toValue);
+    });
+
+    return () => {
+      animValue.removeAllListeners();
+    };
+  }, [animateFromZero, targetPercentage]); // targetPercentage read at start; ref prevents re-run when date changes
+
+  const strokeDashoffset = animValue.interpolate({
+    inputRange: [0, 100],
+    outputRange: [CIRCUMFERENCE, 0],
+  });
+
   return (
-    /*
-     * Glassmorphism (backdrop-filter blur) is not available in React Native
-     * without @react-native-community/blur. Using solid white + shadow as an
-     * equivalent visual anchor. TODO M-post: swap to BlurView on iOS.
-     */
     <View style={styles.card}>
-      {/* Left: text content */}
       <View style={styles.leftContent}>
         <Text style={styles.title}>{title}</Text>
         {total > 0 ? (
@@ -45,7 +93,6 @@ export function ProgressHero({ selectedDate, completed, total, overLimit = 0 }: 
         )}
       </View>
 
-      {/* Right: circular progress ring */}
       <View style={styles.ringContainer}>
         <Svg
           width={130}
@@ -53,7 +100,6 @@ export function ProgressHero({ selectedDate, completed, total, overLimit = 0 }: 
           viewBox="0 0 130 130"
           style={{ transform: [{ rotate: '-90deg' }] }}
         >
-          {/* Track */}
           <Circle
             cx={65}
             cy={65}
@@ -62,8 +108,7 @@ export function ProgressHero({ selectedDate, completed, total, overLimit = 0 }: 
             stroke="#E5E5E7"
             strokeWidth={14}
           />
-          {/* Progress arc */}
-          <Circle
+          <AnimatedCircle
             cx={65}
             cy={65}
             r={RADIUS}
@@ -76,11 +121,10 @@ export function ProgressHero({ selectedDate, completed, total, overLimit = 0 }: 
           />
         </Svg>
 
-        {/* % label centered */}
-        <View style={StyleSheet.absoluteFillObject}>
+        <View style={StyleSheet.absoluteFillObject} pointerEvents="none">
           <View style={styles.percentageCenter}>
-            <Text style={[styles.percentageText, { color: percentage > 0 ? '#000000' : '#8E8E93' }]}>
-              {percentage}%
+            <Text style={[styles.percentageText, { color: displayPercent > 0 ? '#000000' : '#8E8E93' }]}>
+              {displayPercent}%
             </Text>
           </View>
         </View>
@@ -99,7 +143,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    // Shadow (replaces glassmorphism backdrop — iOS only)
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.08,
