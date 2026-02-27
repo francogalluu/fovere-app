@@ -54,7 +54,7 @@ export function ProgressHero({
 
 const styles = StyleSheet.create({
   card: {
-    marginHorizontal: 16,
+    marginHorizontal: 0,
     paddingVertical: 24,
     paddingHorizontal: 24,
     borderRadius: 24,

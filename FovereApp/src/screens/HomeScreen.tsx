@@ -316,12 +316,11 @@ const s = StyleSheet.create({
     paddingBottom: 52,
   },
 
-  // Header
+  // Header (horizontal padding matches scrollContent so title aligns with sections)
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 24,
     paddingTop: 16,
     paddingBottom: 8,
     backgroundColor: C.bgHome,
