@@ -16,6 +16,8 @@ interface SwipeableHabitCardProps {
   onComplete: () => void;
   /** Called when user confirms delete after swiping right and tapping Delete */
   onDelete?: () => void;
+  /** Called when user chooses "Pause" instead of delete — caller should archive the habit */
+  onPause?: () => void;
 }
 
 function RightActions({ isCompleted }: { isCompleted: boolean }) {
@@ -50,6 +52,7 @@ export function SwipeableHabitCard({
   onPress,
   onComplete,
   onDelete,
+  onPause,
 }: SwipeableHabitCardProps) {
   const swipeRef = useRef<Swipeable>(null);
   const pendingActionRef = useRef<'complete' | 'undo' | null>(null);
@@ -65,23 +68,32 @@ export function SwipeableHabitCard({
     onComplete();
   };
 
-  const handleDeletePress = () => {
+  const showDeleteAlert = () => {
     swipeRef.current?.close();
+    const buttons: Array<{ text: string; style?: 'cancel' | 'destructive' | 'default'; onPress?: () => void }> = [
+      { text: 'Cancel', style: 'cancel' },
+    ];
+    if (onPause) {
+      buttons.push({ text: 'Pause', onPress: () => onPause() });
+    }
+    buttons.push({ text: 'Delete', style: 'destructive', onPress: () => onDelete?.() });
     Alert.alert(
       'Delete habit',
-      `Are you sure you want to delete "${habit.name}"? This habit and its history will be permanently removed.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: () => onDelete?.() },
-      ]
+      `Are you sure you want to delete "${habit.name}"? This habit and its history will be permanently removed.${onPause ? ' You can also pause it to hide it and resume later.' : ''}`,
+      buttons
     );
+  };
+
+  const handleLeftOpen = () => {
+    showDeleteAlert();
   };
 
   return (
     <Swipeable
       ref={swipeRef}
       renderRightActions={() => <RightActions isCompleted={isCompleted} />}
-      renderLeftActions={onDelete ? () => <LeftActions onDelete={handleDeletePress} /> : undefined}
+      renderLeftActions={onDelete ? () => <LeftActions onDelete={showDeleteAlert} /> : undefined}
+      onSwipeableLeftOpen={onDelete ? handleLeftOpen : undefined}
       onSwipeableRightOpen={handleRightOpen}
       onSwipeableClose={handleSwipeClose}
       rightThreshold={42}

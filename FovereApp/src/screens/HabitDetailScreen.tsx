@@ -32,6 +32,7 @@ export default function HabitDetailScreen({ route, navigation }: Props) {
   const logEntry       = useHabitStore(s => s.logEntry);
   const deleteEntry    = useHabitStore(s => s.deleteEntry);
   const deleteHabit    = useHabitStore(s => s.deleteHabit);
+  const archiveHabit   = useHabitStore(s => s.archiveHabit);
 
   const currentValue = useMemo(
     () => habit ? getHabitCurrentValue(habit, allEntries, viewDate) : 0,
@@ -88,13 +89,26 @@ export default function HabitDetailScreen({ route, navigation }: Props) {
     decrementEntry(habit.id, viewDate);
   }, [habit, currentValue, decrementEntry, viewDate, isViewingFuture]);
 
+  const handlePause = () => {
+    if (!habit) return;
+    Alert.alert(
+      'Pause habit',
+      `"${habit.name}" will be hidden from your daily list. You can resume it anytime from the Paused section on the home screen.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Pause', onPress: () => { archiveHabit(id); navigation.goBack(); } },
+      ],
+    );
+  };
+
   const handleDelete = () => {
     if (!habit) return;
     Alert.alert(
       'Delete Habit',
-      `"${habit.name}" and all its history will be permanently deleted.`,
+      `"${habit.name}" and all its history will be permanently deleted. You can pause it instead to keep the habit and its history.`,
       [
         { text: 'Cancel', style: 'cancel' },
+        { text: 'Pause instead', onPress: () => { archiveHabit(id); navigation.goBack(); } },
         {
           text: 'Delete',
           style: 'destructive',
@@ -222,6 +236,16 @@ export default function HabitDetailScreen({ route, navigation }: Props) {
           </View>
         </View>
 
+        {/* ── Pause ─────────────────────────────────────────────────────── */}
+        <View style={s.section}>
+          <Pressable
+            onPress={handlePause}
+            style={({ pressed }) => [s.pauseCard, pressed && { opacity: 0.7 }]}
+          >
+            <Text style={s.pauseText}>Pause habit</Text>
+          </Pressable>
+        </View>
+
         {/* ── Delete ────────────────────────────────────────────────────── */}
         <View style={s.section}>
           <Pressable
@@ -320,6 +344,13 @@ const s = StyleSheet.create({
   },
   infoLabel: { fontSize: 17, color: '#666' },
   infoValue: { fontSize: 17, color: '#1A1A1A', fontWeight: '500' },
+
+  // Pause
+  pauseCard: {
+    backgroundColor: '#fff', borderRadius: 16,
+    paddingVertical: 16, alignItems: 'center',
+  },
+  pauseText: { fontSize: 17, color: '#008080' },
 
   // Delete
   deleteCard: {

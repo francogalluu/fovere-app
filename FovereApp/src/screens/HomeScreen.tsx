@@ -10,7 +10,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import type { NavigationProp } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
-import { Plus } from 'lucide-react-native';
+import { Plus, Play } from 'lucide-react-native';
 
 import { useHabitStore } from '@/store';
 import { useSettingsStore } from '@/store/settingsStore';
@@ -50,10 +50,12 @@ export default function HomeScreen() {
   const selectedDate    = useHabitStore(s => s.selectedDate);
   const setSelectedDate = useHabitStore(s => s.setSelectedDate);
 
-  const logEntry    = useHabitStore(s => s.logEntry);
-  const deleteEntry = useHabitStore(s => s.deleteEntry);
-  const deleteHabit = useHabitStore(s => s.deleteHabit);
-  const addHabit    = useHabitStore(s => s.addHabit);
+  const logEntry       = useHabitStore(s => s.logEntry);
+  const deleteEntry    = useHabitStore(s => s.deleteEntry);
+  const deleteHabit     = useHabitStore(s => s.deleteHabit);
+  const archiveHabit    = useHabitStore(s => s.archiveHabit);
+  const unarchiveHabit  = useHabitStore(s => s.unarchiveHabit);
+  const addHabit       = useHabitStore(s => s.addHabit);
 
   // ── Derived data ─────────────────────────────────────────────────────────────
 
@@ -67,6 +69,14 @@ export default function HomeScreen() {
       })
       .sort((a, b) => a.sortOrder - b.sortOrder);
   }, [rawHabits]);
+
+  const pausedHabits = useMemo(
+    () =>
+      rawHabits
+        .filter(h => h.archivedAt !== null)
+        .sort((a, b) => (b.archivedAt! > a.archivedAt! ? 1 : -1)),
+    [rawHabits],
+  );
 
   const weekDates = useMemo(() => getWeekDates(selectedDate), [selectedDate]);
 
@@ -178,6 +188,7 @@ export default function HomeScreen() {
         onPress={() => handleNavigateToDetail(habit.id)}
         onComplete={() => handleComplete(habit)}
         onDelete={() => deleteHabit(habit.id)}
+        onPause={() => archiveHabit(habit.id)}
       />
     );
   };
@@ -299,6 +310,33 @@ export default function HomeScreen() {
           <Pressable onPress={() => setSelectedDate(today())} style={s.todayPill}>
             <Text style={s.todayPillText}>Jump to Today</Text>
           </Pressable>
+        )}
+
+        {/* ── Paused habits ─────────────────────────────────────────────────── */}
+        {pausedHabits.length > 0 && (
+          <View style={s.section}>
+            <View style={s.sectionTitleRow}>
+              <Text style={s.sectionTitle}>Paused</Text>
+            </View>
+            <View style={s.pausedList}>
+              {pausedHabits.map(h => (
+                <View key={h.id} style={s.pausedRow}>
+                  <Text style={s.pausedIcon}>{h.icon}</Text>
+                  <Text style={s.pausedName} numberOfLines={1}>{h.name}</Text>
+                  <Pressable
+                    onPress={() => {
+                      if (haptic) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      unarchiveHabit(h.id);
+                    }}
+                    style={({ pressed }) => [s.resumeBtn, pressed && { opacity: 0.8 }]}
+                  >
+                    <Play size={16} color="#fff" strokeWidth={2.5} />
+                    <Text style={s.resumeBtnText}>Resume</Text>
+                  </Pressable>
+                </View>
+              ))}
+            </View>
+          </View>
         )}
       </ScrollView>
     </SafeAreaView>
@@ -455,5 +493,47 @@ const s = StyleSheet.create({
     fontSize: 14,
     color: C.teal,
     fontWeight: '600',
+  },
+
+  // Paused habits
+  pausedList: {
+    gap: 10,
+  },
+  pausedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    gap: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  pausedIcon: {
+    fontSize: 24,
+  },
+  pausedName: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '500',
+    color: C.text1,
+  },
+  resumeBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: C.teal,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+  },
+  resumeBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#fff',
   },
 });
