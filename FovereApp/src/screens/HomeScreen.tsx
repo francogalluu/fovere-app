@@ -22,7 +22,7 @@ import {
   isHabitActiveOnDate,
   isHabitCompleted,
 } from '@/lib/aggregates';
-import { today, isFuture, getWeekDates, formatDateTitle } from '@/lib/dates';
+import { today, isFuture, getWeekDates, getWeeksRange, formatDateTitle } from '@/lib/dates';
 import { C } from '@/lib/tokens';
 import type { RootStackParamList } from '@/navigation/types';
 import type { Habit } from '@/types/habit';
@@ -79,15 +79,15 @@ export default function HomeScreen() {
     [rawHabits],
   );
 
-  const weekDates = useMemo(() => getWeekDates(selectedDate), [selectedDate]);
+  const scrollableWeeks = useMemo(() => getWeeksRange(12, 12), []);
 
   const completionByDate = useMemo(() => {
     const result: Record<string, number> = {};
-    weekDates.forEach(d => {
+    scrollableWeeks.flat().forEach(d => {
       result[d] = getDaySummary(rawHabits, entries, d).dailyOnlyCompletionPct;
     });
     return result;
-  }, [rawHabits, entries, weekDates]);
+  }, [rawHabits, entries, scrollableWeeks]);
 
   const { completed, total } = useMemo(
     () => dailyOnlyCompletedCount(rawHabits, entries, selectedDate),
@@ -218,8 +218,9 @@ export default function HomeScreen() {
           </Pressable>
         </View>
 
-        {/* ── Week calendar strip ──────────────────────────────────────────── */}
+        {/* ── Week calendar strip (scrollable) ───────────────────────────────── */}
         <WeekCalendar
+          weeks={scrollableWeeks}
           selectedDate={selectedDate}
           completionByDate={completionByDate}
           onDateSelect={handleDateSelect}

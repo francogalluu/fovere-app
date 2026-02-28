@@ -89,6 +89,19 @@ export const getWeekDates = (anchorDate: string): string[] => {
   });
 };
 
+/** Returns an array of weeks (each week = 7 YYYY-MM-DD). numWeeksBack/Forward from the week containing today. */
+export const getWeeksRange = (
+  numWeeksBack: number,
+  numWeeksForward: number,
+): string[][] => {
+  const todayWeek = getWeekDates(today());
+  const startSunday = addDays(todayWeek[0], -7 * numWeeksBack);
+  const total = numWeeksBack + 1 + numWeeksForward;
+  return Array.from({ length: total }, (_, i) =>
+    getWeekDates(addDays(startSunday, i * 7)),
+  );
+};
+
 export const getDayOfMonth = (dateStr: string): number =>
   parseInt(dateStr.split('-')[2], 10);
 
