@@ -3,7 +3,7 @@
  * When Quantity is selected: target stepper + unit field.
  * When Time is selected: native iOS countdown wheel on iOS; hours+minutes stepper on Android.
  */
-import React, { useLayoutEffect, useMemo } from 'react';
+import React, { useLayoutEffect, useMemo, useState } from 'react';
 import {
   View, Text, Pressable, TextInput,
   ScrollView, StyleSheet, KeyboardAvoidingView, Platform,
@@ -98,6 +98,18 @@ export default function MeasureByStep({ navigation }: Props) {
 
   const handleDecrement = () => setTarget(Math.max(1, target - 1));
   const handleIncrement = () => setTarget(target + 1);
+
+  const [quantityInput, setQuantityInput] = useState<string | null>(null);
+  const quantityDisplayValue = quantityInput !== null ? quantityInput : String(target);
+  const onQuantityFocus = () => setQuantityInput(String(target));
+  const onQuantityChange = (text: string) => {
+    setQuantityInput(text.replace(/\D/g, ''));
+  };
+  const onQuantityBlur = () => {
+    const n = quantityInput === '' ? 1 : Math.max(1, Math.min(999999, parseInt(quantityInput || '1', 10) || 1));
+    setTarget(n);
+    setQuantityInput(null);
+  };
 
   const selectCompletion = () => setKind('boolean');
   const selectQuantity = () => {
@@ -215,7 +227,18 @@ export default function MeasureByStep({ navigation }: Props) {
                     <Pressable onPress={handleDecrement} style={s.stepBtn}>
                       <Minus size={18} color={target <= 1 ? '#C7C7CC' : C.teal} strokeWidth={2.5} />
                     </Pressable>
-                    <Text style={s.stepValue}>{target}</Text>
+                    <TextInput
+                      style={s.stepValueInput}
+                      value={quantityDisplayValue}
+                      onChangeText={onQuantityChange}
+                      onFocus={onQuantityFocus}
+                      onBlur={onQuantityBlur}
+                      keyboardType="number-pad"
+                      returnKeyType="done"
+                      maxLength={6}
+                      selectTextOnFocus
+                      accessibilityLabel="Daily target"
+                    />
                     <Pressable onPress={handleIncrement} style={s.stepBtn}>
                       <Plus size={18} color={C.teal} strokeWidth={2.5} />
                     </Pressable>
@@ -359,6 +382,12 @@ const s = StyleSheet.create({
   stepValue: {
     fontSize: 20, fontWeight: '600', color: '#1A1A1A',
     minWidth: 36, textAlign: 'center',
+  },
+  stepValueInput: {
+    fontSize: 20, fontWeight: '600', color: '#1A1A1A',
+    minWidth: 48, paddingVertical: 4, paddingHorizontal: 8,
+    textAlign: 'center',
+    borderWidth: 1, borderColor: 'transparent', borderRadius: 8,
   },
 
   // Unit input
