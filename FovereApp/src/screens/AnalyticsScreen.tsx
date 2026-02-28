@@ -13,7 +13,6 @@ import {
   getWeekDates,
   getDayOfWeekIndex,
   getLastNMonthRanges,
-  datesInRangeGroupedByWeekday,
   SHORT_DAY_LABELS,
 } from '@/lib/dates';
 import {
@@ -36,8 +35,6 @@ export type { ChartBar };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const WEEKDAY_LABELS_ANALYTICS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const;
-
 function getBuckets(range: TimeRange, endDate: string): ChartBucket[] {
   switch (range) {
     case 'day':
@@ -48,13 +45,12 @@ function getBuckets(range: TimeRange, endDate: string): ChartBucket[] {
     }
     case 'month': {
       const start = addDays(endDate, -29);
-      const byWeekday = datesInRangeGroupedByWeekday(start, endDate);
-      return byWeekday.map((dates, i) => ({
-        key: String(i),
-        label: WEEKDAY_LABELS_ANALYTICS[i],
-        start,
-        end: endDate,
-        dates,
+      const days = datesInRange(start, endDate);
+      return days.map(d => ({
+        key: d,
+        label: d,
+        start: d,
+        end: d,
       }));
     }
     case '6month':
@@ -158,7 +154,7 @@ function getPeriodLabel(range: TimeRange): string {
 const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const;
 const MONTH_INITIALS = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'] as const;
 
-/** Indices of buckets that should show an x-axis label. Month: no per-bar labels (only range caption). */
+/** Indices of buckets that should show an x-axis label. Month: none (only range caption). */
 function getXAxisTicks(range: TimeRange, bars: ChartBar[]): number[] {
   if (range === 'month') return [];
   if (range === 'week' || range === '6month' || range === 'year') {
@@ -170,7 +166,7 @@ function getXAxisTicks(range: TimeRange, bars: ChartBar[]): number[] {
 /** Label text for the x-axis at this bucket. Single line, no wrap. */
 function formatXAxisLabel(range: TimeRange, bar: ChartBar, index: number): string {
   if (range === 'week') return WEEKDAY_LABELS[index] ?? bar.label;
-  if (range === 'month') return WEEKDAY_LABELS_ANALYTICS[index] ?? bar.label;
+  if (range === 'month') return bar.label;
   if (range === '6month') return bar.label;
   if (range === 'year') {
     const [, mm] = bar.key.split('-');
@@ -180,9 +176,9 @@ function formatXAxisLabel(range: TimeRange, bar: ChartBar, index: number): strin
   return bar.label;
 }
 
-/** Indices where a vertical gridline should be drawn. Month: same ~4 as x-axis labels; Year: between months. */
+/** Indices where a vertical gridline should be drawn. Month: same sparse ticks as x-axis; Year: between months. */
 function getVerticalGridlineIndices(range: TimeRange, bars: ChartBar[]): number[] {
-  if (range === 'month') return getXAxisTicks('month', bars);
+  if (range === 'month') return getXAxisTicks(range, bars);
   if (range === 'year') return bars.map((_, i) => i).filter(i => i > 0);
   return [];
 }
@@ -411,7 +407,10 @@ export default function AnalyticsScreen() {
                 chartAreaHeight={timeRange === 'month' ? 240 : 220}
                 getTooltipDateLabel={(bar, index) =>
                   timeRange === 'month'
-                    ? (WEEKDAY_LABELS[index] ?? bar.label)
+                    ? (() => {
+                        const d = new Date(bar.key + 'T00:00:00');
+                        return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+                      })()
                     : timeRange === 'week'
                       ? (WEEKDAY_LABELS[index] ?? bar.label)
                       : bar.label
@@ -439,9 +438,14 @@ export default function AnalyticsScreen() {
                   return MONTH_INITIALS[m - 1] ?? bar.label;
                 } : undefined}
               />
-              {timeRange === 'month' && chartBars.length >= 2 && (
-                <Text style={s.barChartRangeCaption}>Last 30 days by weekday</Text>
-              )}
+              {timeRange === 'month' && chartBars.length >= 2 && (() => {
+                const start = chartBars[0].key;
+                const end = chartBars[chartBars.length - 1].key;
+                const fmt = (d: string) => new Date(d + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                return (
+                  <Text style={s.barChartRangeCaption}>{fmt(start)} – {fmt(end)}</Text>
+                );
+              })()}
             </>
           )}
         </View>
