@@ -2,6 +2,7 @@ import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import type { WizardStackParamList } from './types';
 
+import HabitSourceStep from '@/screens/wizard/HabitSourceStep';
 import HabitTypeStep from '@/screens/wizard/HabitTypeStep';
 import HabitNameStep from '@/screens/wizard/HabitNameStep';
 import HabitIconStep from '@/screens/wizard/HabitIconStep';
@@ -15,7 +16,7 @@ const Stack = createNativeStackNavigator<WizardStackParamList>();
 export default function WizardNavigator() {
   return (
     <Stack.Navigator
-      initialRouteName="HabitType"
+      initialRouteName="HabitSource"
       screenOptions={{
         headerShown: true,
         headerBackTitle: 'Back',
@@ -26,6 +27,11 @@ export default function WizardNavigator() {
         contentStyle: { backgroundColor: '#F2F2F7' },
       }}
     >
+      <Stack.Screen
+        name="HabitSource"
+        component={HabitSourceStep}
+        options={{ title: 'Add a new habit' }}
+      />
       <Stack.Screen
         name="HabitType"
         component={HabitTypeStep}

@@ -210,7 +210,7 @@ export default function HomeScreen() {
         <View style={s.header}>
           <Text style={s.appTitle}>Fovere</Text>
           <Pressable
-            onPress={() => navigation.navigate('NewHabit', { screen: 'HabitType' })}
+            onPress={() => navigation.navigate('NewHabit', { screen: 'HabitSource' })}
             style={s.addButton}
             accessibilityLabel="Add new habit"
           >

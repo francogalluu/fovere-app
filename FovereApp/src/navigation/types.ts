@@ -2,6 +2,7 @@ import type { NavigatorScreenParams } from '@react-navigation/native';
 
 // ─── Wizard stack ─────────────────────────────────────────────────────────────
 export type WizardStackParamList = {
+  HabitSource: undefined;
   HabitType: undefined;
   HabitName: undefined;
   HabitIcon: undefined;

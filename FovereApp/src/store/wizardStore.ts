@@ -22,6 +22,16 @@ interface WizardState {
   // ── Setters ────────────────────────────────────────────────────────────────
   reset: () => void;
   loadHabit: (habit: Habit) => void;
+  /** Pre-fill wizard from a predetermined habit (no habitId). */
+  loadPredetermined: (draft: {
+    name: string;
+    icon: string;
+    goalType: 'build' | 'break';
+    kind: 'boolean' | 'numeric';
+    frequency: 'daily' | 'weekly' | 'monthly';
+    target: number;
+    unit?: string;
+  }) => void;
   setGoalType: (v: 'build' | 'break') => void;
   setName: (v: string) => void;
   setIcon: (v: string) => void;
@@ -66,6 +76,19 @@ export const useWizardStore = create<WizardState>()((set) => ({
     unit:            habit.unit ?? '',
     reminderEnabled: !!habit.reminderTime,
     reminderTime:    habit.reminderTime ?? '08:00',
+  }),
+
+  loadPredetermined: (draft) => set({
+    habitId:         null,
+    goalType:        draft.goalType,
+    name:            draft.name,
+    icon:            draft.icon,
+    kind:            draft.kind,
+    frequency:       draft.frequency,
+    target:          draft.target,
+    unit:            draft.unit ?? '',
+    reminderEnabled: false,
+    reminderTime:    DEFAULTS.reminderTime,
   }),
 
   setGoalType:        (goalType)        => set({ goalType }),

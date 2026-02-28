@@ -69,8 +69,9 @@ export default function HabitTypeStep({ navigation }: Props) {
         return;
       }
     }
-    // New habit: reset only if not already editing (avoid resetting mid-flow)
-    if (!habitId) reset();
+    // New habit: reset only when store is still empty (e.g. direct open).
+    // Do not reset when pre-filled from predetermined picker (name already set).
+    if (!habitId && !name.trim()) reset();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
