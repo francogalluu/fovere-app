@@ -18,6 +18,8 @@ interface SwipeableHabitCardProps {
   onDelete?: () => void;
   /** Called when user chooses "Pause" instead of delete — caller should archive the habit */
   onPause?: () => void;
+  /** Compact layout (smaller card for home compact view) */
+  compact?: boolean;
 }
 
 function RightActions({ isCompleted }: { isCompleted: boolean }) {
@@ -53,6 +55,7 @@ export function SwipeableHabitCard({
   onComplete,
   onDelete,
   onPause,
+  compact = false,
 }: SwipeableHabitCardProps) {
   const swipeRef = useRef<Swipeable>(null);
   const pendingActionRef = useRef<'complete' | 'undo' | null>(null);
@@ -103,7 +106,7 @@ export function SwipeableHabitCard({
       overshootLeft={false}
       enabled={!readOnly}
       containerStyle={s.swipeContainer}
-      childrenContainerStyle={s.swipeChildren}
+      childrenContainerStyle={[s.swipeChildren, compact && s.swipeChildrenCompact]}
     >
       <HabitCard
         habit={habit}
@@ -111,6 +114,7 @@ export function SwipeableHabitCard({
         isCompleted={isCompleted}
         readOnly={readOnly}
         onPress={onPress}
+        compact={compact}
       />
     </Swipeable>
   );
@@ -122,6 +126,9 @@ const s = StyleSheet.create({
   },
   swipeChildren: {
     overflow: 'visible',
+  },
+  swipeChildrenCompact: {
+    marginBottom: 4,
   },
   rightAction: {
     width: 90,

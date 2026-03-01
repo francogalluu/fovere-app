@@ -15,7 +15,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import type { NavigationProp } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
-import { Plus, Play, Sprout, CircleSlash } from 'lucide-react-native';
+import { Plus, Play, Sprout, CircleSlash, LayoutGrid } from 'lucide-react-native';
 
 import { useHabitStore } from '@/store';
 import { useSettingsStore } from '@/store/settingsStore';
@@ -45,9 +45,11 @@ const DAYS_FORWARD = 30;
 function HomeDayContent({
   date,
   onJumpToToday,
+  compact = false,
 }: {
   date: string;
   onJumpToToday: () => void;
+  compact?: boolean;
 }) {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const haptic = Boolean(useSettingsStore(s => s.hapticFeedback));
@@ -224,6 +226,7 @@ function HomeDayContent({
         onComplete={() => handleComplete(habit)}
         onDelete={isTodayDate ? () => archiveHabit(habit.id) : undefined}
         onPause={isTodayDate ? () => pauseHabit(habit.id) : undefined}
+        compact={compact}
       />
     );
   };
@@ -235,20 +238,21 @@ function HomeDayContent({
       contentContainerStyle={s.scrollContent}
       showsVerticalScrollIndicator={false}
     >
-      <View style={{ marginTop: 8 }}>
+      <View style={[compact ? s.heroWrapCompact : s.heroWrap]}>
         <ProgressHero
           selectedDate={date}
           completed={completed}
           total={total}
           overLimit={overLimitCount}
           onPress={() => setSummaryVisible(true)}
+          compact={compact}
         />
       </View>
 
       {dailyBuildHabitsOnDate.length > 0 && (
-        <View style={s.section}>
+        <View style={[s.section, compact && s.sectionCompact]}>
           <View style={s.sectionTitleRow}>
-            <Text style={s.sectionTitle}>{dailySectionLabel}</Text>
+            <Text style={[s.sectionTitle, compact && s.sectionTitleCompact]}>{dailySectionLabel}</Text>
             {!isTodayDate && (
               <View style={s.badge}>
                 <Text style={s.badgeText}>{isReadOnly ? 'Upcoming' : 'Past'}</Text>
@@ -262,9 +266,9 @@ function HomeDayContent({
       )}
 
       {allBreakHabitsOnDate.length > 0 && (
-        <View style={s.section}>
+        <View style={[s.section, compact && s.sectionCompact]}>
           <View style={s.sectionTitleRow}>
-            <Text style={s.sectionTitle}>Break Habits</Text>
+            <Text style={[s.sectionTitle, compact && s.sectionTitleCompact]}>Break Habits</Text>
             {!isTodayDate && (
               <View style={s.badge}>
                 <Text style={s.badgeText}>{isReadOnly ? 'Upcoming' : 'Past'}</Text>
@@ -278,9 +282,9 @@ function HomeDayContent({
       )}
 
       {weeklyBuildHabitsOnDate.length > 0 && (
-        <View style={s.section}>
+        <View style={[s.section, compact && s.sectionCompact]}>
           <View style={s.sectionTitleRow}>
-            <Text style={s.sectionTitle}>Weekly Habits</Text>
+            <Text style={[s.sectionTitle, compact && s.sectionTitleCompact]}>Weekly Habits</Text>
             {weeklyBuildTotal > 0 && (
               <Text style={s.weeklyPct}>
                 {Math.round((weeklyBuildCompleted / weeklyBuildTotal) * 100)}% this week
@@ -294,9 +298,9 @@ function HomeDayContent({
       )}
 
       {monthlyBuildHabitsOnDate.length > 0 && (
-        <View style={s.section}>
+        <View style={[s.section, compact && s.sectionCompact]}>
           <View style={s.sectionTitleRow}>
-            <Text style={s.sectionTitle}>Monthly Habits</Text>
+            <Text style={[s.sectionTitle, compact && s.sectionTitleCompact]}>Monthly Habits</Text>
             {monthlyBuildTotal > 0 && (
               <Text style={s.weeklyPct}>
                 {Math.round((monthlyBuildCompleted / monthlyBuildTotal) * 100)}% this month
@@ -325,9 +329,9 @@ function HomeDayContent({
       )}
 
       {isTodayDate && pausedHabits.length > 0 && (
-        <View style={s.section}>
+        <View style={[s.section, compact && s.sectionCompact]}>
           <View style={s.sectionTitleRow}>
-            <Text style={s.sectionTitle}>Paused</Text>
+            <Text style={[s.sectionTitle, compact && s.sectionTitleCompact]}>Paused</Text>
           </View>
           <View style={s.pausedList}>
             {pausedHabits.map(h => (
@@ -368,6 +372,8 @@ function HomeDayContent({
 export default function HomeScreen() {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const haptic = Boolean(useSettingsStore(s => s.hapticFeedback));
+  const compactHomeView = useSettingsStore(s => s.compactHomeView);
+  const setCompactHomeView = useSettingsStore(s => s.setCompactHomeView);
   const { width: screenWidth } = useWindowDimensions();
   const listRef = useRef<FlatList<string>>(null);
 
@@ -529,17 +535,31 @@ export default function HomeScreen() {
     navigation.navigate('NewHabit', { screen: 'HabitSource', params: { goalType: 'break' } });
   }, [closeAddSheet, navigation]);
 
+  const handleToggleCompact = useCallback(() => {
+    if (haptic) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setCompactHomeView(!compactHomeView);
+  }, [haptic, compactHomeView]);
+
   return (
     <SafeAreaView style={s.safe}>
       <View style={s.header}>
         <Text style={s.appTitle}>Fovere</Text>
-        <Pressable
-          onPress={openAddSheet}
-          style={s.addButton}
-          accessibilityLabel="Add new habit"
-        >
-          <Plus size={20} color="#fff" strokeWidth={2.5} />
-        </Pressable>
+        <View style={s.headerActions}>
+          <Pressable
+            onPress={handleToggleCompact}
+            style={[s.compactToggle, compactHomeView && s.compactToggleActive]}
+            accessibilityLabel={compactHomeView ? 'Switch to full view' : 'Switch to compact view'}
+          >
+            <LayoutGrid size={20} color={compactHomeView ? '#fff' : C.teal} strokeWidth={2.5} />
+          </Pressable>
+          <Pressable
+            onPress={openAddSheet}
+            style={s.addButton}
+            accessibilityLabel="Add new habit"
+          >
+            <Plus size={20} color="#fff" strokeWidth={2.5} />
+          </Pressable>
+        </View>
       </View>
 
       <WeekCalendar
@@ -567,7 +587,7 @@ export default function HomeScreen() {
         initialNumToRender={1}
         renderItem={({ item: date }) => (
           <View style={[s.dayPage, { width: screenWidth }]}>
-            <HomeDayContent date={date} onJumpToToday={handleJumpToToday} />
+            <HomeDayContent date={date} onJumpToToday={handleJumpToToday} compact={compactHomeView} />
           </View>
         )}
       />
@@ -646,6 +666,25 @@ const s = StyleSheet.create({
     color: C.text1,
     letterSpacing: -0.5,
   },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  compactToggle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'transparent',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: C.teal,
+  },
+  compactToggleActive: {
+    backgroundColor: C.teal,
+    borderColor: C.teal,
+  },
   addButton: {
     width: 36,
     height: 36,
@@ -655,9 +694,14 @@ const s = StyleSheet.create({
     justifyContent: 'center',
   },
 
+  heroWrap: { marginTop: 8 },
+  heroWrapCompact: { marginTop: 4 },
   // Sections (no extra horizontal padding; scrollContent provides it for shadow room)
   section: {
     marginTop: 24,
+  },
+  sectionCompact: {
+    marginTop: 12,
   },
   sectionTitleRow: {
     flexDirection: 'row',
@@ -670,6 +714,9 @@ const s = StyleSheet.create({
     fontWeight: '600',
     color: C.text1,
     marginLeft: 4,
+  },
+  sectionTitleCompact: {
+    fontSize: 17,
   },
 
   // Weekly percentage label (right side of Weekly Habits title)

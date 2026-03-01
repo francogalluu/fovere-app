@@ -23,10 +23,14 @@ interface SettingsState {
    */
   notificationsEnabled: boolean;
 
+  /** Compact home screen layout (smaller hero and habit cards for faster scanning). */
+  compactHomeView: boolean;
+
   // ── Actions ────────────────────────────────────────────────────────────────
   setHapticFeedback: (enabled: boolean) => void;
   setWeekStartsOn: (day: WeekStartDay) => void;
   setNotificationsEnabled: (enabled: boolean) => void;
+  setCompactHomeView: (enabled: boolean) => void;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -52,10 +56,12 @@ export const useSettingsStore = create<SettingsState>()(
       hapticFeedback: true,
       weekStartsOn: 1,          // Monday by default (matches legacy Settings screen)
       notificationsEnabled: false,
+      compactHomeView: false,
 
       setHapticFeedback: (enabled) => set({ hapticFeedback: enabled }),
       setWeekStartsOn: (day) => set({ weekStartsOn: day }),
       setNotificationsEnabled: (enabled) => set({ notificationsEnabled: enabled }),
+      setCompactHomeView: (enabled) => set({ compactHomeView: enabled }),
     }),
     {
       name: 'fovere-settings',
@@ -72,6 +78,7 @@ export const useSettingsStore = create<SettingsState>()(
         // weekStartsOn must be 0 or 1 — clamp just in case
         const ws = Number(state.weekStartsOn);
         state.weekStartsOn = (ws === 0 || ws === 1 ? ws : 1) as WeekStartDay;
+        state.compactHomeView = toBoolean(state.compactHomeView, false);
 
         if (__DEV__) {
           console.log('[settingsStore] rehydrated →', {
