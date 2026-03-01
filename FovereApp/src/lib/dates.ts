@@ -73,15 +73,20 @@ export const formatDateTitle = (dateStr: string): string => {
   return d.toLocaleDateString('en-US', { day: 'numeric', month: 'long' });
 };
 
+/** 0 = Sunday, 1 = Monday (matches settingsStore WeekStartDay) */
+export type WeekStartDay = 0 | 1;
+
 /**
  * Returns 7 YYYY-MM-DD strings for the week containing anchorDate.
- * Week starts on Sunday (index 0).
+ * weekStartsOn: 0 = Sun–Sat, 1 = Mon–Sun.
  */
-export const getWeekDates = (anchorDate: string): string[] => {
+export const getWeekDates = (anchorDate: string, weekStartsOn: WeekStartDay): string[] => {
   const d = new Date(anchorDate + 'T00:00:00');
-  const dayOfWeek = d.getDay(); // 0 = Sunday
+  const dayOfWeek = d.getDay(); // 0 = Sunday, 1 = Monday, ...
+  const daysFromStart =
+    weekStartsOn === 0 ? dayOfWeek : (dayOfWeek + 6) % 7; // Mon=0 .. Sun=6
   const weekStart = new Date(d);
-  weekStart.setDate(d.getDate() - dayOfWeek);
+  weekStart.setDate(d.getDate() - daysFromStart);
   return Array.from({ length: 7 }, (_, i) => {
     const day = new Date(weekStart);
     day.setDate(weekStart.getDate() + i);
@@ -93,12 +98,13 @@ export const getWeekDates = (anchorDate: string): string[] => {
 export const getWeeksRange = (
   numWeeksBack: number,
   numWeeksForward: number,
+  weekStartsOn: WeekStartDay,
 ): string[][] => {
-  const todayWeek = getWeekDates(today());
-  const startSunday = addDays(todayWeek[0], -7 * numWeeksBack);
+  const todayWeek = getWeekDates(today(), weekStartsOn);
+  const firstDay = addDays(todayWeek[0], -7 * numWeeksBack);
   const total = numWeeksBack + 1 + numWeeksForward;
   return Array.from({ length: total }, (_, i) =>
-    getWeekDates(addDays(startSunday, i * 7)),
+    getWeekDates(addDays(firstDay, i * 7), weekStartsOn),
   );
 };
 
@@ -108,8 +114,21 @@ export const getDayOfMonth = (dateStr: string): number =>
 export const getDayOfWeekIndex = (dateStr: string): number =>
   new Date(dateStr + 'T00:00:00').getDay();
 
-/** Short day labels indexed Sunday → Saturday */
+/** Short day labels indexed Sunday → Saturday (native getDay() order). */
 export const SHORT_DAY_LABELS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'] as const;
+
+/** Column index 0..6 for the first day of the week (0=Sun when weekStartsOn 0, 0=Mon when 1). */
+export const getDayOfWeekColumnIndex = (dateStr: string, weekStartsOn: WeekStartDay): number => {
+  const d = new Date(dateStr + 'T00:00:00');
+  const dayOfWeek = d.getDay();
+  return weekStartsOn === 0 ? dayOfWeek : (dayOfWeek + 6) % 7;
+};
+
+/** Short day labels in display order: first element is the first day of the week. */
+export const getShortDayLabels = (weekStartsOn: WeekStartDay): string[] =>
+  weekStartsOn === 0
+    ? [...SHORT_DAY_LABELS]
+    : ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
 
 /** Build an inclusive array of YYYY-MM-DD strings from `from` to `to` */
 export const datesInRange = (from: string, to: string): string[] => {
@@ -145,9 +164,9 @@ export const normalizeDate = (date: string | Date): string => {
   return toLocalDateString(date);
 };
 
-/** Inclusive week range (Sun–Sat) for the week containing the given date. */
-export const getWeekRange = (dateStr: string): { start: string; end: string } => {
-  const days = getWeekDates(dateStr);
+/** Inclusive week range for the week containing the given date. */
+export const getWeekRange = (dateStr: string, weekStartsOn: WeekStartDay): { start: string; end: string } => {
+  const days = getWeekDates(dateStr, weekStartsOn);
   return { start: days[0], end: days[6] };
 };
 

@@ -30,8 +30,8 @@ export default function SettingsScreen() {
       'Week Starts On',
       undefined,
       [
-        { text: 'Sunday',  onPress: () => setWeekStartsOn(0), style: weekStartsOn === 0 ? 'destructive' : 'default' },
-        { text: 'Monday',  onPress: () => setWeekStartsOn(1), style: weekStartsOn === 1 ? 'destructive' : 'default' },
+        { text: 'Sunday',  onPress: () => setWeekStartsOn(0), style: 'default' },
+        { text: 'Monday',  onPress: () => setWeekStartsOn(1), style: 'default' },
         { text: 'Cancel',  style: 'cancel' },
       ],
     );

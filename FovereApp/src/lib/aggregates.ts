@@ -1,5 +1,5 @@
 import type { Habit, HabitEntry } from '@/types/habit';
-import { getWeekDates, datesInRange } from './dates';
+import { getWeekDates, datesInRange, type WeekStartDay } from './dates';
 
 // ─── Active-on-date (pause/delete are forward-looking) ────────────────────────
 
@@ -40,9 +40,10 @@ export const getHabitCurrentValue = (
   habit: Habit,
   entries: HabitEntry[],
   date: string,
+  weekStartsOn: WeekStartDay,
 ): number => {
   if (habit.frequency === 'weekly') {
-    const weekDates = getWeekDates(date);
+    const weekDates = getWeekDates(date, weekStartsOn);
     return weekDates.reduce((sum, d) => sum + entryValue(entries, habit.id, d), 0);
   }
   if (habit.frequency === 'monthly') {
@@ -71,8 +72,9 @@ export const isHabitCompleted = (
   habit: Habit,
   entries: HabitEntry[],
   date: string,
+  weekStartsOn: WeekStartDay,
 ): boolean => {
-  const value = getHabitCurrentValue(habit, entries, date);
+  const value = getHabitCurrentValue(habit, entries, date, weekStartsOn);
   if (habit.goalType === 'break') return value <= habit.target;
   return value >= habit.target;
 };
@@ -82,9 +84,10 @@ export const isOverLimit = (
   habit: Habit,
   entries: HabitEntry[],
   date: string,
+  weekStartsOn: WeekStartDay,
 ): boolean => {
   if (habit.goalType !== 'break') return false;
-  return getHabitCurrentValue(habit, entries, date) > habit.target;
+  return getHabitCurrentValue(habit, entries, date, weekStartsOn) > habit.target;
 };
 
 /** Count of daily break habits that have exceeded their limit on a given date. */
@@ -92,11 +95,12 @@ export const dailyOverLimitCount = (
   habits: Habit[],
   entries: HabitEntry[],
   date: string,
+  weekStartsOn: WeekStartDay,
 ): number =>
   habits.filter(
     h => isHabitActiveOnDate(h, date) && h.createdAt <= date &&
          h.frequency === 'daily' && h.goalType === 'break' &&
-         isOverLimit(h, entries, date),
+         isOverLimit(h, entries, date, weekStartsOn),
   ).length;
 
 // ─── Day-level aggregates ─────────────────────────────────────────────────────
@@ -109,10 +113,11 @@ export const dailyCompletion = (
   habits: Habit[],
   entries: HabitEntry[],
   date: string,
+  weekStartsOn: WeekStartDay,
 ): number => {
   const active = habits.filter(h => isHabitActiveOnDate(h, date) && h.createdAt <= date);
   if (active.length === 0) return 0;
-  const completed = active.filter(h => isHabitCompleted(h, entries, date)).length;
+  const completed = active.filter(h => isHabitCompleted(h, entries, date, weekStartsOn)).length;
   return Math.round((completed / active.length) * 100);
 };
 
@@ -121,9 +126,10 @@ export const dailyCompletedCount = (
   habits: Habit[],
   entries: HabitEntry[],
   date: string,
+  weekStartsOn: WeekStartDay,
 ): { completed: number; total: number } => {
   const active = habits.filter(h => isHabitActiveOnDate(h, date) && h.createdAt <= date);
-  const completed = active.filter(h => isHabitCompleted(h, entries, date)).length;
+  const completed = active.filter(h => isHabitCompleted(h, entries, date, weekStartsOn)).length;
   return { completed, total: active.length };
 };
 
@@ -136,12 +142,13 @@ export const dailyOnlyCompletedCount = (
   habits: Habit[],
   entries: HabitEntry[],
   date: string,
+  weekStartsOn: WeekStartDay,
 ): { completed: number; total: number } => {
   const active = habits.filter(
     h => isHabitActiveOnDate(h, date) && h.createdAt <= date && h.frequency === 'daily',
   );
   return {
-    completed: active.filter(h => isHabitCompleted(h, entries, date)).length,
+    completed: active.filter(h => isHabitCompleted(h, entries, date, weekStartsOn)).length,
     total: active.length,
   };
 };
@@ -151,8 +158,9 @@ export const dailyOnlyCompletion = (
   habits: Habit[],
   entries: HabitEntry[],
   date: string,
+  weekStartsOn: WeekStartDay,
 ): number => {
-  const { completed, total } = dailyOnlyCompletedCount(habits, entries, date);
+  const { completed, total } = dailyOnlyCompletedCount(habits, entries, date, weekStartsOn);
   return total === 0 ? 0 : Math.round((completed / total) * 100);
 };
 
@@ -161,12 +169,13 @@ export const weeklyHabitProgress = (
   habits: Habit[],
   entries: HabitEntry[],
   date: string,
+  weekStartsOn: WeekStartDay,
 ): { completed: number; total: number } => {
   const active = habits.filter(
     h => isHabitActiveOnDate(h, date) && h.createdAt <= date && h.frequency === 'weekly',
   );
   return {
-    completed: active.filter(h => isHabitCompleted(h, entries, date)).length,
+    completed: active.filter(h => isHabitCompleted(h, entries, date, weekStartsOn)).length,
     total: active.length,
   };
 };
@@ -178,12 +187,13 @@ export const weeklyScore = (
   habits: Habit[],
   entries: HabitEntry[],
   weekStartDate: string,
+  weekStartsOn: WeekStartDay,
 ): number => {
   const days = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(weekStartDate + 'T00:00:00');
     d.setDate(d.getDate() + i);
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   });
-  const scores = days.map(d => dailyCompletion(habits, entries, d));
+  const scores = days.map(d => dailyCompletion(habits, entries, d, weekStartsOn));
   return Math.round(scores.reduce((a, b) => a + b, 0) / 7);
 };

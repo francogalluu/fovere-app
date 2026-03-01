@@ -13,7 +13,8 @@ import {
   getWeekDates,
   getMonthKey,
   getLastNMonthRanges,
-  SHORT_DAY_LABELS,
+  getShortDayLabels,
+  getDayOfWeekColumnIndex,
 } from '@/lib/dates';
 import {
   dailyCompletion,
@@ -26,6 +27,7 @@ import type { Habit, HabitEntry } from '@/types/habit';
 import { BarChartWithTooltip, type ChartBar } from '@/components/charts/BarChartWithTooltip';
 import { ScoreRing } from '@/components/ScoreRing';
 import { useHabitStore } from '@/store';
+import { useSettingsStore } from '@/store/settingsStore';
 import { useHabitLogs } from '@/hooks/useHabitLogs';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -36,15 +38,16 @@ export type { ChartBar };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function getBuckets(range: TimeRange, endDate: string): ChartBucket[] {
+function getBuckets(range: TimeRange, endDate: string, weekStartsOn: 0 | 1): ChartBucket[] {
   switch (range) {
     case 'day':
       return [{ key: endDate, label: 'Today', start: endDate, end: endDate }];
     case 'week': {
-      const last7 = datesInRange(addDays(endDate, -6), endDate);
-      return last7.map(d => ({
+      const dayLabels = getShortDayLabels(weekStartsOn);
+      const weekDates = getWeekDates(endDate, weekStartsOn);
+      return weekDates.map((d, i) => ({
         key: d,
-        label: SHORT_DAY_LABELS[new Date(d + 'T00:00:00').getDay()],
+        label: dayLabels[i],
         start: d,
         end: d,
       }));
@@ -72,6 +75,7 @@ function aggregateCompletions(
   entries: HabitEntry[],
   buckets: ChartBucket[],
   habitFilter: Habit | null,
+  weekStartsOn: 0 | 1,
 ): { completed: number; target: number; averagePercent?: number }[] {
   return buckets.map(bucket => {
     const days = bucket.dates ?? datesInRange(bucket.start, bucket.end);
@@ -83,11 +87,11 @@ function aggregateCompletions(
       if (habitFilter) {
         if (habitFilter.createdAt > d) continue;
         target += 1;
-        if (isHabitCompleted(habitFilter, entries, d)) completed += 1;
+        if (isHabitCompleted(habitFilter, entries, d, weekStartsOn)) completed += 1;
       } else {
         const active = habits.filter(h => isHabitActiveOnDate(h, d) && h.createdAt <= d);
         const n = active.length;
-        const c = active.filter(h => isHabitCompleted(h, entries, d)).length;
+        const c = active.filter(h => isHabitCompleted(h, entries, d, weekStartsOn)).length;
         target += n;
         completed += c;
         dailyPcts.push(n > 0 ? (c / n) * 100 : 0);
@@ -115,9 +119,9 @@ function safePercent(percent: number | null | undefined): number {
   return Math.max(0, Math.min(100, n));
 }
 
-function buildChartBars(habits: Habit[], entries: HabitEntry[], range: TimeRange, endDate: string, habitFilter: Habit | null): ChartBar[] {
-  const buckets = getBuckets(range, endDate);
-  const agg = aggregateCompletions(habits, entries, buckets, habitFilter);
+function buildChartBars(habits: Habit[], entries: HabitEntry[], range: TimeRange, endDate: string, habitFilter: Habit | null, weekStartsOn: 0 | 1): ChartBar[] {
+  const buckets = getBuckets(range, endDate, weekStartsOn);
+  const agg = aggregateCompletions(habits, entries, buckets, habitFilter, weekStartsOn);
   return buckets.map((b, i) => {
     const raw =
       agg[i].averagePercent != null
@@ -133,10 +137,10 @@ function buildChartBars(habits: Habit[], entries: HabitEntry[], range: TimeRange
   });
 }
 
-function getPeriodDates(range: TimeRange, todayStr: string): string[] {
+function getPeriodDates(range: TimeRange, todayStr: string, weekStartsOn: 0 | 1): string[] {
   switch (range) {
     case 'day': return [todayStr];
-    case 'week': return datesInRange(addDays(todayStr, -6), todayStr);
+    case 'week': return getWeekDates(todayStr, weekStartsOn);
     case 'month': return datesInRange(addDays(todayStr, -29), todayStr);
     case '6month': {
       const start = addMonths(todayStr, -5);
@@ -155,17 +159,18 @@ function getPeriodLabel(range: TimeRange): string {
   return { day: 'Today', week: 'Last 7 days', month: 'Last 30 days', '6month': 'Last 6 months', year: 'Last year' }[range];
 }
 
-/** Per-weekday average completion (0–6 = Sun–Sat). For month/6M/year only. */
+/** Per-weekday average completion (0–6 = first day of week .. last). For month/6M/year only. */
 function getCompletionByWeekday(
   periodDates: string[],
   habits: Habit[],
   entries: HabitEntry[],
+  weekStartsOn: 0 | 1,
 ): number[] {
   const byDow: number[][] = [[], [], [], [], [], [], []];
   for (const d of periodDates) {
-    const dow = new Date(d + 'T00:00:00').getDay();
-    const pct = dailyCompletion(habits, entries, d);
-    byDow[dow].push(pct);
+    const col = getDayOfWeekColumnIndex(d, weekStartsOn);
+    const pct = dailyCompletion(habits, entries, d, weekStartsOn);
+    byDow[col].push(pct);
   }
   return byDow.map(arr =>
     arr.length === 0 ? 0 : Math.round(arr.reduce((a, b) => a + b, 0) / arr.length),
@@ -207,13 +212,13 @@ function getVerticalGridlineIndices(range: TimeRange, bars: ChartBar[]): number[
 }
 
 /** Compute streak: consecutive days ending today/yesterday with 100% completion */
-function computeStreak(habits: Habit[], entries: HabitEntry[], todayStr: string): number {
+function computeStreak(habits: Habit[], entries: HabitEntry[], todayStr: string, weekStartsOn: 0 | 1): number {
   if (habits.length === 0) return 0;
   let streak = 0;
   let cursor = todayStr;
-  if (dailyCompletion(habits, entries, cursor) < 100) cursor = addDays(cursor, -1);
+  if (dailyCompletion(habits, entries, cursor, weekStartsOn) < 100) cursor = addDays(cursor, -1);
   while (cursor >= '2020-01-01') {
-    if (dailyCompletion(habits, entries, cursor) === 100) {
+    if (dailyCompletion(habits, entries, cursor, weekStartsOn) === 100) {
       streak++;
       cursor = addDays(cursor, -1);
     } else break;
@@ -222,13 +227,13 @@ function computeStreak(habits: Habit[], entries: HabitEntry[], todayStr: string)
 }
 
 /** Streak for a single habit */
-function computeHabitStreak(habit: Habit, entries: HabitEntry[], todayStr: string): number {
+function computeHabitStreak(habit: Habit, entries: HabitEntry[], todayStr: string, weekStartsOn: 0 | 1): number {
   const dates = datesInRange(habit.createdAt, todayStr);
   let streak = 0;
   let startIdx = dates.length - 1;
-  if (!isHabitCompleted(habit, entries, dates[startIdx])) startIdx--;
+  if (!isHabitCompleted(habit, entries, dates[startIdx], weekStartsOn)) startIdx--;
   for (let i = startIdx; i >= 0; i--) {
-    if (isHabitCompleted(habit, entries, dates[i])) streak++;
+    if (isHabitCompleted(habit, entries, dates[i], weekStartsOn)) streak++;
     else break;
   }
   return streak;
@@ -239,6 +244,7 @@ function computeHabitStreak(habit: Habit, entries: HabitEntry[], todayStr: strin
 export default function AnalyticsScreen() {
   const { habits, entries, focusKey } = useHabitLogs();
   const allHabits = useHabitStore(s => s.habits);
+  const weekStartsOn = useSettingsStore(s => s.weekStartsOn);
   const todayStr = today();
 
   const [selectedHabitId, setSelectedHabitId] = useState<string>('all');
@@ -250,15 +256,15 @@ export default function AnalyticsScreen() {
   );
 
   const periodDates = useMemo(
-    () => getPeriodDates(timeRange, todayStr),
-    [timeRange, todayStr],
+    () => getPeriodDates(timeRange, todayStr, weekStartsOn),
+    [timeRange, todayStr, weekStartsOn],
   );
 
   // ── Completion ring ───────────────────────────────────────────────────────
 
   const { completionPct, completionText, completionTitle } = useMemo(() => {
     if (selectedHabit) {
-      const completed = periodDates.filter(d => isHabitCompleted(selectedHabit, entries, d)).length;
+      const completed = periodDates.filter(d => isHabitCompleted(selectedHabit, entries, d, weekStartsOn)).length;
       return {
         completionPct:   periodDates.length > 0 ? Math.round((completed / periodDates.length) * 100) : 0,
         completionText:  `${completed} of ${periodDates.length} sessions`,
@@ -266,7 +272,7 @@ export default function AnalyticsScreen() {
       };
     }
     if (allHabits.length === 0) return { completionPct: 0, completionText: '0 of 0 habits', completionTitle: getPeriodLabel(timeRange) };
-    const scores   = periodDates.map(d => dailyCompletion(allHabits, entries, d));
+    const scores   = periodDates.map(d => dailyCompletion(allHabits, entries, d, weekStartsOn));
     const pct      = Math.round(scores.reduce((a, b) => a + b, 0) / (scores.length || 1));
     let totalPossible = 0;
     for (const d of periodDates) {
@@ -275,18 +281,18 @@ export default function AnalyticsScreen() {
     let totalCompleted = 0;
     for (const d of periodDates) {
       const active = allHabits.filter(h => isHabitActiveOnDate(h, d) && h.createdAt <= d);
-      totalCompleted += active.filter(h => isHabitCompleted(h, entries, d)).length;
+      totalCompleted += active.filter(h => isHabitCompleted(h, entries, d, weekStartsOn)).length;
     }
     return {
       completionPct:   pct,
       completionText:  `${totalCompleted} of ${totalPossible} habits`,
       completionTitle: getPeriodLabel(timeRange) + ' completion',
     };
-  }, [selectedHabit, allHabits, entries, periodDates, timeRange, focusKey]);
+  }, [selectedHabit, allHabits, entries, periodDates, timeRange, weekStartsOn, focusKey]);
 
   const chartBars = useMemo(
-    () => buildChartBars(allHabits, entries, timeRange, todayStr, selectedHabit ?? null),
-    [allHabits, entries, timeRange, todayStr, selectedHabit, focusKey],
+    () => buildChartBars(allHabits, entries, timeRange, todayStr, selectedHabit ?? null, weekStartsOn),
+    [allHabits, entries, timeRange, todayStr, selectedHabit, weekStartsOn, focusKey],
   );
 
   const totalCompleted = useMemo(
@@ -302,14 +308,14 @@ export default function AnalyticsScreen() {
   // ── Single-habit streak ───────────────────────────────────────────────────
 
   const habitStreak = useMemo(
-    () => selectedHabit ? computeHabitStreak(selectedHabit, entries, todayStr) : null,
-    [selectedHabit, entries, todayStr, focusKey],
+    () => selectedHabit ? computeHabitStreak(selectedHabit, entries, todayStr, weekStartsOn) : null,
+    [selectedHabit, entries, todayStr, weekStartsOn, focusKey],
   );
 
   const habitDaysCompleted = useMemo(() => {
     if (!selectedHabit) return null;
-    return periodDates.filter(d => isHabitCompleted(selectedHabit, entries, d)).length;
-  }, [selectedHabit, entries, periodDates, focusKey]);
+    return periodDates.filter(d => isHabitCompleted(selectedHabit, entries, d, weekStartsOn)).length;
+  }, [selectedHabit, entries, periodDates, weekStartsOn, focusKey]);
 
   // ── By-habit completion (when "All habits" selected) ──────────────────────
   // Uses each habit's measure: period sum of value vs expected (target × periods). e.g. weekly = sum of minutes vs expected minutes so far.
@@ -335,12 +341,12 @@ export default function AnalyticsScreen() {
           const weekKeys = new Set<string>();
           for (const d of periodDates) {
             if (!isHabitActiveOnDate(habit, d) || habit.createdAt > d) continue;
-            weekKeys.add(getWeekDates(d)[0]);
+            weekKeys.add(getWeekDates(d, weekStartsOn)[0]);
           }
           let value = 0;
           for (const weekStart of weekKeys) {
-            const anyDay = getWeekDates(weekStart).find(d => periodDates.includes(d) && isHabitActiveOnDate(habit, d) && habit.createdAt <= d);
-            if (anyDay) value += getHabitCurrentValue(habit, entries, anyDay);
+            const anyDay = getWeekDates(weekStart, weekStartsOn).find(d => periodDates.includes(d) && isHabitActiveOnDate(habit, d) && habit.createdAt <= d);
+            if (anyDay) value += getHabitCurrentValue(habit, entries, anyDay, weekStartsOn);
           }
           const expected = targetPerPeriod * weekKeys.size;
           const pct = expected > 0 ? Math.min(100, Math.round((value / expected) * 100)) : 0;
@@ -359,7 +365,7 @@ export default function AnalyticsScreen() {
           const [y, m] = monthKey.split('-').map(Number);
           const lastDay = new Date(y, m, 0).getDate();
           const anchor = `${y}-${String(m).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
-          value += getHabitCurrentValue(habit, entries, anchor);
+          value += getHabitCurrentValue(habit, entries, anchor, weekStartsOn);
         }
         const expected = targetPerPeriod * monthKeys.size;
         const pct = expected > 0 ? Math.min(100, Math.round((value / expected) * 100)) : 0;
@@ -369,13 +375,13 @@ export default function AnalyticsScreen() {
     const build = list.filter(x => x.habit.goalType !== 'break').sort((a, b) => b.pct - a.pct);
     const breakList = list.filter(x => x.habit.goalType === 'break').sort((a, b) => b.pct - a.pct);
     return { build, break: breakList };
-  }, [habits, periodDates, entries, selectedHabit, focusKey]);
+  }, [habits, periodDates, entries, selectedHabit, weekStartsOn, focusKey]);
 
   // ── Completion by weekday (month / 6M / year only) ─────────────────────────
   const completionByWeekday = useMemo(() => {
     if (timeRange !== 'month' && timeRange !== '6month' && timeRange !== 'year') return null;
-    return getCompletionByWeekday(periodDates, allHabits, entries);
-  }, [timeRange, periodDates, allHabits, entries, focusKey]);
+    return getCompletionByWeekday(periodDates, allHabits, entries, weekStartsOn);
+  }, [timeRange, periodDates, allHabits, entries, weekStartsOn, focusKey]);
 
   // ── Break habits summary ───────────────────────────────────────────────────
   const breakHabitsSummary = useMemo(() => {
@@ -388,13 +394,13 @@ export default function AnalyticsScreen() {
       if (active.length === 0) continue;
       daysWithBreak++;
       const over = active.some(h => {
-        const val = getHabitCurrentValue(h, entries, d);
+        const val = getHabitCurrentValue(h, entries, d, weekStartsOn);
         return val > h.target;
       });
       if (!over) daysUnderLimit++;
     }
     return daysWithBreak > 0 ? { daysUnderLimit, daysWithBreak } : null;
-  }, [habits, periodDates, entries, selectedHabit, focusKey]);
+  }, [habits, periodDates, entries, selectedHabit, weekStartsOn, focusKey]);
 
   // ── Heatmap (current month) ───────────────────────────────────────────────
 
@@ -411,10 +417,10 @@ export default function AnalyticsScreen() {
       let pct = 0;
       if (!future) {
         if (selectedHabit) {
-          const val = getHabitCurrentValue(selectedHabit, entries, dateStr);
+          const val = getHabitCurrentValue(selectedHabit, entries, dateStr, weekStartsOn);
           pct = Math.round((val / (selectedHabit.target || 1)) * 100);
         } else {
-          pct = dailyCompletion(habits, entries, dateStr);
+          pct = dailyCompletion(habits, entries, dateStr, weekStartsOn);
         }
       }
       let color = '#E5E5E7';
@@ -430,7 +436,7 @@ export default function AnalyticsScreen() {
     const rows: { dateStr: string | null; color: string }[][] = [];
     for (let i = 0; i < cells.length; i += 7) rows.push(cells.slice(i, i + 7));
     return rows;
-  }, [todayStr, selectedHabit, habits, entries, focusKey]);
+  }, [todayStr, selectedHabit, habits, entries, weekStartsOn, focusKey]);
 
   const heatmapMonthLabel = new Date(todayStr + 'T00:00:00').toLocaleDateString('en-US', { month: 'short' });
 
@@ -610,7 +616,7 @@ export default function AnalyticsScreen() {
           <>
             <Text style={s.sectionTitle}>Completion by weekday</Text>
             <View style={s.weekdayCard}>
-              {WEEKDAY_LABELS.map((label, i) => {
+              {getShortDayLabels(weekStartsOn).map((label, i) => {
                 const pct = completionByWeekday[i] ?? 0;
                 return (
                   <View key={i} style={s.weekdayRow}>

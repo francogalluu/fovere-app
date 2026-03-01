@@ -4,10 +4,10 @@ import Svg, { Circle } from 'react-native-svg';
 import {
   getWeekDates,
   getDayOfMonth,
-  getDayOfWeekIndex,
-  SHORT_DAY_LABELS,
+  getShortDayLabels,
   isToday,
   isFuture,
+  type WeekStartDay,
 } from '@/lib/dates';
 import { getProgressColor } from '@/lib/progressColors';
 
@@ -24,6 +24,7 @@ interface WeekCalendarProps {
   selectedDate: string;
   completionByDate: Record<string, number>;
   onDateSelect: (date: string) => void;
+  weekStartsOn: WeekStartDay;
 }
 
 export function WeekCalendar({
@@ -31,10 +32,12 @@ export function WeekCalendar({
   selectedDate,
   completionByDate,
   onDateSelect,
+  weekStartsOn,
 }: WeekCalendarProps) {
   const scrollRef = useRef<ScrollView>(null);
   const [containerWidth, setContainerWidth] = useState(0);
-  const weeks = weeksProp ?? [getWeekDates(selectedDate)];
+  const weeks = weeksProp ?? [getWeekDates(selectedDate, weekStartsOn)];
+  const dayLabels = getShortDayLabels(weekStartsOn);
 
   const weekIndexForDate = weeks.findIndex(w => w.includes(selectedDate));
   useEffect(() => {
@@ -49,14 +52,14 @@ export function WeekCalendar({
     requestAnimationFrame(scroll);
   }, [selectedDate, weekIndexForDate, weeks.length, containerWidth]);
 
-  const renderDay = (date: string, fillWeek?: boolean) => {
+  const renderDay = (date: string, fillWeek: boolean, columnIndex: number) => {
     const completion = completionByDate[date] ?? 0;
     const isSelected = date === selectedDate;
     const isTodayDate = isToday(date);
     const isFutureDate = isFuture(date);
     const ringColor = getProgressColor(completion);
     const dashOffset = CIRCUMFERENCE * (1 - completion / 100);
-    const dayLabel = SHORT_DAY_LABELS[getDayOfWeekIndex(date)];
+    const dayLabel = dayLabels[columnIndex];
     const dayNumber = getDayOfMonth(date);
 
     return (
@@ -137,7 +140,7 @@ export function WeekCalendar({
               key={weekDates[0]}
               style={[styles.row, styles.weekColumn, containerWidth > 0 && { width: containerWidth }]}
             >
-              {weekDates.map((date) => renderDay(date, true))}
+              {weekDates.map((date, i) => renderDay(date, true, i))}
             </View>
           ))}
         </ScrollView>
@@ -147,7 +150,7 @@ export function WeekCalendar({
 
   return (
     <View style={styles.row}>
-      {weeks[0].map((date) => renderDay(date))}
+      {weeks[0].map((date, i) => renderDay(date, false, i))}
     </View>
   );
 }

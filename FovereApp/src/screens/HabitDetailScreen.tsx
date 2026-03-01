@@ -12,6 +12,7 @@ import { Minus, Plus } from 'lucide-react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '@/navigation/types';
 import { useHabitStore } from '@/store';
+import { useSettingsStore } from '@/store/settingsStore';
 import { today, isFuture } from '@/lib/dates';
 import { getHabitCurrentValue, isHabitCompleted } from '@/lib/aggregates';
 import { getProgressColor, PROGRESS_COLORS } from '@/lib/progressColors';
@@ -27,6 +28,7 @@ export default function HabitDetailScreen({ route, navigation }: Props) {
 
   const habit          = useHabitStore(s => s.habits.find(h => h.id === id));
   const allEntries     = useHabitStore(s => s.entries);
+  const weekStartsOn   = useSettingsStore(s => s.weekStartsOn);
   const incrementEntry = useHabitStore(s => s.incrementEntry);
   const decrementEntry = useHabitStore(s => s.decrementEntry);
   const logEntry       = useHabitStore(s => s.logEntry);
@@ -35,13 +37,13 @@ export default function HabitDetailScreen({ route, navigation }: Props) {
   const archiveHabit   = useHabitStore(s => s.archiveHabit);
 
   const currentValue = useMemo(
-    () => habit ? getHabitCurrentValue(habit, allEntries, viewDate) : 0,
-    [habit, allEntries, viewDate],
+    () => habit ? getHabitCurrentValue(habit, allEntries, viewDate, weekStartsOn) : 0,
+    [habit, allEntries, viewDate, weekStartsOn],
   );
 
   const completed = useMemo(
-    () => habit ? isHabitCompleted(habit, allEntries, viewDate) : false,
-    [habit, allEntries, viewDate],
+    () => habit ? isHabitCompleted(habit, allEntries, viewDate, weekStartsOn) : false,
+    [habit, allEntries, viewDate, weekStartsOn],
   );
 
   const isBreak           = habit?.goalType === 'break';

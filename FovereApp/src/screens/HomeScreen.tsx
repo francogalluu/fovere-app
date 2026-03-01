@@ -46,10 +46,12 @@ function HomeDayContent({
   date,
   onJumpToToday,
   compact = false,
+  weekStartsOn,
 }: {
   date: string;
   onJumpToToday: () => void;
   compact?: boolean;
+  weekStartsOn: 0 | 1;
 }) {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const haptic = Boolean(useSettingsStore(s => s.hapticFeedback));
@@ -82,8 +84,8 @@ function HomeDayContent({
   );
 
   const { completed, total } = useMemo(
-    () => dailyOnlyCompletedCount(rawHabits, entries, date),
-    [rawHabits, entries, date],
+    () => dailyOnlyCompletedCount(rawHabits, entries, date, weekStartsOn),
+    [rawHabits, entries, date, weekStartsOn],
   );
 
   const weeklyBuildHabitsForProgress = useMemo(
@@ -93,10 +95,10 @@ function HomeDayContent({
   const { completed: weeklyBuildCompleted, total: weeklyBuildTotal } = useMemo(() => {
     const active = weeklyBuildHabitsForProgress.filter(h => h.createdAt <= date);
     return {
-      completed: active.filter(h => isHabitCompleted(h, entries, date)).length,
+      completed: active.filter(h => isHabitCompleted(h, entries, date, weekStartsOn)).length,
       total: active.length,
     };
-  }, [weeklyBuildHabitsForProgress, entries, date]);
+  }, [weeklyBuildHabitsForProgress, entries, date, weekStartsOn]);
 
   const dailyBuildHabits = useMemo(
     () => habits.filter(h => h.frequency === 'daily' && h.goalType !== 'break'),
@@ -121,10 +123,10 @@ function HomeDayContent({
   const { completed: monthlyBuildCompleted, total: monthlyBuildTotal } = useMemo(() => {
     const active = monthlyBuildHabits.filter(h => h.createdAt <= date);
     return {
-      completed: active.filter(h => isHabitCompleted(h, entries, date)).length,
+      completed: active.filter(h => isHabitCompleted(h, entries, date, weekStartsOn)).length,
       total: active.length,
     };
-  }, [monthlyBuildHabits, entries, date]);
+  }, [monthlyBuildHabits, entries, date, weekStartsOn]);
   const allBreakHabits = useMemo(
     () => [...dailyBreakHabits, ...weeklyBreakHabits],
     [dailyBreakHabits, weeklyBreakHabits],
@@ -157,8 +159,8 @@ function HomeDayContent({
   );
 
   const overLimitCount = useMemo(
-    () => dailyOverLimitCount(rawHabits, entries, date),
-    [rawHabits, entries, date],
+    () => dailyOverLimitCount(rawHabits, entries, date, weekStartsOn),
+    [rawHabits, entries, date, weekStartsOn],
   );
 
   const isReadOnly = isFuture(date);
@@ -167,10 +169,10 @@ function HomeDayContent({
 
   const getCardData = useCallback(
     (habit: Habit) => ({
-      currentValue: getHabitCurrentValue(habit, entries, date),
-      isCompleted: isHabitCompleted(habit, entries, date),
+      currentValue: getHabitCurrentValue(habit, entries, date, weekStartsOn),
+      isCompleted: isHabitCompleted(habit, entries, date, weekStartsOn),
     }),
-    [entries, date],
+    [entries, date, weekStartsOn],
   );
 
   const [summaryVisible, setSummaryVisible] = useState(false);
@@ -374,6 +376,7 @@ export default function HomeScreen() {
   const haptic = Boolean(useSettingsStore(s => s.hapticFeedback));
   const compactHomeView = useSettingsStore(s => s.compactHomeView);
   const setCompactHomeView = useSettingsStore(s => s.setCompactHomeView);
+  const weekStartsOn = useSettingsStore(s => s.weekStartsOn);
   const { width: screenWidth } = useWindowDimensions();
   const listRef = useRef<FlatList<string>>(null);
 
@@ -439,15 +442,15 @@ export default function HomeScreen() {
     };
   }, [selectedDate, dates]);
 
-  const scrollableWeeks = useMemo(() => getWeeksRange(12, 12), []);
+  const scrollableWeeks = useMemo(() => getWeeksRange(12, 12, weekStartsOn), [weekStartsOn]);
 
   const completionByDate = useMemo(() => {
     const result: Record<string, number> = {};
     scrollableWeeks.flat().forEach(d => {
-      result[d] = getDaySummary(rawHabits, entries, d).dailyOnlyCompletionPct;
+      result[d] = getDaySummary(rawHabits, entries, d, weekStartsOn).dailyOnlyCompletionPct;
     });
     return result;
-  }, [rawHabits, entries, scrollableWeeks]);
+  }, [rawHabits, entries, scrollableWeeks, weekStartsOn]);
 
   const handleDateSelect = useCallback((date: string) => {
     calendarTapRef.current = true;
@@ -567,6 +570,7 @@ export default function HomeScreen() {
         selectedDate={selectedDate}
         completionByDate={completionByDate}
         onDateSelect={handleDateSelect}
+        weekStartsOn={weekStartsOn}
       />
 
       <FlatList
@@ -587,7 +591,12 @@ export default function HomeScreen() {
         initialNumToRender={1}
         renderItem={({ item: date }) => (
           <View style={[s.dayPage, { width: screenWidth }]}>
-            <HomeDayContent date={date} onJumpToToday={handleJumpToToday} compact={compactHomeView} />
+            <HomeDayContent
+              date={date}
+              onJumpToToday={handleJumpToToday}
+              compact={compactHomeView}
+              weekStartsOn={weekStartsOn}
+            />
           </View>
         )}
       />

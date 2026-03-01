@@ -10,6 +10,7 @@
  */
 
 import type { Habit, HabitEntry } from '@/types/habit';
+import type { WeekStartDay } from './dates';
 import { getHabitCurrentValue, isHabitCompleted, entryValue, isHabitActiveOnDate } from './aggregates';
 
 const DEFAULT_PENALTY_FACTOR = 1;
@@ -40,8 +41,9 @@ function getOverflowCountToday(
   habit: Habit,
   entries: HabitEntry[],
   date: string,
+  weekStartsOn: WeekStartDay,
 ): number {
-  const periodValue = getHabitCurrentValue(habit, entries, date);
+  const periodValue = getHabitCurrentValue(habit, entries, date, weekStartsOn);
   if (periodValue <= habit.target) return 0;
 
   const valueOnDate = entryValue(entries, habit.id, date);
@@ -76,6 +78,7 @@ export function calculateDailyScore(
   habits: Habit[],
   entries: HabitEntry[],
   date: string,
+  weekStartsOn: WeekStartDay,
   options: DailyScoreOptions = {},
 ): number {
   const penaltyFactor = options.penaltyFactor ?? DEFAULT_PENALTY_FACTOR;
@@ -96,14 +99,14 @@ export function calculateDailyScore(
     const isBuild = habit.goalType !== 'break';
 
     if (isBuild) {
-      if (isHabitCompleted(habit, entries, date)) {
+      if (isHabitCompleted(habit, entries, date, weekStartsOn)) {
         goodPoints += habitWeight;
       }
       continue;
     }
 
     // Bad habit: always grant base weight; overflow removes credit (no double punishment).
-    const overflowToday = getOverflowCountToday(habit, entries, date);
+    const overflowToday = getOverflowCountToday(habit, entries, date, weekStartsOn);
     const overflowPenalty = habitWeight * penaltyFactor * overflowToday;
     let badContribution = habitWeight - overflowPenalty;
     if (!allowNegativeBad) {

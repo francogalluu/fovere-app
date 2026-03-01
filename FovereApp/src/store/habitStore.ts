@@ -3,6 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { appStorage } from './storage';
 import { getTodayNormalized, normalizeDate, getWeekRange, getMonthRange, datesInRange } from '@/lib/dates';
 import type { Habit, HabitEntry } from '@/types/habit';
+import { useSettingsStore } from './settingsStore';
 
 // ─── Schema versioning ────────────────────────────────────────────────────────
 
@@ -113,7 +114,8 @@ function getAffectedDatesForEntryEdit(habit: Habit | undefined, date: string): s
     return datesInRange(start, end);
   }
   if (habit.frequency === 'weekly') {
-    const { start, end } = getWeekRange(date);
+    const weekStartsOn = useSettingsStore.getState().weekStartsOn;
+    const { start, end } = getWeekRange(date, weekStartsOn);
     return datesInRange(start, end);
   }
   return [date];

@@ -4,7 +4,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
 import { ChevronLeft, ChevronRight, Flame, CalendarCheck } from 'lucide-react-native';
 import { useHabitStore } from '@/store';
-import { today, datesInRange, addDays, toLocalDateString, SHORT_DAY_LABELS, getDayOfWeekIndex } from '@/lib/dates';
+import { useSettingsStore } from '@/store/settingsStore';
+import { today, datesInRange, addDays, toLocalDateString, getWeekDates, getShortDayLabels } from '@/lib/dates';
 import { getDaySummary } from '@/lib/daySummary';
 import { getHabitCurrentValue, dailyCompletedCount, isHabitActiveOnDate } from '@/lib/aggregates';
 import { getProgressColor } from '@/lib/progressColors';
@@ -27,6 +28,7 @@ function formatMonthDay(dateKey: string): string {
 export default function CalendarScreen() {
   const rawHabits = useHabitStore(s => s.habits);
   const entries   = useHabitStore(s => s.entries);
+  const weekStartsOn = useSettingsStore(s => s.weekStartsOn);
 
   const todayStr = today();
 
@@ -53,13 +55,16 @@ export default function CalendarScreen() {
     () => new Date(todayDate.getFullYear(), todayDate.getMonth(), 1),
   );
 
-  // Week starts on Monday
   const [weekStart, setWeekStart] = useState(() => {
-    const d = new Date(todayDate);
-    const dow = d.getDay();
-    d.setDate(d.getDate() - (dow === 0 ? 6 : dow - 1));
-    return d;
+    const ws = useSettingsStore.getState().weekStartsOn;
+    const startStr = getWeekDates(todayStr, ws)[0];
+    return new Date(startStr + 'T00:00:00');
   });
+
+  useEffect(() => {
+    const startStr = getWeekDates(todayStr, weekStartsOn)[0];
+    setWeekStart(new Date(startStr + 'T00:00:00'));
+  }, [weekStartsOn]);
 
   // ── Monthly calendar cells ────────────────────────────────────────────────
 
@@ -84,11 +89,11 @@ export default function CalendarScreen() {
     const to     = isoDate(y, m, lastD);
     const dates  = datesInRange(from, todayStr < to ? todayStr : to);
     if (dates.length === 0) return { pct: 0, completed: 0, total: 0 };
-    const scores    = dates.map(d => getDaySummary(rawHabits, entries, d).completionPct);
+    const scores    = dates.map(d => getDaySummary(rawHabits, entries, d, weekStartsOn).completionPct);
     const completed = scores.filter(v => v === 100).length;
     const pct       = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
     return { pct, completed, total: dates.length };
-  }, [currentMonth, rawHabits, entries, todayStr]);
+  }, [currentMonth, rawHabits, entries, todayStr, weekStartsOn]);
 
   // ── Weekly bar data ───────────────────────────────────────────────────────
 
@@ -101,30 +106,23 @@ export default function CalendarScreen() {
   const weekStartStr = toLocalDateString(weekStart);
 
   const weekChartBars = useMemo((): ChartBar[] => {
-    const datesSunFirst = [
-      addDays(weekStartStr, -1),
-      weekStartStr,
-      addDays(weekStartStr, 1),
-      addDays(weekStartStr, 2),
-      addDays(weekStartStr, 3),
-      addDays(weekStartStr, 4),
-      addDays(weekStartStr, 5),
-    ];
-    return datesSunFirst.map((dateStr, i) => {
-      const pct = dateStr <= todayStr ? getDaySummary(rawHabits, entries, dateStr).completionPct : 0;
-      const { completed, total } = dailyCompletedCount(rawHabits, entries, dateStr);
+    const labels = getShortDayLabels(weekStartsOn);
+    const dates = Array.from({ length: 7 }, (_, i) => addDays(weekStartStr, i));
+    return dates.map((dateStr, i) => {
+      const pct = dateStr <= todayStr ? getDaySummary(rawHabits, entries, dateStr, weekStartsOn).completionPct : 0;
+      const { completed, total } = dailyCompletedCount(rawHabits, entries, dateStr, weekStartsOn);
       return {
         key: dateStr,
-        label: SHORT_DAY_LABELS[i],
+        label: labels[i],
         percent: pct,
         completed,
         target: total,
       };
     });
-  }, [weekStartStr, rawHabits, entries, todayStr]);
+  }, [weekStartStr, rawHabits, entries, todayStr, weekStartsOn]);
 
   const weekDays = useMemo(() => {
-    const labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const labels = getShortDayLabels(weekStartsOn);
     return Array.from({ length: 7 }, (_, i) => {
       const d = new Date(weekStart);
       d.setDate(d.getDate() + i);
@@ -132,12 +130,12 @@ export default function CalendarScreen() {
       return {
         label:      labels[i],
         dateStr,
-        completion: dateStr <= todayStr ? getDaySummary(rawHabits, entries, dateStr).completionPct : 0,
+        completion: dateStr <= todayStr ? getDaySummary(rawHabits, entries, dateStr, weekStartsOn).completionPct : 0,
         isFuture:   dateStr > todayStr,
         isToday:    dateStr === todayStr,
       };
     });
-  }, [weekStart, rawHabits, entries, todayStr]);
+  }, [weekStart, rawHabits, entries, todayStr, weekStartsOn]);
 
   const weekStats = useMemo(() => {
     const past = weekDays.filter(d => !d.isFuture);
@@ -162,16 +160,15 @@ export default function CalendarScreen() {
     if (rawHabits.length === 0) return 0;
     let streak = 0;
     let cursor = todayStr;
-    // Grace: if today isn't 100% done yet, don't break the streak
-    if (getDaySummary(rawHabits, entries, cursor).completionPct < 100) cursor = addDays(cursor, -1);
+    if (getDaySummary(rawHabits, entries, cursor, weekStartsOn).completionPct < 100) cursor = addDays(cursor, -1);
     while (cursor >= '2020-01-01') {
-      if (getDaySummary(rawHabits, entries, cursor).completionPct === 100) {
+      if (getDaySummary(rawHabits, entries, cursor, weekStartsOn).completionPct === 100) {
         streak++;
         cursor = addDays(cursor, -1);
       } else break;
     }
     return streak;
-  }, [rawHabits, entries, todayStr]);
+  }, [rawHabits, entries, todayStr, weekStartsOn]);
 
   // ── Habit breakdown ───────────────────────────────────────────────────────
 
@@ -192,7 +189,7 @@ export default function CalendarScreen() {
     return habits.map(habit => {
       let value = '';
       if (habit.kind === 'boolean') {
-        const count = dates.filter(d => getHabitCurrentValue(habit, entries, d) >= habit.target).length;
+        const count = dates.filter(d => getHabitCurrentValue(habit, entries, d, weekStartsOn) >= habit.target).length;
         value = `${count} time${count !== 1 ? 's' : ''}`;
       } else {
         const sum = dates.reduce((acc, d) => {
@@ -203,7 +200,7 @@ export default function CalendarScreen() {
       }
       return { id: habit.id, icon: habit.icon, name: habit.name, value };
     });
-  }, [habits, entries, view, currentMonth, weekDays, todayStr]);
+  }, [habits, entries, view, currentMonth, weekDays, todayStr, weekStartsOn]);
 
   // ── Month navigation ──────────────────────────────────────────────────────
 
@@ -309,7 +306,7 @@ export default function CalendarScreen() {
                   if (!dateStr) return <View key={`e-${idx}`} style={s.calCell} />;
                   const isToday  = dateStr === todayStr;
                   const isFuture = dateStr > todayStr;
-                  const pct      = isFuture ? 0 : getDaySummary(rawHabits, entries, dateStr).completionPct;
+                  const pct      = isFuture ? 0 : getDaySummary(rawHabits, entries, dateStr, weekStartsOn).completionPct;
                   const color    = getProgressColor(pct);
                   const r = 14;
                   const circ = 2 * Math.PI * r;
@@ -372,7 +369,7 @@ export default function CalendarScreen() {
                 bars={weekChartBars}
                 chartAreaHeight={220}
                 getTooltipDateLabel={(bar) => formatMonthDay(bar.key)}
-                todayIndex={getDayOfWeekIndex(todayStr)}
+                todayIndex={weekChartBars.findIndex(b => b.key === todayStr)}
                 emptyMessage="No data for this week"
                 onTooltipLayout={handleTooltipLayout}
               />
