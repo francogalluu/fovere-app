@@ -3,7 +3,7 @@
  * Shows "+ Create a custom habit" button, search bar, and predetermined habits by category.
  * Tapping a predetermined habit pre-fills the wizard and navigates to HabitType.
  */
-import React, { useLayoutEffect, useCallback, useMemo, useState } from 'react';
+import React, { useLayoutEffect, useCallback, useMemo, useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -29,14 +29,19 @@ import { C, R } from '@/lib/tokens';
 
 type Props = NativeStackScreenProps<WizardStackParamList, 'HabitSource'>;
 
-export default function HabitSourceStep({ navigation }: Props) {
-  const { reset, loadPredetermined } = useWizardStore();
+export default function HabitSourceStep({ navigation, route }: Props) {
+  const { reset, loadPredetermined, setGoalType } = useWizardStore();
   const [query, setQuery] = useState('');
+  const goalType = route.params?.goalType;
 
   const categories = useMemo(
-    () => searchPredetermined(query),
-    [query],
+    () => searchPredetermined(query, goalType),
+    [query, goalType],
   );
+
+  useEffect(() => {
+    if (goalType) setGoalType(goalType);
+  }, [goalType, setGoalType]);
 
   const handleCancel = useCallback(() => {
     reset();

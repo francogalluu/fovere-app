@@ -8,11 +8,14 @@ import {
   SafeAreaView,
   FlatList,
   useWindowDimensions,
+  Modal,
+  Animated,
+  Easing,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NavigationProp } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
-import { Plus, Play } from 'lucide-react-native';
+import { Plus, Play, Sprout, CircleSlash } from 'lucide-react-native';
 
 import { useHabitStore } from '@/store';
 import { useSettingsStore } from '@/store/settingsStore';
@@ -493,12 +496,45 @@ export default function HomeScreen() {
     [],
   );
 
+  const [addSheetVisible, setAddSheetVisible] = useState(false);
+  const addSheetSlide = useRef(new Animated.Value(300)).current;
+
+  useEffect(() => {
+    if (addSheetVisible) {
+      addSheetSlide.setValue(300);
+      Animated.timing(addSheetSlide, {
+        toValue: 0,
+        duration: 120,
+        useNativeDriver: true,
+        easing: Easing.out(Easing.cubic),
+      }).start();
+    }
+  }, [addSheetVisible, addSheetSlide]);
+
+  const openAddSheet = useCallback(() => setAddSheetVisible(true), []);
+  const closeAddSheet = useCallback(() => {
+    Animated.timing(addSheetSlide, {
+      toValue: 300,
+      duration: 80,
+      useNativeDriver: true,
+      easing: Easing.in(Easing.cubic),
+    }).start(() => setAddSheetVisible(false));
+  }, [addSheetSlide]);
+  const handleBuildHabit = useCallback(() => {
+    closeAddSheet();
+    navigation.navigate('NewHabit', { screen: 'HabitSource', params: { goalType: 'build' } });
+  }, [closeAddSheet, navigation]);
+  const handleBreakHabit = useCallback(() => {
+    closeAddSheet();
+    navigation.navigate('NewHabit', { screen: 'HabitSource', params: { goalType: 'break' } });
+  }, [closeAddSheet, navigation]);
+
   return (
     <SafeAreaView style={s.safe}>
       <View style={s.header}>
         <Text style={s.appTitle}>Fovere</Text>
         <Pressable
-          onPress={() => navigation.navigate('NewHabit', { screen: 'HabitSource' })}
+          onPress={openAddSheet}
           style={s.addButton}
           accessibilityLabel="Add new habit"
         >
@@ -536,6 +572,37 @@ export default function HomeScreen() {
         )}
       />
 
+      <Modal
+        visible={addSheetVisible}
+        transparent
+        animationType="none"
+        onRequestClose={closeAddSheet}
+      >
+        <View style={s.addSheetBackdrop}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={closeAddSheet} />
+          <Animated.View style={[s.addSheetCard, { transform: [{ translateY: addSheetSlide }] }]}>
+            <Text style={s.addSheetTitle}>New habit</Text>
+            <Pressable
+              onPress={handleBuildHabit}
+              style={({ pressed }) => [s.addSheetOption, pressed && s.addSheetOptionPressed]}
+            >
+              <View style={s.addSheetIconWrapBuild}>
+                <Sprout size={22} color="#34C759" strokeWidth={2.5} />
+              </View>
+              <Text style={s.addSheetOptionText}>Build good habit</Text>
+            </Pressable>
+            <Pressable
+              onPress={handleBreakHabit}
+              style={({ pressed }) => [s.addSheetOption, pressed && s.addSheetOptionPressed]}
+            >
+              <View style={s.addSheetIconWrapBreak}>
+                <CircleSlash size={22} color="#fff" strokeWidth={2.5} />
+              </View>
+              <Text style={s.addSheetOptionText}>Break bad habit</Text>
+            </Pressable>
+          </Animated.View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -708,5 +775,66 @@ const s = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#fff',
+  },
+
+  // Add-habit bottom sheet (Build / Break choice)
+  addSheetBackdrop: {
+    flex: 1,
+    backgroundColor: 'transparent',
+    justifyContent: 'flex-end',
+  },
+  addSheetCard: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    marginHorizontal: 16,
+    marginBottom: 34,
+    paddingTop: 14,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.06)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.18,
+    shadowRadius: 16,
+    elevation: 12,
+  },
+  addSheetTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: C.text2,
+    marginBottom: 4,
+    paddingHorizontal: 4,
+  },
+  addSheetOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 4,
+    gap: 16,
+  },
+  addSheetOptionPressed: {
+    opacity: 0.7,
+  },
+  addSheetIconWrapBuild: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(52, 199, 89, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  addSheetIconWrapBreak: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#3A3A3C',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  addSheetOptionText: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: C.text1,
   },
 });

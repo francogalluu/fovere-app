@@ -1,12 +1,10 @@
 /**
  * HabitTypeStep — the wizard's entry screen / summary form.
- *
- * Matches reference NewHabit.tsx exactly:
+ * Build/break choice is made earlier (add-habit sheet); goalType comes from store.
  *   • Cancel (left) | title | Save (right)  — configured via navigation header
- *   • Build / Break segmented control        — teal active, #3C3C43 inactive
- *   • Section 1: Habit Name, Icon            — chevron rows → sub-steps
- *   • Section 2: Frequency, Measure By       — chevron rows → sub-steps
- *   • Section 3: Reminder toggle, Time row   — inline toggle + conditional row
+ *   • Section 1: Habit Name, Icon, Description — chevron rows → sub-steps
+ *   • Section 2: Frequency, Measure By     — chevron rows → sub-steps
+ *   • Section 3: Reminder toggle, Time row  — inline toggle + conditional row
  */
 import React, { useLayoutEffect, useEffect, useCallback } from 'react';
 import {
@@ -49,7 +47,7 @@ export default function HabitTypeStep({ navigation }: Props) {
     habitId, goalType, name, icon, description, kind, frequency,
     target, unit, reminderEnabled, reminderTime,
     reset, loadHabit,
-    setGoalType, setReminderEnabled,
+    setReminderEnabled,
   } = useWizardStore();
 
   // ── Habit store actions ────────────────────────────────────────────────────
@@ -152,23 +150,6 @@ export default function HabitTypeStep({ navigation }: Props) {
     <SafeAreaView style={s.safe} edges={['bottom']}>
       <ScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled">
 
-        {/* ── Build / Break segmented control ────────────────────────── */}
-        <View style={s.segWrap}>
-          <View style={s.seg}>
-            {(['build', 'break'] as const).map((type) => (
-              <Pressable
-                key={type}
-                onPress={() => setGoalType(type)}
-                style={[s.segBtn, goalType === type && s.segBtnActive]}
-              >
-                <Text style={[s.segText, goalType === type && s.segTextActive]}>
-                  {type === 'build' ? 'Build a Habit' : 'Break a Habit'}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-        </View>
-
         {/* ── Section 1: Name & Icon ──────────────────────────────────── */}
         <View style={s.section}>
           <Row
@@ -267,29 +248,11 @@ function Row({
 
 const s = StyleSheet.create({
   safe:   { flex: 1, backgroundColor: '#F2F2F7' },
-  scroll: { paddingBottom: 40 },
+  scroll: { paddingTop: 24, paddingBottom: 40 },
 
   // Header buttons
   headerBtn:     { fontSize: 17, color: C.teal },
   headerBtnSave: { fontWeight: '600' },
-
-  // Build/Break segmented control
-  segWrap: { paddingHorizontal: 16, paddingTop: 24, paddingBottom: 8 },
-  seg: {
-    flexDirection: 'row',
-    backgroundColor: '#E5E5EA',
-    borderRadius: 12,
-    padding: 4,
-  },
-  segBtn: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: 9,
-    alignItems: 'center',
-  },
-  segBtnActive: { backgroundColor: C.teal },
-  segText:      { fontSize: 15, fontWeight: '400', color: '#3C3C43' },
-  segTextActive:{ fontSize: 15, fontWeight: '600', color: '#FFFFFF' },
 
   // Section card
   section: {
