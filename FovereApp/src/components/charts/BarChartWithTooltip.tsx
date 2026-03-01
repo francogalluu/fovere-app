@@ -19,11 +19,29 @@ export type ChartBar = {
   target: number;
 };
 
+/** For rendering the tooltip in an overlay (e.g. above filters). */
+export type TooltipOverlayLayout =
+  | { visible: false }
+  | {
+      visible: true;
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+      /** Screen X (window coords) for the center of the pointer/arrow below the tooltip. */
+      pointerScreenX: number;
+      dateLabel: string;
+      pct: number;
+      detail: string;
+    };
+
 // ─── Constants ─────────────────────────────────────────────────────────────────
 
 const TOOLTIP_MIN_WIDTH = 120;
 const TOOLTIP_GAP_PX = 8;
 const TOOLTIP_SAFE_MARGIN = 8;
+/** Extra space above the plot so the tooltip is never cropped (e.g. for 100% bars). */
+const TOOLTIP_TOP_PADDING = 72;
 const BUBBLE_CORNER_RADIUS = 10;
 const ARROW_CORNER_CLEARANCE = 2;
 const POINTER_BASE_HALF_WIDTH = 8;
@@ -70,6 +88,7 @@ function ChartTooltip({
   screenWidth,
   chartScreenX,
   getTooltipDateLabel,
+  onMeasureInWindow,
 }: {
   bar: ChartBar;
   index: number;
@@ -80,8 +99,13 @@ function ChartTooltip({
   screenWidth: number;
   chartScreenX: number;
   getTooltipDateLabel: (bar: ChartBar, index: number) => string;
+  onMeasureInWindow?: (
+    rect: { x: number; y: number; width: number; height: number },
+    content: { dateLabel: string; pct: number; detail: string },
+  ) => void;
 }) {
   const [tooltipSize, setTooltipSize] = useState({ width: TOOLTIP_MIN_WIDTH, height: 56 });
+  const tooltipWrapRef = useRef<View>(null);
 
   const pointerScale = getPointerScale(barCount);
   const arrowHalfWidth = POINTER_BASE_HALF_WIDTH * pointerScale;
@@ -90,7 +114,7 @@ function ChartTooltip({
 
   const barHeightPx = getBarHeightPx(bar.percent, chartAreaHeight);
   const barTopYPx = chartAreaHeight - barHeightPx;
-  const tooltipTopPx = barTopYPx - tooltipSize.height - TOOLTIP_GAP_PX - arrowHeight;
+  const tooltipTopPx = TOOLTIP_TOP_PADDING + barTopYPx - tooltipSize.height - TOOLTIP_GAP_PX - arrowHeight;
 
   const safeMargin = TOOLTIP_SAFE_MARGIN;
   const R = BUBBLE_CORNER_RADIUS;
@@ -114,6 +138,20 @@ function ChartTooltip({
 
   const dateLabel = getTooltipDateLabel(bar, index);
   const tooltipHeight = tooltipSize.height + arrowHeight;
+  const pct = Math.round(safePercent(bar.percent));
+  const detail = bar.target > 0 ? `${bar.completed} of ${bar.target}` : '';
+
+  useEffect(() => {
+    if (!onMeasureInWindow || tooltipSize.height === 0) return;
+    const t = setTimeout(() => {
+      tooltipWrapRef.current?.measureInWindow?.(
+        (x: number, y: number, w: number, h: number) => {
+          onMeasureInWindow({ x, y, width: w, height: h }, { dateLabel, pct, detail });
+        },
+      );
+    }, 50);
+    return () => clearTimeout(t);
+  }, [onMeasureInWindow, tooltipSize.height, dateLabel, pct, detail]);
 
   return (
     <Animated.View
@@ -125,12 +163,14 @@ function ChartTooltip({
           width,
           height: tooltipHeight,
           zIndex: 20,
+          opacity: onMeasureInWindow ? 0 : 1,
         },
         tooltipWrapperStyle,
       ]}
       pointerEvents="none"
     >
       <View
+        ref={tooltipWrapRef}
         style={[styles.chartTooltip, { width }]}
         onLayout={e => {
           const { width: w, height: h } = e.nativeEvent.layout;
@@ -250,6 +290,8 @@ export interface BarChartWithTooltipProps {
   xAxisTickIndices?: Set<number>;
   /** Custom label for each bar (x-axis). If omitted, bar.label is used. */
   getAxisLabel?: (bar: ChartBar, index: number) => string;
+  /** When set, the chart reports tooltip layout in screen coords so the parent can render it in an overlay (e.g. above filters). */
+  onTooltipLayout?: (layout: TooltipOverlayLayout) => void;
 }
 
 export function BarChartWithTooltip({
@@ -262,6 +304,7 @@ export function BarChartWithTooltip({
   barChartRowMonth = false,
   xAxisTickIndices: xAxisTickIndicesProp,
   getAxisLabel,
+  onTooltipLayout,
 }: BarChartWithTooltipProps) {
   const [pressedBarIndex, setPressedBarIndex] = useState<number | null>(null);
   const [chartLayout, setChartLayout] = useState({ width: 0, height: 0 });
@@ -301,6 +344,12 @@ export function BarChartWithTooltip({
     }
   }, [pressedBarIndex, bars.length, barGeometry]);
 
+  useEffect(() => {
+    if (pressedBarIndex === null && onTooltipLayout) {
+      onTooltipLayout({ visible: false });
+    }
+  }, [pressedBarIndex, onTooltipLayout]);
+
   const hasChartData = bars.some(b => b.target > 0);
   const xAxisTickIndices = React.useMemo(
     () => xAxisTickIndicesProp ?? new Set(bars.map((_, i) => i)),
@@ -329,6 +378,7 @@ export function BarChartWithTooltip({
         chartContainerRef.current?.measureInWindow((x: number) => setChartScreenX(x));
       }}
     >
+      <View style={styles.barChartInner}>
       {renderTopContent && chartLayout.width > 0 && renderTopContent(chartLayout)}
       {pressedBarIndex !== null && bars[pressedBarIndex] && chartLayout.width > 0 && (
         <ChartTooltip
@@ -341,6 +391,19 @@ export function BarChartWithTooltip({
           screenWidth={Dimensions.get('window').width}
           chartScreenX={chartScreenX}
           getTooltipDateLabel={getTooltipDateLabel}
+          onMeasureInWindow={
+            onTooltipLayout
+              ? (rect, content) => {
+                  const pointerScreenX = chartScreenX + barGeometry.barCenterX(pressedBarIndex);
+                  onTooltipLayout({
+                    visible: true,
+                    ...rect,
+                    ...content,
+                    pointerScreenX,
+                  });
+                }
+              : undefined
+          }
         />
       )}
       <GestureDetector
@@ -400,6 +463,7 @@ export function BarChartWithTooltip({
           ))}
         </View>
       </GestureDetector>
+      </View>
     </View>
   );
 }
@@ -408,6 +472,7 @@ export function BarChartWithTooltip({
 
 const styles = StyleSheet.create({
   barChartContainer: { position: 'relative', width: '100%', overflow: 'visible' },
+  barChartInner: { paddingTop: TOOLTIP_TOP_PADDING, width: '100%' },
   barChartRow: { flexDirection: 'row', alignItems: 'flex-end', minHeight: 240, width: '100%' },
   barChartRowMonth: { minHeight: 260 },
   barCol: { flex: 1, alignItems: 'center', marginHorizontal: 2 },
