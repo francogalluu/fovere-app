@@ -202,10 +202,11 @@ function HomeDayContent({
     (habit: Habit) => {
       if (isReadOnly) return;
       const { isCompleted: done } = getCardData(habit);
-      if (haptic) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       if (done) {
+        if (haptic) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         deleteEntry(habit.id, date);
       } else {
+        if (haptic) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         logEntry(habit.id, date, habit.target);
       }
     },

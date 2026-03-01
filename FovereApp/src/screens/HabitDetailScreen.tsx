@@ -8,6 +8,7 @@ import {
   StyleSheet,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as Haptics from 'expo-haptics';
 import { Minus, Plus } from 'lucide-react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { Palette } from '@/lib/theme';
@@ -32,6 +33,7 @@ export default function HabitDetailScreen({ route, navigation }: Props) {
   const habit          = useHabitStore(s => s.habits.find(h => h.id === id));
   const allEntries     = useHabitStore(s => s.entries);
   const weekStartsOn   = useSettingsStore(s => s.weekStartsOn);
+  const haptic         = Boolean(useSettingsStore(s => s.hapticFeedback));
   const incrementEntry = useHabitStore(s => s.incrementEntry);
   const decrementEntry = useHabitStore(s => s.decrementEntry);
   const logEntry       = useHabitStore(s => s.logEntry);
@@ -79,15 +81,22 @@ export default function HabitDetailScreen({ route, navigation }: Props) {
 
   const handleToggle = useCallback(() => {
     if (!habit || isViewingFuture) return;
-    if (completed) deleteEntry(habit.id, viewDate);
-    else logEntry(habit.id, viewDate, 1);
-  }, [habit, completed, deleteEntry, logEntry, viewDate, isViewingFuture]);
+    if (completed) {
+      if (haptic) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      deleteEntry(habit.id, viewDate);
+    } else {
+      if (haptic) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      logEntry(habit.id, viewDate, 1);
+    }
+  }, [habit, completed, deleteEntry, logEntry, viewDate, isViewingFuture, haptic]);
 
   const handleIncrement = useCallback(() => {
     if (!habit || isViewingFuture) return;
     if (!isBreak && currentValue >= habit.target) return;
+    const willReachGoal = currentValue + 1 >= habit.target;
+    if (haptic && willReachGoal) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     incrementEntry(habit.id, viewDate);
-  }, [habit, isBreak, currentValue, incrementEntry, viewDate, isViewingFuture]);
+  }, [habit, isBreak, currentValue, incrementEntry, viewDate, isViewingFuture, haptic]);
 
   const handleDecrement = useCallback(() => {
     if (!habit || currentValue <= 0 || isViewingFuture) return;
