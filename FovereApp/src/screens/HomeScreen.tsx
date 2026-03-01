@@ -121,6 +121,13 @@ function HomeDayContent({
     () => habits.filter(h => h.frequency === 'monthly' && h.goalType !== 'break'),
     [habits],
   );
+  const { completed: monthlyBuildCompleted, total: monthlyBuildTotal } = useMemo(() => {
+    const active = monthlyBuildHabits.filter(h => h.createdAt <= date);
+    return {
+      completed: active.filter(h => isHabitCompleted(h, entries, date)).length,
+      total: active.length,
+    };
+  }, [monthlyBuildHabits, entries, date]);
   const allBreakHabits = useMemo(
     () => [...dailyBreakHabits, ...weeklyBreakHabits],
     [dailyBreakHabits, weeklyBreakHabits],
@@ -261,6 +268,22 @@ function HomeDayContent({
           </View>
           <View style={{ opacity: isReadOnly ? 0.5 : 1 }}>
             {weeklyBuildHabits.map(renderHabitCard)}
+          </View>
+        </View>
+      )}
+
+      {monthlyBuildHabits.length > 0 && (
+        <View style={s.section}>
+          <View style={s.sectionTitleRow}>
+            <Text style={s.sectionTitle}>Monthly Habits</Text>
+            {monthlyBuildTotal > 0 && (
+              <Text style={s.weeklyPct}>
+                {Math.round((monthlyBuildCompleted / monthlyBuildTotal) * 100)}% this month
+              </Text>
+            )}
+          </View>
+          <View style={{ opacity: isReadOnly ? 0.5 : 1 }}>
+            {monthlyBuildHabits.map(renderHabitCard)}
           </View>
         </View>
       )}
