@@ -306,12 +306,17 @@ export const useHabitStore = create<HabitState>()(
         entries: state.entries,
       }),
 
-      // Restore habits/entries from storage but always set selectedDate to today.
-      merge: (persisted, current) => ({
-        ...current,
-        ...(persisted as object),
-        selectedDate: getTodayNormalized(),
-      }),
+      // Restore habits/entries from storage; never restore selectedDate — always today.
+      merge: (persisted, current) => {
+        const p = persisted as Partial<HabitState>;
+        return {
+          ...current,
+          _schemaVersion: p._schemaVersion ?? current._schemaVersion,
+          habits: p.habits ?? current.habits,
+          entries: p.entries ?? current.entries,
+          selectedDate: getTodayNormalized(),
+        };
+      },
 
       // Runs on EVERY rehydration (not just schema upgrades).
       // Coerces any numeric fields that stale AsyncStorage data might have

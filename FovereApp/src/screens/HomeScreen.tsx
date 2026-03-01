@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback } from 'react';
+import React, { useMemo, useCallback, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,8 @@ import {
   Pressable,
   StyleSheet,
   SafeAreaView,
+  FlatList,
+  useWindowDimensions,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NavigationProp } from '@react-navigation/native';
@@ -22,7 +24,7 @@ import {
   isHabitActiveOnDate,
   isHabitCompleted,
 } from '@/lib/aggregates';
-import { today, isFuture, getWeekDates, getWeeksRange, formatDateTitle } from '@/lib/dates';
+import { today, isFuture, getWeekDates, getWeeksRange, formatDateTitle, addDays } from '@/lib/dates';
 import { C } from '@/lib/tokens';
 import type { RootStackParamList } from '@/navigation/types';
 import type { Habit } from '@/types/habit';
@@ -39,37 +41,39 @@ const SAMPLE_HABITS: Array<Omit<Habit, 'id' | 'createdAt' | 'archivedAt' | 'sort
   { name: 'Yoga Class',   icon: '🧘', kind: 'numeric',  frequency: 'weekly', target: 3,  unit: 'times' },
 ];
 
-// ─── HomeScreen ───────────────────────────────────────────────────────────────
+const DAYS_BACK = 90;
+const DAYS_FORWARD = 30;
 
-export default function HomeScreen() {
+// ─── HomeDayContent: one "page" of hero + habits for a given date ─────────────
+
+function HomeDayContent({
+  date,
+  onJumpToToday,
+}: {
+  date: string;
+  onJumpToToday: () => void;
+}) {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const haptic = Boolean(useSettingsStore(s => s.hapticFeedback));
-
-  // ── Store slices — each selector returns a single stable value ──────────────
-  const rawHabits       = useHabitStore(s => s.habits);
-  const entries         = useHabitStore(s => s.entries);
-  const selectedDate    = useHabitStore(s => s.selectedDate);
-  const setSelectedDate = useHabitStore(s => s.setSelectedDate);
-
-  const logEntry       = useHabitStore(s => s.logEntry);
-  const deleteEntry    = useHabitStore(s => s.deleteEntry);
-  const pauseHabit     = useHabitStore(s => s.pauseHabit);
-  const unpauseHabit   = useHabitStore(s => s.unpauseHabit);
-  const archiveHabit   = useHabitStore(s => s.archiveHabit);
-  const addHabit       = useHabitStore(s => s.addHabit);
-
-  // ── Derived data ─────────────────────────────────────────────────────────────
+  const rawHabits = useHabitStore(s => s.habits);
+  const entries = useHabitStore(s => s.entries);
+  const logEntry = useHabitStore(s => s.logEntry);
+  const deleteEntry = useHabitStore(s => s.deleteEntry);
+  const pauseHabit = useHabitStore(s => s.pauseHabit);
+  const unpauseHabit = useHabitStore(s => s.unpauseHabit);
+  const archiveHabit = useHabitStore(s => s.archiveHabit);
+  const addHabit = useHabitStore(s => s.addHabit);
 
   const habits = useMemo(() => {
     const seen = new Set<string>();
     return rawHabits
       .filter(h => {
-        if (!isHabitActiveOnDate(h, selectedDate) || seen.has(h.id)) return false;
+        if (!isHabitActiveOnDate(h, date) || seen.has(h.id)) return false;
         seen.add(h.id);
         return true;
       })
       .sort((a, b) => a.sortOrder - b.sortOrder);
-  }, [rawHabits, selectedDate]);
+  }, [rawHabits, date]);
 
   const pausedHabits = useMemo(
     () =>
@@ -79,39 +83,28 @@ export default function HomeScreen() {
     [rawHabits],
   );
 
-  const scrollableWeeks = useMemo(() => getWeeksRange(12, 12), []);
-
-  const completionByDate = useMemo(() => {
-    const result: Record<string, number> = {};
-    scrollableWeeks.flat().forEach(d => {
-      result[d] = getDaySummary(rawHabits, entries, d).dailyOnlyCompletionPct;
-    });
-    return result;
-  }, [rawHabits, entries, scrollableWeeks]);
-
   const { completed, total } = useMemo(
-    () => dailyOnlyCompletedCount(rawHabits, entries, selectedDate),
-    [rawHabits, entries, selectedDate],
+    () => dailyOnlyCompletedCount(rawHabits, entries, date),
+    [rawHabits, entries, date],
   );
 
-  // Weekly build only (for Weekly Habits section header %)
   const weeklyBuildHabitsForProgress = useMemo(
     () => habits.filter(h => h.frequency === 'weekly' && h.goalType !== 'break'),
     [habits],
   );
   const { completed: weeklyBuildCompleted, total: weeklyBuildTotal } = useMemo(() => {
-    const active = weeklyBuildHabitsForProgress.filter(h => h.createdAt <= selectedDate);
+    const active = weeklyBuildHabitsForProgress.filter(h => h.createdAt <= date);
     return {
-      completed: active.filter(h => isHabitCompleted(h, entries, selectedDate)).length,
+      completed: active.filter(h => isHabitCompleted(h, entries, date)).length,
       total: active.length,
     };
-  }, [weeklyBuildHabitsForProgress, entries, selectedDate]);
+  }, [weeklyBuildHabitsForProgress, entries, date]);
 
-  const dailyBuildHabits  = useMemo(
+  const dailyBuildHabits = useMemo(
     () => habits.filter(h => h.frequency === 'daily' && h.goalType !== 'break'),
     [habits],
   );
-  const dailyBreakHabits  = useMemo(
+  const dailyBreakHabits = useMemo(
     () => habits.filter(h => h.frequency === 'daily' && h.goalType === 'break'),
     [habits],
   );
@@ -123,59 +116,46 @@ export default function HomeScreen() {
     () => habits.filter(h => h.frequency === 'weekly' && h.goalType !== 'break'),
     [habits],
   );
-  // All break habits (daily + weekly) for the Break Habits section
   const allBreakHabits = useMemo(
     () => [...dailyBreakHabits, ...weeklyBreakHabits],
     [dailyBreakHabits, weeklyBreakHabits],
   );
 
   const overLimitCount = useMemo(
-    () => dailyOverLimitCount(rawHabits, entries, selectedDate),
-    [rawHabits, entries, selectedDate],
+    () => dailyOverLimitCount(rawHabits, entries, date),
+    [rawHabits, entries, date],
   );
 
-  const isReadOnly   = isFuture(selectedDate);
-  const isToday      = selectedDate === today();
-
-  // Section title for the daily section — matches reference exactly
-  const dailySectionLabel = `${formatDateTitle(selectedDate)}'s Habits`;
-
-  // ── Helpers ──────────────────────────────────────────────────────────────────
+  const isReadOnly = isFuture(date);
+  const isTodayDate = date === today();
+  const dailySectionLabel = `${formatDateTitle(date)}'s Habits`;
 
   const getCardData = useCallback(
     (habit: Habit) => ({
-      currentValue: getHabitCurrentValue(habit, entries, selectedDate),
-      isCompleted:  isHabitCompleted(habit, entries, selectedDate),
+      currentValue: getHabitCurrentValue(habit, entries, date),
+      isCompleted: isHabitCompleted(habit, entries, date),
     }),
-    [entries, selectedDate],
+    [entries, date],
   );
 
-  // ── Actions ──────────────────────────────────────────────────────────────────
-
-  const handleComplete = useCallback((habit: Habit) => {
-    if (isReadOnly) return;
-    const { isCompleted: done } = getCardData(habit);
-    if (haptic) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    if (done) {
-      deleteEntry(habit.id, selectedDate);
-    } else {
-      logEntry(habit.id, selectedDate, habit.target);
-    }
-  }, [isReadOnly, getCardData, haptic, deleteEntry, logEntry, selectedDate]);
-
-  const handleAddSampleHabits = () => {
-    SAMPLE_HABITS.forEach(h => addHabit(h));
-    if (haptic) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-  };
-
-  const handleDateSelect = (date: string) => setSelectedDate(date);
+  const handleComplete = useCallback(
+    (habit: Habit) => {
+      if (isReadOnly) return;
+      const { isCompleted: done } = getCardData(habit);
+      if (haptic) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      if (done) {
+        deleteEntry(habit.id, date);
+      } else {
+        logEntry(habit.id, date, habit.target);
+      }
+    },
+    [isReadOnly, getCardData, haptic, deleteEntry, logEntry, date],
+  );
 
   const handleNavigateToDetail = (habitId: string) => {
     if (isReadOnly) return;
-    navigation.navigate('HabitDetail', { id: habitId, date: selectedDate });
+    navigation.navigate('HabitDetail', { id: habitId, date });
   };
-
-  // ── Render helpers ───────────────────────────────────────────────────────────
 
   const renderHabitCard = (habit: Habit) => {
     const { currentValue, isCompleted } = getCardData(habit);
@@ -188,162 +168,290 @@ export default function HomeScreen() {
         readOnly={isReadOnly}
         onPress={() => handleNavigateToDetail(habit.id)}
         onComplete={() => handleComplete(habit)}
-        // Delete: archive (soft-delete) so it disappears from Home from today on,
-        // but its history remains in Calendar/Analytics.
         onDelete={() => archiveHabit(habit.id)}
-        // Pause: set pausedAt so it moves into the Paused section on Home.
         onPause={() => pauseHabit(habit.id)}
       />
     );
   };
 
-  // ── UI ───────────────────────────────────────────────────────────────────────
+  return (
+    <ScrollView
+      style={s.dayScroll}
+      contentContainerStyle={s.scrollContent}
+      showsVerticalScrollIndicator={false}
+    >
+      <View style={{ marginTop: 8 }}>
+        <ProgressHero
+          selectedDate={date}
+          completed={completed}
+          total={total}
+          overLimit={overLimitCount}
+        />
+      </View>
+
+      {dailyBuildHabits.length > 0 && (
+        <View style={s.section}>
+          <View style={s.sectionTitleRow}>
+            <Text style={s.sectionTitle}>{dailySectionLabel}</Text>
+            {!isTodayDate && (
+              <View style={s.badge}>
+                <Text style={s.badgeText}>{isReadOnly ? 'Upcoming' : 'Past'}</Text>
+              </View>
+            )}
+          </View>
+          <View style={{ opacity: isReadOnly ? 0.5 : 1 }}>
+            {dailyBuildHabits.map(renderHabitCard)}
+          </View>
+        </View>
+      )}
+
+      {allBreakHabits.length > 0 && (
+        <View style={s.section}>
+          <View style={s.sectionTitleRow}>
+            <Text style={s.sectionTitle}>Break Habits</Text>
+            {!isTodayDate && (
+              <View style={s.badge}>
+                <Text style={s.badgeText}>{isReadOnly ? 'Upcoming' : 'Past'}</Text>
+              </View>
+            )}
+          </View>
+          <View style={{ opacity: isReadOnly ? 0.5 : 1 }}>
+            {allBreakHabits.map(renderHabitCard)}
+          </View>
+        </View>
+      )}
+
+      {weeklyBuildHabits.length > 0 && (
+        <View style={s.section}>
+          <View style={s.sectionTitleRow}>
+            <Text style={s.sectionTitle}>Weekly Habits</Text>
+            {weeklyBuildTotal > 0 && (
+              <Text style={s.weeklyPct}>
+                {Math.round((weeklyBuildCompleted / weeklyBuildTotal) * 100)}% this week
+              </Text>
+            )}
+          </View>
+          <View style={{ opacity: isReadOnly ? 0.5 : 1 }}>
+            {weeklyBuildHabits.map(renderHabitCard)}
+          </View>
+        </View>
+      )}
+
+      {habits.length === 0 && (
+        <View style={s.emptyState}>
+          <Text style={s.emptyTitle}>No habits yet</Text>
+          <Text style={s.emptyBody}>
+            Tap + above to create your first habit,{'\n'}
+            or load sample data to explore the app.
+          </Text>
+          <Pressable
+            onPress={() => {
+              SAMPLE_HABITS.forEach(h => addHabit(h));
+              if (haptic) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            }}
+            style={s.sampleButton}
+          >
+            <Text style={s.sampleButtonText}>Load sample habits</Text>
+          </Pressable>
+        </View>
+      )}
+
+      {!isTodayDate && (
+        <Pressable onPress={onJumpToToday} style={s.todayPill}>
+          <Text style={s.todayPillText}>Jump to Today</Text>
+        </Pressable>
+      )}
+
+      {isTodayDate && pausedHabits.length > 0 && (
+        <View style={s.section}>
+          <View style={s.sectionTitleRow}>
+            <Text style={s.sectionTitle}>Paused</Text>
+          </View>
+          <View style={s.pausedList}>
+            {pausedHabits.map(h => (
+              <View key={h.id} style={s.pausedRow}>
+                <Text style={s.pausedIcon}>{h.icon}</Text>
+                <Text style={s.pausedName} numberOfLines={1}>{h.name}</Text>
+                <Pressable
+                  onPress={() => {
+                    if (haptic) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    unpauseHabit(h.id);
+                  }}
+                  style={({ pressed }) => [s.resumeBtn, pressed && { opacity: 0.8 }]}
+                >
+                  <Play size={16} color="#fff" strokeWidth={2.5} />
+                  <Text style={s.resumeBtnText}>Resume</Text>
+                </Pressable>
+              </View>
+            ))}
+          </View>
+        </View>
+      )}
+    </ScrollView>
+  );
+}
+
+// ─── HomeScreen ───────────────────────────────────────────────────────────────
+
+export default function HomeScreen() {
+  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+  const haptic = Boolean(useSettingsStore(s => s.hapticFeedback));
+  const { width: screenWidth } = useWindowDimensions();
+  const listRef = useRef<FlatList<string>>(null);
+
+  const rawHabits = useHabitStore(s => s.habits);
+  const entries = useHabitStore(s => s.entries);
+  const selectedDate = useHabitStore(s => s.selectedDate);
+  const setSelectedDate = useHabitStore(s => s.setSelectedDate);
+
+  const logEntry = useHabitStore(s => s.logEntry);
+  const deleteEntry = useHabitStore(s => s.deleteEntry);
+  const pauseHabit = useHabitStore(s => s.pauseHabit);
+  const unpauseHabit = useHabitStore(s => s.unpauseHabit);
+  const archiveHabit = useHabitStore(s => s.archiveHabit);
+  const addHabit = useHabitStore(s => s.addHabit);
+
+  const todayStr = today();
+  const dates = useMemo(
+    () =>
+      Array.from({ length: DAYS_BACK + 1 + DAYS_FORWARD }, (_, i) =>
+        addDays(todayStr, i - DAYS_BACK),
+      ),
+    [todayStr],
+  );
+  const todayIndex = DAYS_BACK;
+  const mountTimeRef = useRef<number>(Date.now());
+  const hasScrolledToSelectedRef = useRef(false);
+  const programmaticScrollRef = useRef(false);
+
+  // Once on mount: open on today. (onMomentumScrollEnd is ignored for 500ms so this isn’t overwritten.)
+  useEffect(() => {
+    setSelectedDate(todayStr);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // When selectedDate changes (e.g. from week calendar tap), scroll list to that day.
+  // Skip on initial mount so we don't fight with initialScrollIndex (which shows today).
+  useEffect(() => {
+    if (!hasScrolledToSelectedRef.current) {
+      hasScrolledToSelectedRef.current = true;
+      return;
+    }
+    const idx = dates.indexOf(selectedDate);
+    if (idx >= 0 && listRef.current) {
+      programmaticScrollRef.current = true;
+      listRef.current.scrollToIndex({ index: idx, animated: true });
+    }
+  }, [selectedDate, dates]);
+
+  const scrollableWeeks = useMemo(() => getWeeksRange(12, 12), []);
+
+  const completionByDate = useMemo(() => {
+    const result: Record<string, number> = {};
+    scrollableWeeks.flat().forEach(d => {
+      result[d] = getDaySummary(rawHabits, entries, d).dailyOnlyCompletionPct;
+    });
+    return result;
+  }, [rawHabits, entries, scrollableWeeks]);
+
+  const handleDateSelect = (date: string) => setSelectedDate(date);
+
+  const handleJumpToToday = useCallback(() => setSelectedDate(today()), []);
+
+  const onMomentumScrollEnd = useCallback(
+    (e: { nativeEvent: { contentOffset: { x: number } } }) => {
+      // Ignore the scroll end that follows our own scrollToIndex (calendar tap).
+      // Otherwise we get a feedback loop: tap yesterday → scroll to 89 → onMomentumScrollEnd
+      // rounds to 90 → setSelectedDate(today) → scroll to 90 → onMomentumScrollEnd rounds to 89 → bounce.
+      if (programmaticScrollRef.current) {
+        programmaticScrollRef.current = false;
+        return;
+      }
+      if (Date.now() - mountTimeRef.current < 500) return;
+      if (screenWidth <= 0) return;
+      const index = Math.round(e.nativeEvent.contentOffset.x / screenWidth);
+      const clamped = Math.max(0, Math.min(index, dates.length - 1));
+      const newDate = dates[clamped];
+      if (newDate !== selectedDate) setSelectedDate(newDate);
+    },
+    [screenWidth, dates, selectedDate],
+  );
+
+  const getItemLayout = useCallback(
+    (_: unknown, index: number) => ({
+      length: screenWidth,
+      offset: index * screenWidth,
+      index,
+    }),
+    [screenWidth],
+  );
+
+  const onScrollToIndexFailed = useCallback(
+    (info: { index: number }) => {
+      setTimeout(() => {
+        programmaticScrollRef.current = true;
+        listRef.current?.scrollToIndex({
+          index: info.index,
+          animated: true,
+        });
+      }, 100);
+    },
+    [],
+  );
+
+  const handleAddSampleHabits = useCallback(() => {
+    SAMPLE_HABITS.forEach(h => addHabit(h));
+    if (haptic) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  }, [addHabit, haptic]);
 
   return (
     <SafeAreaView style={s.safe}>
-      <ScrollView
-        style={s.scroll}
-        contentContainerStyle={s.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* ── Header ──────────────────────────────────────────────────────── */}
-        <View style={s.header}>
-          <Text style={s.appTitle}>Fovere</Text>
-          <Pressable
-            onPress={() => navigation.navigate('NewHabit', { screen: 'HabitSource' })}
-            style={s.addButton}
-            accessibilityLabel="Add new habit"
-          >
-            <Plus size={20} color="#fff" strokeWidth={2.5} />
+      <View style={s.header}>
+        <Text style={s.appTitle}>Fovere</Text>
+        <Pressable
+          onPress={() => navigation.navigate('NewHabit', { screen: 'HabitSource' })}
+          style={s.addButton}
+          accessibilityLabel="Add new habit"
+        >
+          <Plus size={20} color="#fff" strokeWidth={2.5} />
+        </Pressable>
+      </View>
+
+      <WeekCalendar
+        weeks={scrollableWeeks}
+        selectedDate={selectedDate}
+        completionByDate={completionByDate}
+        onDateSelect={handleDateSelect}
+      />
+
+      <FlatList
+        ref={listRef}
+        data={dates}
+        keyExtractor={(d) => d}
+        style={s.dayList}
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        onMomentumScrollEnd={onMomentumScrollEnd}
+        getItemLayout={getItemLayout}
+        initialScrollIndex={todayIndex}
+        onScrollToIndexFailed={onScrollToIndexFailed}
+        windowSize={5}
+        initialNumToRender={1}
+        renderItem={({ item: date }) => (
+          <View style={[s.dayPage, { width: screenWidth }]}>
+            <HomeDayContent date={date} onJumpToToday={handleJumpToToday} />
+          </View>
+        )}
+      />
+
+      {rawHabits.length > 0 && (
+        <View style={s.devRow}>
+          <Pressable onPress={handleAddSampleHabits} style={s.devButton}>
+            <Text style={s.devButtonText}>＋ Add sample habits (dev)</Text>
           </Pressable>
         </View>
-
-        {/* ── Week calendar strip (scrollable) ───────────────────────────────── */}
-        <WeekCalendar
-          weeks={scrollableWeeks}
-          selectedDate={selectedDate}
-          completionByDate={completionByDate}
-          onDateSelect={handleDateSelect}
-        />
-
-        {/* ── Progress hero ────────────────────────────────────────────────── */}
-        <View style={{ marginTop: 8 }}>
-          <ProgressHero
-            selectedDate={selectedDate}
-            completed={completed}
-            total={total}
-            overLimit={overLimitCount}
-          />
-        </View>
-
-        {/* ── Daily build habits ───────────────────────────────────────────── */}
-        {dailyBuildHabits.length > 0 && (
-          <View style={s.section}>
-            <View style={s.sectionTitleRow}>
-              <Text style={s.sectionTitle}>{dailySectionLabel}</Text>
-              {!isToday && (
-                <View style={s.badge}>
-                  <Text style={s.badgeText}>{isReadOnly ? 'Upcoming' : 'Past'}</Text>
-                </View>
-              )}
-            </View>
-            <View style={{ opacity: isReadOnly ? 0.5 : 1 }}>
-              {dailyBuildHabits.map(renderHabitCard)}
-            </View>
-          </View>
-        )}
-
-        {/* ── Break habits (daily + weekly) ────────────────────────────────── */}
-        {allBreakHabits.length > 0 && (
-          <View style={s.section}>
-            <View style={s.sectionTitleRow}>
-              <Text style={s.sectionTitle}>Break Habits</Text>
-              {!isToday && (
-                <View style={s.badge}>
-                  <Text style={s.badgeText}>{isReadOnly ? 'Upcoming' : 'Past'}</Text>
-                </View>
-              )}
-            </View>
-            <View style={{ opacity: isReadOnly ? 0.5 : 1 }}>
-              {allBreakHabits.map(renderHabitCard)}
-            </View>
-          </View>
-        )}
-
-        {/* ── Weekly build habits only ──────────────────────────────────────── */}
-        {weeklyBuildHabits.length > 0 && (
-          <View style={s.section}>
-            <View style={s.sectionTitleRow}>
-              <Text style={s.sectionTitle}>Weekly Habits</Text>
-              {weeklyBuildTotal > 0 && (
-                <Text style={s.weeklyPct}>
-                  {Math.round((weeklyBuildCompleted / weeklyBuildTotal) * 100)}% this week
-                </Text>
-              )}
-            </View>
-            <View style={{ opacity: isReadOnly ? 0.5 : 1 }}>
-              {weeklyBuildHabits.map(renderHabitCard)}
-            </View>
-          </View>
-        )}
-
-        {/* ── Empty state ──────────────────────────────────────────────────── */}
-        {habits.length === 0 && (
-          <View style={s.emptyState}>
-            <Text style={s.emptyTitle}>No habits yet</Text>
-            <Text style={s.emptyBody}>
-              Tap + above to create your first habit,{'\n'}
-              or load sample data to explore the app.
-            </Text>
-            <Pressable onPress={handleAddSampleHabits} style={s.sampleButton}>
-              <Text style={s.sampleButtonText}>Load sample habits</Text>
-            </Pressable>
-          </View>
-        )}
-
-        {/* ── Dev shortcut ─────────────────────────────────────────────────── */}
-        {habits.length > 0 && (
-          <View style={s.devRow}>
-            <Pressable onPress={handleAddSampleHabits} style={s.devButton}>
-              <Text style={s.devButtonText}>＋ Add sample habits (dev)</Text>
-            </Pressable>
-          </View>
-        )}
-
-        {/* ── Jump to today pill ───────────────────────────────────────────── */}
-        {!isToday && (
-          <Pressable onPress={() => setSelectedDate(today())} style={s.todayPill}>
-            <Text style={s.todayPillText}>Jump to Today</Text>
-          </Pressable>
-        )}
-
-        {/* ── Paused habits (only when viewing today) ───────────────────────── */}
-        {isToday && pausedHabits.length > 0 && (
-          <View style={s.section}>
-            <View style={s.sectionTitleRow}>
-              <Text style={s.sectionTitle}>Paused</Text>
-            </View>
-            <View style={s.pausedList}>
-              {pausedHabits.map(h => (
-                <View key={h.id} style={s.pausedRow}>
-                  <Text style={s.pausedIcon}>{h.icon}</Text>
-                  <Text style={s.pausedName} numberOfLines={1}>{h.name}</Text>
-                  <Pressable
-                    onPress={() => {
-                      if (haptic) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                      unpauseHabit(h.id);
-                    }}
-                    style={({ pressed }) => [s.resumeBtn, pressed && { opacity: 0.8 }]}
-                  >
-                    <Play size={16} color="#fff" strokeWidth={2.5} />
-                    <Text style={s.resumeBtnText}>Resume</Text>
-                  </Pressable>
-                </View>
-              ))}
-            </View>
-          </View>
-        )}
-      </ScrollView>
+      )}
     </SafeAreaView>
   );
 }
@@ -355,7 +463,13 @@ const s = StyleSheet.create({
     flex: 1,
     backgroundColor: C.bgHome,
   },
-  scroll: {
+  dayList: {
+    flex: 1,
+  },
+  dayPage: {
+    flex: 1,
+  },
+  dayScroll: {
     flex: 1,
     backgroundColor: C.bgHome,
   },
@@ -372,6 +486,7 @@ const s = StyleSheet.create({
     justifyContent: 'space-between',
     paddingTop: 16,
     paddingBottom: 8,
+    paddingHorizontal: 28,
     backgroundColor: C.bgHome,
   },
   appTitle: {
