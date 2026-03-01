@@ -9,7 +9,6 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
-import { Minus, Plus } from 'lucide-react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { Palette } from '@/lib/theme';
 import type { RootStackParamList } from '@/navigation/types';
@@ -20,6 +19,7 @@ import { today, isFuture } from '@/lib/dates';
 import { getHabitCurrentValue, isHabitCompleted } from '@/lib/aggregates';
 import { getProgressColor, PROGRESS_COLORS } from '@/lib/progressColors';
 import { ScoreRing } from '@/components/ScoreRing';
+import { InteractiveQuantityRing } from '@/components/InteractiveQuantityRing';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'HabitDetail'>;
 
@@ -103,6 +103,14 @@ export default function HabitDetailScreen({ route, navigation }: Props) {
     decrementEntry(habit.id, viewDate);
   }, [habit, currentValue, decrementEntry, viewDate, isViewingFuture]);
 
+  const handleSetQuantity = useCallback((value: number) => {
+    if (!habit || isViewingFuture) return;
+    const maxVal = isBreak ? 99999 : habit.target;
+    const clamped = Math.max(0, Math.min(value, maxVal));
+    if (haptic && clamped >= habit.target) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    logEntry(habit.id, viewDate, clamped);
+  }, [habit, isBreak, logEntry, viewDate, isViewingFuture, haptic]);
+
   const handlePause = () => {
     if (!habit) return;
     Alert.alert(
@@ -156,32 +164,24 @@ export default function HabitDetailScreen({ route, navigation }: Props) {
     <SafeAreaView style={[s.safe, { backgroundColor: colors.bgSecondary }]} edges={['bottom']}>
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
 
-        {/* ── Progress ring ─────────────────────────────────────────────── */}
+        {/* ── Progress ring (boolean) or label only (numeric: ring is in InteractiveQuantityRing) ─── */}
         <View style={s.ringSection}>
-          <ScoreRing
-            value={progressPct}
-            size={220}
-            strokeWidth={12}
-            radius={80}
-            strokeColor={ringStrokeColor}
-            renderCenter={() => (
-              <View style={s.ringCenter}>
-                {habit.kind === 'boolean' ? (
+          {habit.kind === 'boolean' ? (
+            <ScoreRing
+              value={progressPct}
+              size={220}
+              strokeWidth={12}
+              radius={80}
+              strokeColor={ringStrokeColor}
+              renderCenter={() => (
+                <View style={s.ringCenter}>
                   <Text style={[s.ringBoolMark, { color: completed || (isBreak && progressPct >= 100) ? accentColor : colors.chevron }]}>
                     {completed ? '✓' : '○'}
                   </Text>
-                ) : (
-                  <Text>
-                    <Text style={[s.ringCurrent, { color: colors.text1 }]}>{currentValue}</Text>
-                    <Text style={[s.ringTarget, { color: colors.text4 }]}>/{habit.target}</Text>
-                  </Text>
-                )}
-                {habit.kind === 'numeric' && habit.unit ? (
-                  <Text style={[s.ringUnit, { color: colors.text4 }]}>{habit.unit}</Text>
-                ) : null}
-              </View>
-            )}
-          />
+                </View>
+              )}
+            />
+          ) : null}
           <Text style={[s.goalLabel, { color: colors.text3 }]}>{goalLabel}</Text>
           {overLimit && (
             <Text style={[s.overLimitBadge, { color: colors.danger }]}>Over limit — {currentValue - habit.target} too many</Text>
@@ -211,29 +211,15 @@ export default function HabitDetailScreen({ route, navigation }: Props) {
             </Pressable>
           </View>
         ) : (
-          <View style={s.numRow}>
-            <Pressable
-              onPress={isViewingFuture ? undefined : handleDecrement}
-              disabled={currentValue === 0 || isViewingFuture}
-              style={[s.ctrlBtn, { backgroundColor: colors.bgCard }, (currentValue === 0 || isViewingFuture) && s.ctrlBtnDisabled]}
-            >
-              <Minus size={24} color={accentColor} strokeWidth={2.5} />
-            </Pressable>
-
-            <Text style={[s.numValue, { color: colors.text1 }]}>{currentValue}</Text>
-
-            <Pressable
-              onPress={isViewingFuture ? undefined : handleIncrement}
-              disabled={(!isBreak && currentValue >= habit.target) || isViewingFuture}
-              style={[
-                s.ctrlBtnPrimary,
-                { backgroundColor: accentColor, shadowColor: accentColor },
-                ((!isBreak && currentValue >= habit.target) || isViewingFuture) && s.ctrlBtnDisabled,
-              ]}
-            >
-              <Plus size={24} color={colors.white} strokeWidth={2.5} />
-            </Pressable>
-          </View>
+          <InteractiveQuantityRing
+            value={currentValue}
+            target={habit.target}
+            unit={habit.unit}
+            isBreak={isBreak}
+            disabled={isViewingFuture}
+            strokeColor={ringStrokeColor}
+            onValueChange={handleSetQuantity}
+          />
         )}
 
         {/* ── Info rows ─────────────────────────────────────────────────── */}
@@ -352,29 +338,7 @@ const s = StyleSheet.create({
   boolBtnDone: { backgroundColor: '#008080' },
   boolBtnText: { fontSize: 17, fontWeight: '600', color: '#008080' },
   boolBtnTextDone: { color: '#fff' },
-
-  // Numeric controls
-  numRow: {
-    flexDirection: 'row', alignItems: 'center',
-    justifyContent: 'center', gap: 24, marginBottom: 32,
-  },
-  ctrlBtn: {
-    width: 56, height: 56, borderRadius: 28, backgroundColor: '#fff',
-    alignItems: 'center', justifyContent: 'center',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08, shadowRadius: 4, elevation: 2,
-  },
-  ctrlBtnPrimary: {
-    width: 56, height: 56, borderRadius: 28, backgroundColor: '#008080',
-    alignItems: 'center', justifyContent: 'center',
-    shadowColor: '#008080', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3, shadowRadius: 6, elevation: 4,
-  },
   ctrlBtnDisabled: { opacity: 0.3 },
-  numValue: {
-    fontSize: 56, fontWeight: '300', color: '#1A1A1A',
-    minWidth: 90, textAlign: 'center',
-  },
 
   // Info rows
   section:     { paddingHorizontal: 16, marginBottom: 12 },
