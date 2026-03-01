@@ -39,10 +39,14 @@ export function WeekCalendar({
   const weekIndexForDate = weeks.findIndex(w => w.includes(selectedDate));
   useEffect(() => {
     if (weeks.length <= 1 || weekIndexForDate < 0 || containerWidth <= 0) return;
-    scrollRef.current?.scrollTo({
-      x: weekIndexForDate * containerWidth,
-      animated: false,
-    });
+    const targetX = weekIndexForDate * containerWidth;
+    const scroll = () => {
+      scrollRef.current?.scrollTo({
+        x: targetX,
+        animated: false,
+      });
+    };
+    requestAnimationFrame(scroll);
   }, [selectedDate, weekIndexForDate, weeks.length, containerWidth]);
 
   const renderDay = (date: string, fillWeek?: boolean) => {
@@ -121,7 +125,10 @@ export function WeekCalendar({
           horizontal
           pagingEnabled
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[
+            styles.scrollContent,
+            containerWidth > 0 && { width: weeks.length * containerWidth },
+          ]}
           keyboardShouldPersistTaps="handled"
           decelerationRate="fast"
         >

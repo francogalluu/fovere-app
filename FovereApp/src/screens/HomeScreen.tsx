@@ -445,23 +445,30 @@ export default function HomeScreen() {
 
   const handleJumpToToday = useCallback(() => setSelectedDate(today()), []);
 
+  const viewabilityConfig = useRef({
+    itemVisiblePercentThreshold: 50,
+  }).current;
+
+  const onViewableItemsChanged = useCallback(
+    ({ viewableItems }: { viewableItems: Array<{ index: number | null }> }) => {
+      if (viewableItems.length === 0) return;
+      const item = viewableItems[viewableItems.length - 1];
+      const index = item.index;
+      if (index == null || index < 0 || index >= dates.length) return;
+      const newDate = dates[index];
+      setSelectedDate(newDate);
+    },
+    [dates],
+  );
+
   const onMomentumScrollEnd = useCallback(
     (e: { nativeEvent: { contentOffset: { x: number } } }) => {
-      // Ignore the scroll end that follows our own scrollToIndex (calendar tap).
-      // Otherwise we get a feedback loop: tap yesterday → scroll to 89 → onMomentumScrollEnd
-      // rounds to 90 → setSelectedDate(today) → scroll to 90 → onMomentumScrollEnd rounds to 89 → bounce.
       if (programmaticScrollRef.current) {
         programmaticScrollRef.current = false;
         return;
       }
-      if (Date.now() - mountTimeRef.current < 500) return;
-      if (screenWidth <= 0) return;
-      const index = Math.round(e.nativeEvent.contentOffset.x / screenWidth);
-      const clamped = Math.max(0, Math.min(index, dates.length - 1));
-      const newDate = dates[clamped];
-      if (newDate !== selectedDate) setSelectedDate(newDate);
     },
-    [screenWidth, dates, selectedDate],
+    [],
   );
 
   const getItemLayout = useCallback(
@@ -519,6 +526,8 @@ export default function HomeScreen() {
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
+        viewabilityConfig={viewabilityConfig}
+        onViewableItemsChanged={onViewableItemsChanged}
         onMomentumScrollEnd={onMomentumScrollEnd}
         getItemLayout={getItemLayout}
         initialScrollIndex={todayIndex}
