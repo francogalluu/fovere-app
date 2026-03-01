@@ -66,8 +66,8 @@ export function HabitCard({
   const isBreak       = habit.goalType === 'break';
   const isOverLimit   = isBreak && currentValue > habit.target;
   const pct           = Math.min(100, Math.round((currentValue / habit.target) * 100));
-  // Break habits: ring fills as a danger meter (more = worse). Use warning palette.
-  const progressColor = isBreak
+  // Break habits under limit: show green (same as completed). Over/at limit: danger meter.
+  const progressColor = isBreak && !isCompleted
     ? (pct >= 100 ? PROGRESS_COLORS.LOW : pct >= 50 ? PROGRESS_COLORS.MID : PROGRESS_COLORS.MID_LOW)
     : getProgressColor(pct);
 
@@ -90,9 +90,9 @@ export function HabitCard({
         )}
         <View style={[
           s.iconCircle,
-          // Build: green border when done. Break: red border when over limit.
-          !isBreak && isCompleted && { borderColor: PROGRESS_COLORS.HIGH, borderWidth: 1.5 },
-          isOverLimit              && { borderColor: PROGRESS_COLORS.LOW,  borderWidth: 1.5 },
+          // Green border when completed (build done, or break under limit). Red when break over limit.
+          isCompleted && !isOverLimit && { borderColor: PROGRESS_COLORS.HIGH, borderWidth: 1.5 },
+          isOverLimit && { borderColor: PROGRESS_COLORS.LOW, borderWidth: 1.5 },
         ]}>
           <Text style={s.iconEmoji}>{habit.icon}</Text>
         </View>
@@ -110,15 +110,15 @@ export function HabitCard({
       </View>
 
       {/* ── Progress ring (right side) ─────────────────────────────────── */}
-      {/* Break habits: never show green checkmark; ring is a danger meter */}
+      {/* Completed = green (build done, or break under limit). Break at/over limit = danger meter. */}
       <ScoreRing
-        value={pct}
+        value={isCompleted ? 100 : pct}
         size={48}
         strokeWidth={3}
         radius={20}
-        strokeColor={!isBreak && isCompleted ? PROGRESS_COLORS.HIGH : progressColor}
+        strokeColor={isCompleted ? PROGRESS_COLORS.HIGH : progressColor}
         renderCenter={(displayPercent) =>
-          !isBreak && isCompleted ? (
+          isCompleted ? (
             <Check size={18} color={PROGRESS_COLORS.HIGH} strokeWidth={3} />
           ) : isBreak && pct >= 100 ? (
             <TriangleAlert size={18} color={PROGRESS_COLORS.LOW} strokeWidth={2.5} />
