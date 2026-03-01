@@ -612,10 +612,9 @@ export default function AnalyticsScreen() {
             <View style={s.weekdayCard}>
               {WEEKDAY_LABELS.map((label, i) => {
                 const pct = completionByWeekday[i] ?? 0;
-                const isBest = pct > 0 && pct === Math.max(...completionByWeekday);
                 return (
                   <View key={i} style={s.weekdayRow}>
-                    <Text style={[s.weekdayLabel, isBest && s.weekdayLabelBest]} numberOfLines={1}>{label}</Text>
+                    <Text style={s.weekdayLabel} numberOfLines={1}>{label}</Text>
                     <View style={s.weekdayBarBg}>
                       <View style={[s.weekdayBarFill, { width: `${pct}%` }]} />
                     </View>
@@ -855,7 +854,6 @@ const s = StyleSheet.create({
   },
   weekdayRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
   weekdayLabel: { fontSize: 13, color: '#8E8E93', width: 36 },
-  weekdayLabelBest: { fontWeight: '700', color: '#34C759' },
   weekdayBarBg: { flex: 1, height: 8, backgroundColor: '#E5E5E7', borderRadius: 4, overflow: 'hidden', marginHorizontal: 12 },
   weekdayBarFill: { height: '100%', backgroundColor: '#34C759', borderRadius: 4 },
   weekdayPct: { fontSize: 13, fontWeight: '600', color: '#1A1A1A', width: 36, textAlign: 'right' },

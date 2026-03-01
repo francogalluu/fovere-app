@@ -133,6 +133,32 @@ function HomeDayContent({
     [dailyBreakHabits, weeklyBreakHabits],
   );
 
+  // Only show habits that existed on the viewed date (avoid showing today's new habit on yesterday)
+  const dailyBuildHabitsOnDate = useMemo(
+    () => dailyBuildHabits.filter(h => h.createdAt <= date),
+    [dailyBuildHabits, date],
+  );
+  const dailyBreakHabitsOnDate = useMemo(
+    () => dailyBreakHabits.filter(h => h.createdAt <= date),
+    [dailyBreakHabits, date],
+  );
+  const weeklyBuildHabitsOnDate = useMemo(
+    () => weeklyBuildHabits.filter(h => h.createdAt <= date),
+    [weeklyBuildHabits, date],
+  );
+  const weeklyBreakHabitsOnDate = useMemo(
+    () => weeklyBreakHabits.filter(h => h.createdAt <= date),
+    [weeklyBreakHabits, date],
+  );
+  const monthlyBuildHabitsOnDate = useMemo(
+    () => monthlyBuildHabits.filter(h => h.createdAt <= date),
+    [monthlyBuildHabits, date],
+  );
+  const allBreakHabitsOnDate = useMemo(
+    () => [...dailyBreakHabitsOnDate, ...weeklyBreakHabitsOnDate],
+    [dailyBreakHabitsOnDate, weeklyBreakHabitsOnDate],
+  );
+
   const overLimitCount = useMemo(
     () => dailyOverLimitCount(rawHabits, entries, date),
     [rawHabits, entries, date],
@@ -163,12 +189,12 @@ function HomeDayContent({
 
   const summarySections: DaySummarySection[] = useMemo(
     () => [
-      { title: 'Daily', habits: dailyBuildHabits.map(toSummaryHabit) },
-      { title: 'Weekly', habits: weeklyBuildHabits.map(toSummaryHabit) },
-      { title: 'Monthly', habits: monthlyBuildHabits.map(toSummaryHabit) },
-      { title: 'Break Habits', habits: allBreakHabits.map(toSummaryHabit) },
+      { title: 'Daily', habits: dailyBuildHabitsOnDate.map(toSummaryHabit) },
+      { title: 'Weekly', habits: weeklyBuildHabitsOnDate.map(toSummaryHabit) },
+      { title: 'Monthly', habits: monthlyBuildHabitsOnDate.map(toSummaryHabit) },
+      { title: 'Break Habits', habits: allBreakHabitsOnDate.map(toSummaryHabit) },
     ],
-    [dailyBuildHabits, weeklyBuildHabits, monthlyBuildHabits, allBreakHabits, toSummaryHabit],
+    [dailyBuildHabitsOnDate, weeklyBuildHabitsOnDate, monthlyBuildHabitsOnDate, allBreakHabitsOnDate, toSummaryHabit],
   );
 
   const handleComplete = useCallback(
@@ -224,7 +250,7 @@ function HomeDayContent({
         />
       </View>
 
-      {dailyBuildHabits.length > 0 && (
+      {dailyBuildHabitsOnDate.length > 0 && (
         <View style={s.section}>
           <View style={s.sectionTitleRow}>
             <Text style={s.sectionTitle}>{dailySectionLabel}</Text>
@@ -235,12 +261,12 @@ function HomeDayContent({
             )}
           </View>
           <View style={{ opacity: isReadOnly ? 0.5 : 1 }}>
-            {dailyBuildHabits.map(renderHabitCard)}
+            {dailyBuildHabitsOnDate.map(renderHabitCard)}
           </View>
         </View>
       )}
 
-      {allBreakHabits.length > 0 && (
+      {allBreakHabitsOnDate.length > 0 && (
         <View style={s.section}>
           <View style={s.sectionTitleRow}>
             <Text style={s.sectionTitle}>Break Habits</Text>
@@ -251,12 +277,12 @@ function HomeDayContent({
             )}
           </View>
           <View style={{ opacity: isReadOnly ? 0.5 : 1 }}>
-            {allBreakHabits.map(renderHabitCard)}
+            {allBreakHabitsOnDate.map(renderHabitCard)}
           </View>
         </View>
       )}
 
-      {weeklyBuildHabits.length > 0 && (
+      {weeklyBuildHabitsOnDate.length > 0 && (
         <View style={s.section}>
           <View style={s.sectionTitleRow}>
             <Text style={s.sectionTitle}>Weekly Habits</Text>
@@ -267,12 +293,12 @@ function HomeDayContent({
             )}
           </View>
           <View style={{ opacity: isReadOnly ? 0.5 : 1 }}>
-            {weeklyBuildHabits.map(renderHabitCard)}
+            {weeklyBuildHabitsOnDate.map(renderHabitCard)}
           </View>
         </View>
       )}
 
-      {monthlyBuildHabits.length > 0 && (
+      {monthlyBuildHabitsOnDate.length > 0 && (
         <View style={s.section}>
           <View style={s.sectionTitleRow}>
             <Text style={s.sectionTitle}>Monthly Habits</Text>
@@ -283,7 +309,7 @@ function HomeDayContent({
             )}
           </View>
           <View style={{ opacity: isReadOnly ? 0.5 : 1 }}>
-            {monthlyBuildHabits.map(renderHabitCard)}
+            {monthlyBuildHabitsOnDate.map(renderHabitCard)}
           </View>
         </View>
       )}
