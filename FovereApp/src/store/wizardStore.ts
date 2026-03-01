@@ -44,7 +44,7 @@ interface WizardState {
 }
 
 const DEFAULTS: Omit<WizardState, keyof Pick<WizardState,
-  'reset' | 'loadHabit' | 'setGoalType' | 'setName' | 'setIcon' |
+  'reset' | 'loadHabit' | 'loadPredetermined' | 'setGoalType' | 'setName' | 'setIcon' |
   'setKind' | 'setFrequency' | 'setTarget' | 'setUnit' |
   'setReminderEnabled' | 'setReminderTime'
 >> = {

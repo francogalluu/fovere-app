@@ -11,12 +11,13 @@ import {
   addDays,
   addMonths,
   getWeekDates,
-  getDayOfWeekIndex,
+  getMonthKey,
   getLastNMonthRanges,
   SHORT_DAY_LABELS,
 } from '@/lib/dates';
 import {
   dailyCompletion,
+  entryValue,
   getHabitCurrentValue,
   isHabitActiveOnDate,
   isHabitCompleted,
@@ -40,8 +41,13 @@ function getBuckets(range: TimeRange, endDate: string): ChartBucket[] {
     case 'day':
       return [{ key: endDate, label: 'Today', start: endDate, end: endDate }];
     case 'week': {
-      const weekDays = getWeekDates(endDate);
-      return weekDays.map((d, i) => ({ key: d, label: SHORT_DAY_LABELS[i], start: d, end: d }));
+      const last7 = datesInRange(addDays(endDate, -6), endDate);
+      return last7.map(d => ({
+        key: d,
+        label: SHORT_DAY_LABELS[new Date(d + 'T00:00:00').getDay()],
+        start: d,
+        end: d,
+      }));
     }
     case 'month': {
       const start = addDays(endDate, -29);
@@ -130,7 +136,7 @@ function buildChartBars(habits: Habit[], entries: HabitEntry[], range: TimeRange
 function getPeriodDates(range: TimeRange, todayStr: string): string[] {
   switch (range) {
     case 'day': return [todayStr];
-    case 'week': return getWeekDates(todayStr).filter(d => d <= todayStr);
+    case 'week': return datesInRange(addDays(todayStr, -6), todayStr);
     case 'month': return datesInRange(addDays(todayStr, -29), todayStr);
     case '6month': {
       const start = addMonths(todayStr, -5);
@@ -146,7 +152,24 @@ function getPeriodDates(range: TimeRange, todayStr: string): string[] {
 }
 
 function getPeriodLabel(range: TimeRange): string {
-  return { day: 'Today', week: 'This week', month: 'Last 30 days', '6month': 'Last 6 months', year: 'Last year' }[range];
+  return { day: 'Today', week: 'Last 7 days', month: 'Last 30 days', '6month': 'Last 6 months', year: 'Last year' }[range];
+}
+
+/** Per-weekday average completion (0–6 = Sun–Sat). For month/6M/year only. */
+function getCompletionByWeekday(
+  periodDates: string[],
+  habits: Habit[],
+  entries: HabitEntry[],
+): number[] {
+  const byDow: number[][] = [[], [], [], [], [], [], []];
+  for (const d of periodDates) {
+    const dow = new Date(d + 'T00:00:00').getDay();
+    const pct = dailyCompletion(habits, entries, d);
+    byDow[dow].push(pct);
+  }
+  return byDow.map(arr =>
+    arr.length === 0 ? 0 : Math.round(arr.reduce((a, b) => a + b, 0) / arr.length),
+  );
 }
 
 // ─── X-axis ticks and labels (Apple Health–style: sparse for month, single-letter for year) ───
@@ -165,7 +188,7 @@ function getXAxisTicks(range: TimeRange, bars: ChartBar[]): number[] {
 
 /** Label text for the x-axis at this bucket. Single line, no wrap. */
 function formatXAxisLabel(range: TimeRange, bar: ChartBar, index: number): string {
-  if (range === 'week') return WEEKDAY_LABELS[index] ?? bar.label;
+  if (range === 'week') return bar.label;
   if (range === 'month') return bar.label;
   if (range === '6month') return bar.label;
   if (range === 'year') {
@@ -288,6 +311,91 @@ export default function AnalyticsScreen() {
     return periodDates.filter(d => isHabitCompleted(selectedHabit, entries, d)).length;
   }, [selectedHabit, entries, periodDates, focusKey]);
 
+  // ── By-habit completion (when "All habits" selected) ──────────────────────
+  // Uses each habit's measure: period sum of value vs expected (target × periods). e.g. weekly = sum of minutes vs expected minutes so far.
+  const byHabitStats = useMemo(() => {
+    if (selectedHabit || habits.length === 0) return { build: [], break: [] };
+    const list = habits
+      .filter(h => periodDates.some(d => isHabitActiveOnDate(h, d) && h.createdAt <= d))
+      .map(habit => {
+        const isBreak = habit.goalType === 'break';
+        const targetPerPeriod = habit.target || 1;
+        const unit = habit.unit?.trim() || 'sessions';
+
+        if (habit.frequency === 'daily') {
+          const eligible = periodDates.filter(d => isHabitActiveOnDate(habit, d) && habit.createdAt <= d);
+          const value = eligible.reduce((sum, d) => sum + entryValue(entries, habit.id, d), 0);
+          const expected = targetPerPeriod * eligible.length;
+          const pct = expected > 0 ? Math.min(100, Math.round((value / expected) * 100)) : 0;
+          const displayPct = isBreak ? (value <= expected ? 100 : Math.min(100, Math.round((value / expected) * 100))) : pct;
+          return { habit, value, expected, pct: displayPct, label: `${value}/${expected} ${unit}` };
+        }
+
+        if (habit.frequency === 'weekly') {
+          const weekKeys = new Set<string>();
+          for (const d of periodDates) {
+            if (!isHabitActiveOnDate(habit, d) || habit.createdAt > d) continue;
+            weekKeys.add(getWeekDates(d)[0]);
+          }
+          let value = 0;
+          for (const weekStart of weekKeys) {
+            const anyDay = getWeekDates(weekStart).find(d => periodDates.includes(d) && isHabitActiveOnDate(habit, d) && habit.createdAt <= d);
+            if (anyDay) value += getHabitCurrentValue(habit, entries, anyDay);
+          }
+          const expected = targetPerPeriod * weekKeys.size;
+          const pct = expected > 0 ? Math.min(100, Math.round((value / expected) * 100)) : 0;
+          const displayPct = isBreak ? (value <= expected ? 100 : Math.min(100, Math.round((value / expected) * 100))) : pct;
+          return { habit, value, expected, pct: displayPct, label: `${value}/${expected} ${unit}` };
+        }
+
+        // monthly: sum value per month in period, expected = target × months
+        const monthKeys = new Set<string>();
+        for (const d of periodDates) {
+          if (!isHabitActiveOnDate(habit, d) || habit.createdAt > d) continue;
+          monthKeys.add(getMonthKey(d));
+        }
+        let value = 0;
+        for (const monthKey of monthKeys) {
+          const [y, m] = monthKey.split('-').map(Number);
+          const lastDay = new Date(y, m, 0).getDate();
+          const anchor = `${y}-${String(m).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+          value += getHabitCurrentValue(habit, entries, anchor);
+        }
+        const expected = targetPerPeriod * monthKeys.size;
+        const pct = expected > 0 ? Math.min(100, Math.round((value / expected) * 100)) : 0;
+        const displayPct = isBreak ? (value <= expected ? 100 : Math.min(100, Math.round((value / expected) * 100))) : pct;
+        return { habit, value, expected, pct: displayPct, label: `${value}/${expected} ${unit}` };
+      });
+    const build = list.filter(x => x.habit.goalType !== 'break').sort((a, b) => b.pct - a.pct);
+    const breakList = list.filter(x => x.habit.goalType === 'break').sort((a, b) => b.pct - a.pct);
+    return { build, break: breakList };
+  }, [habits, periodDates, entries, selectedHabit, focusKey]);
+
+  // ── Completion by weekday (month / 6M / year only) ─────────────────────────
+  const completionByWeekday = useMemo(() => {
+    if (timeRange !== 'month' && timeRange !== '6month' && timeRange !== 'year') return null;
+    return getCompletionByWeekday(periodDates, allHabits, entries);
+  }, [timeRange, periodDates, allHabits, entries, focusKey]);
+
+  // ── Break habits summary ───────────────────────────────────────────────────
+  const breakHabitsSummary = useMemo(() => {
+    if (selectedHabit || !habits.some(h => h.goalType === 'break')) return null;
+    const breakHabits = habits.filter(h => h.goalType === 'break');
+    let daysWithBreak = 0;
+    let daysUnderLimit = 0;
+    for (const d of periodDates) {
+      const active = breakHabits.filter(h => isHabitActiveOnDate(h, d) && h.createdAt <= d);
+      if (active.length === 0) continue;
+      daysWithBreak++;
+      const over = active.some(h => {
+        const val = getHabitCurrentValue(h, entries, d);
+        return val > h.target;
+      });
+      if (!over) daysUnderLimit++;
+    }
+    return daysWithBreak > 0 ? { daysUnderLimit, daysWithBreak } : null;
+  }, [habits, periodDates, entries, selectedHabit, focusKey]);
+
   // ── Heatmap (current month) ───────────────────────────────────────────────
 
   const heatmapData = useMemo(() => {
@@ -354,7 +462,7 @@ export default function AnalyticsScreen() {
           ))}
         </ScrollView>
 
-        {/* Time range: W / M / 6M / Y (no Daily) */}
+        {/* Time range: 7D / 30D / 6M / Y — history only (no future days) */}
         <View style={s.timeRangeRow}>
           {(['week', 'month', '6month', 'year'] as TimeRange[]).map(r => (
             <Pressable
@@ -363,7 +471,7 @@ export default function AnalyticsScreen() {
               style={[s.timeRangeSeg, timeRange === r && s.timeRangeSegActive]}
             >
               <Text style={[s.timeRangeSegText, timeRange === r && s.timeRangeSegTextActive]}>
-                {r === 'week' ? 'W' : r === 'month' ? 'M' : r === '6month' ? '6M' : 'Y'}
+                {r === 'week' ? '7D' : r === 'month' ? '30D' : r === '6month' ? '6M' : 'Y'}
               </Text>
             </Pressable>
           ))}
@@ -405,17 +513,15 @@ export default function AnalyticsScreen() {
               <BarChartWithTooltip
                 bars={chartBars}
                 chartAreaHeight={timeRange === 'month' ? 240 : 220}
-                getTooltipDateLabel={(bar, index) =>
-                  timeRange === 'month'
+                getTooltipDateLabel={(bar) =>
+                  timeRange === 'month' || timeRange === 'week'
                     ? (() => {
                         const d = new Date(bar.key + 'T00:00:00');
                         return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
                       })()
-                    : timeRange === 'week'
-                      ? (WEEKDAY_LABELS[index] ?? bar.label)
-                      : bar.label
+                    : bar.label
                 }
-                todayIndex={timeRange === 'week' ? getDayOfWeekIndex(todayStr) : null}
+                todayIndex={timeRange === 'week' ? chartBars.length - 1 : null}
                 emptyMessage="No data for this period"
                 renderTopContent={
                   timeRange === 'month' || timeRange === 'year'
@@ -450,6 +556,86 @@ export default function AnalyticsScreen() {
           )}
         </View>
 
+        {/* ── By habit (when "All habits" selected) ───────────────────────────── */}
+        {!selectedHabit && (byHabitStats.build.length > 0 || byHabitStats.break.length > 0) && (
+          <>
+            <Text style={s.sectionTitle}>By habit</Text>
+            <View style={s.byHabitCard}>
+              {byHabitStats.build.length > 0 && (
+                <>
+                  <Text style={s.byHabitSubtitle}>Build habits</Text>
+                  {byHabitStats.build.slice(0, 12).map(({ habit, pct, label }) => (
+                    <View key={habit.id} style={s.byHabitRow}>
+                      <Text style={s.byHabitIcon}>{habit.icon}</Text>
+                      <View style={s.byHabitCenter}>
+                        <View style={s.byHabitNameRow}>
+                          <Text style={s.byHabitName} numberOfLines={1}>{habit.name}</Text>
+                          <Text style={s.byHabitDays}>{label}</Text>
+                        </View>
+                        <View style={s.byHabitBarBg}>
+                          <View style={[s.byHabitBarFill, { width: `${Math.min(100, pct)}%` }]} />
+                        </View>
+                      </View>
+                      <Text style={s.byHabitPct}>{pct}%</Text>
+                    </View>
+                  ))}
+                </>
+              )}
+              {byHabitStats.break.length > 0 && (
+                <>
+                  <Text style={[s.byHabitSubtitle, byHabitStats.build.length > 0 && s.byHabitSubtitleSpaced]}>Break habits</Text>
+                  {byHabitStats.break.slice(0, 12).map(({ habit, pct, label }) => (
+                    <View key={habit.id} style={s.byHabitRow}>
+                      <Text style={s.byHabitIcon}>{habit.icon}</Text>
+                      <View style={s.byHabitCenter}>
+                        <View style={s.byHabitNameRow}>
+                          <Text style={s.byHabitName} numberOfLines={1}>{habit.name}</Text>
+                          <Text style={s.byHabitDays}>{label}</Text>
+                        </View>
+                        <View style={s.byHabitBarBg}>
+                          <View style={[s.byHabitBarFillBreak, { width: `${Math.min(100, pct)}%` }]} />
+                        </View>
+                      </View>
+                      <Text style={s.byHabitPct}>{pct}%</Text>
+                    </View>
+                  ))}
+                </>
+              )}
+            </View>
+          </>
+        )}
+
+        {/* ── Completion by weekday (Month / 6M / Year) ──────────────────────── */}
+        {completionByWeekday !== null && (
+          <>
+            <Text style={s.sectionTitle}>Completion by weekday</Text>
+            <View style={s.weekdayCard}>
+              {WEEKDAY_LABELS.map((label, i) => {
+                const pct = completionByWeekday[i] ?? 0;
+                const isBest = pct > 0 && pct === Math.max(...completionByWeekday);
+                return (
+                  <View key={i} style={s.weekdayRow}>
+                    <Text style={[s.weekdayLabel, isBest && s.weekdayLabelBest]} numberOfLines={1}>{label}</Text>
+                    <View style={s.weekdayBarBg}>
+                      <View style={[s.weekdayBarFill, { width: `${pct}%` }]} />
+                    </View>
+                    <Text style={s.weekdayPct}>{pct}%</Text>
+                  </View>
+                );
+              })}
+            </View>
+          </>
+        )}
+
+        {/* ── Break habits summary ───────────────────────────────────────────── */}
+        {breakHabitsSummary !== null && (
+          <View style={s.breakSummaryCard}>
+            <Text style={s.breakSummaryText}>
+              Stayed under limit: {breakHabitsSummary.daysUnderLimit} of {breakHabitsSummary.daysWithBreak} days
+            </Text>
+          </View>
+        )}
+
         {/* ── Streak card (single habit only) ───────────────────────── */}
         {selectedHabit && habitStreak !== null && habitDaysCompleted !== null && (
           <View style={s.streakCard}>
@@ -470,40 +656,41 @@ export default function AnalyticsScreen() {
           </View>
         )}
 
-        {/* ── Heatmap ───────────────────────────────────────────────── */}
-        <View style={s.heatmapHeader}>
-          <Text style={s.sectionTitle}>Habit heatmap</Text>
-          <View style={s.heatmapMonthPill}>
-            <Text style={s.heatmapMonthText}>{heatmapMonthLabel}</Text>
-          </View>
-        </View>
-        <View style={s.heatmapCard}>
-          {/* Day labels */}
-          <View style={s.heatDayRow}>
-            {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((l, i) => (
-              <Text key={i} style={s.heatDayLabel}>{l}</Text>
-            ))}
-          </View>
-          {/* Grid */}
-          {heatmapData.map((row, ri) => (
-            <View key={ri} style={s.heatRow}>
-              {row.map((cell, ci) => (
-                <View
-                  key={ci}
-                  style={[s.heatCell, { backgroundColor: cell.color }]}
-                />
-              ))}
+        {/* ── Heatmap (Month only) ───────────────────────────────────────────── */}
+        {timeRange === 'month' && (
+          <>
+            <View style={s.heatmapHeader}>
+              <Text style={s.sectionTitle}>Habit heatmap</Text>
+              <View style={s.heatmapMonthPill}>
+                <Text style={s.heatmapMonthText}>{heatmapMonthLabel}</Text>
+              </View>
             </View>
-          ))}
-          {/* Legend */}
-          <View style={s.legend}>
-            <Text style={s.legendLabel}>Less</Text>
-            {['#E5E5E7', '#FFD60A', '#FF9F0A', '#34C759'].map((c, i) => (
-              <View key={i} style={[s.legendCell, { backgroundColor: c }]} />
-            ))}
-            <Text style={s.legendLabel}>More</Text>
-          </View>
-        </View>
+            <View style={s.heatmapCard}>
+              <View style={s.heatDayRow}>
+                {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((l, i) => (
+                  <Text key={i} style={s.heatDayLabel}>{l}</Text>
+                ))}
+              </View>
+              {heatmapData.map((row, ri) => (
+                <View key={ri} style={s.heatRow}>
+                  {row.map((cell, ci) => (
+                    <View
+                      key={ci}
+                      style={[s.heatCell, { backgroundColor: cell.color }]}
+                    />
+                  ))}
+                </View>
+              ))}
+              <View style={s.legend}>
+                <Text style={s.legendLabel}>Less</Text>
+                {['#E5E5E7', '#FFD60A', '#FF9F0A', '#34C759'].map((c, i) => (
+                  <View key={i} style={[s.legendCell, { backgroundColor: c }]} />
+                ))}
+                <Text style={s.legendLabel}>More</Text>
+              </View>
+            </View>
+          </>
+        )}
 
         <View style={{ height: 32 }} />
       </ScrollView>
@@ -642,6 +829,42 @@ const s = StyleSheet.create({
   chartGridlinesWrap: { top: 0, left: 0, right: 0, height: 220 },
   chartGridlinesSvg: { position: 'absolute', top: 0, left: 0 },
   barChartRangeCaption: { fontSize: 11, color: '#8E8E93', marginTop: 8, textAlign: 'center' },
+
+  // By habit
+  byHabitCard: {
+    backgroundColor: '#fff', borderRadius: 24, padding: 20, marginBottom: 32,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 8, elevation: 2,
+  },
+  byHabitSubtitle: { fontSize: 13, fontWeight: '600', color: '#8E8E93', marginBottom: 8 },
+  byHabitSubtitleSpaced: { marginTop: 16 },
+  byHabitRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 14 },
+  byHabitIcon: { fontSize: 20, marginRight: 12, width: 28, textAlign: 'center' },
+  byHabitCenter: { flex: 1, marginRight: 12 },
+  byHabitNameRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
+  byHabitName: { fontSize: 15, fontWeight: '500', color: '#1A1A1A', flex: 1 },
+  byHabitDays: { fontSize: 12, color: '#8E8E93', marginLeft: 8 },
+  byHabitBarBg: { height: 6, backgroundColor: '#E5E5E7', borderRadius: 3, overflow: 'hidden' },
+  byHabitBarFill: { height: '100%', backgroundColor: '#34C759', borderRadius: 3 },
+  byHabitBarFillBreak: { height: '100%', backgroundColor: '#34C759', borderRadius: 3 },
+  byHabitPct: { fontSize: 14, fontWeight: '600', color: '#1A1A1A', minWidth: 36, textAlign: 'right' },
+
+  // Completion by weekday
+  weekdayCard: {
+    backgroundColor: '#fff', borderRadius: 24, padding: 24, marginBottom: 32,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 8, elevation: 2,
+  },
+  weekdayRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
+  weekdayLabel: { fontSize: 13, color: '#8E8E93', width: 36 },
+  weekdayLabelBest: { fontWeight: '700', color: '#34C759' },
+  weekdayBarBg: { flex: 1, height: 8, backgroundColor: '#E5E5E7', borderRadius: 4, overflow: 'hidden', marginHorizontal: 12 },
+  weekdayBarFill: { height: '100%', backgroundColor: '#34C759', borderRadius: 4 },
+  weekdayPct: { fontSize: 13, fontWeight: '600', color: '#1A1A1A', width: 36, textAlign: 'right' },
+
+  // Break habits summary
+  breakSummaryCard: {
+    backgroundColor: 'rgba(52, 199, 89, 0.08)', borderRadius: 16, padding: 16, marginBottom: 32,
+  },
+  breakSummaryText: { fontSize: 15, fontWeight: '600', color: '#1A1A1A' },
 
   // Streak card
   streakCard: {
