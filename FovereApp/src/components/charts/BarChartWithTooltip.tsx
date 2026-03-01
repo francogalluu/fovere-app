@@ -327,14 +327,6 @@ export function BarChartWithTooltip({
     [chartLayout.width, bars.length],
   );
 
-  const snapChartPointerToBar = useCallback(
-    (index: number) => {
-      setPressedBarIndex(index);
-      if (bars.length > 0) chartPointerX.value = barGeometry.barCenterX(index);
-    },
-    [bars.length, barGeometry],
-  );
-
   useEffect(() => {
     sharedChartScreenX.value = chartScreenX;
     sharedChartWidth.value = chartLayout.width;
@@ -440,15 +432,9 @@ export function BarChartWithTooltip({
               runOnJS(setPressedBarIndex)(clamped);
             }
           })
-          .onEnd(ev => {
+          .onEnd(() => {
             'worklet';
-            const x = ev.absoluteX - sharedChartScreenX.value;
-            const barSlotWidth = sharedBarSlotWidth.value;
-            const barCount = sharedBarCount.value;
-            if (barSlotWidth <= 0 || barCount <= 0) return;
-            const idx = Math.round((x - CHART_LEFT_PADDING) / barSlotWidth);
-            const clamped = Math.max(0, Math.min(barCount - 1, idx));
-            runOnJS(snapChartPointerToBar)(clamped);
+            runOnJS(setPressedBarIndex)(null);
           })}
       >
         <View style={[styles.barChartRow, barChartRowMonth && styles.barChartRowMonth]}>

@@ -10,7 +10,7 @@ import { today, datesInRange, addDays, toLocalDateString, getWeekDates, getShort
 import { getDaySummary } from '@/lib/daySummary';
 import { getHabitCurrentValue, dailyCompletedCount, isHabitActiveOnDate } from '@/lib/aggregates';
 import { getProgressColor } from '@/lib/progressColors';
-import { BarChartWithTooltip, type ChartBar, type TooltipOverlayLayout } from '@/components/charts/BarChartWithTooltip';
+import { BarChartWithTooltip, type ChartBar } from '@/components/charts/BarChartWithTooltip';
 import { ScoreRing } from '@/components/ScoreRing';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -46,12 +46,6 @@ export default function CalendarScreen() {
   const todayDate = new Date(todayStr + 'T00:00:00');
 
   const [view, setView] = useState<'monthly' | 'weekly'>('monthly');
-  const [tooltipOverlay, setTooltipOverlay] = useState<TooltipOverlayLayout>({ visible: false });
-  const handleTooltipLayout = useCallback((layout: TooltipOverlayLayout) => setTooltipOverlay(layout), []);
-
-  useEffect(() => {
-    if (view === 'monthly') setTooltipOverlay({ visible: false });
-  }, [view]);
 
   const [currentMonth, setCurrentMonth] = useState(
     () => new Date(todayDate.getFullYear(), todayDate.getMonth(), 1),
@@ -373,7 +367,6 @@ export default function CalendarScreen() {
                 getTooltipDateLabel={(bar) => formatMonthDay(bar.key)}
                 todayIndex={weekChartBars.findIndex(b => b.key === todayStr)}
                 emptyMessage="No data for this week"
-                onTooltipLayout={handleTooltipLayout}
               />
             </View>
 
@@ -416,42 +409,6 @@ export default function CalendarScreen() {
         <View style={{ height: 32 }} />
       </ScrollView>
 
-      {/* Tooltip overlay: frontmost layer so 100% label is never cropped and tooltip sits above filters */}
-      {view === 'weekly' && tooltipOverlay.visible && (
-        <View style={s.tooltipOverlay} pointerEvents="box-none">
-          <View
-            style={[
-              s.tooltipOverlayBubble,
-              {
-                backgroundColor: colors.tooltipBg,
-                position: 'absolute',
-                left: tooltipOverlay.x,
-                top: tooltipOverlay.y,
-                width: tooltipOverlay.width,
-                minHeight: tooltipOverlay.height,
-              },
-            ]}
-          >
-            <Text style={s.tooltipOverlayDate}>{tooltipOverlay.dateLabel}</Text>
-            <Text style={s.tooltipOverlayPct}>{tooltipOverlay.pct}%</Text>
-            {tooltipOverlay.detail ? (
-              <Text style={s.tooltipOverlayDetail}>{tooltipOverlay.detail}</Text>
-            ) : null}
-          </View>
-          {/* Pointer/arrow below the tooltip, centered on the selected bar */}
-          <View
-            style={[
-              s.tooltipOverlayPointer,
-              {
-                borderTopColor: colors.tooltipBg,
-                position: 'absolute',
-                left: tooltipOverlay.pointerScreenX - 8,
-                top: tooltipOverlay.y + tooltipOverlay.height - 1,
-              },
-            ]}
-          />
-        </View>
-      )}
     </SafeAreaView>
   );
 }
@@ -630,39 +587,6 @@ const s = StyleSheet.create({
     borderRadius: 20, padding: 24, marginBottom: 12,
     overflow: 'visible',
     zIndex: 10,
-  },
-
-  // Tooltip overlay (weekly): frontmost layer, above filters
-  tooltipOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 1000,
-  },
-  tooltipOverlayBubble: {
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  tooltipOverlayDate: { fontSize: 12, color: 'rgba(255,255,255,0.9)', marginBottom: 2 },
-  tooltipOverlayPct: { fontSize: 22, fontWeight: '700', color: '#fff', letterSpacing: -0.5 },
-  tooltipOverlayDetail: { fontSize: 11, color: 'rgba(255,255,255,0.75)', marginTop: 4 },
-  tooltipOverlayPointer: {
-    width: 0,
-    height: 0,
-    borderLeftWidth: 8,
-    borderRightWidth: 8,
-    borderTopWidth: 6,
-    borderLeftColor: 'transparent',
-    borderRightColor: 'transparent',
   },
 
   // Empty state

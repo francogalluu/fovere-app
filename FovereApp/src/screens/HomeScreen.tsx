@@ -629,7 +629,7 @@ export default function HomeScreen() {
               style={({ pressed }) => [s.addSheetOption, pressed && { backgroundColor: colors.bgSecondary }]}
             >
               <View style={[s.addSheetIconWrapBreak, { backgroundColor: colors.dangerSoft }]}>
-                <CircleSlash size={22} color={colors.white} strokeWidth={2.5} />
+                <CircleSlash size={22} color={colors.danger} strokeWidth={2.5} />
               </View>
               <Text style={[s.addSheetOptionText, { color: colors.text1 }]}>Break bad habit</Text>
             </Pressable>
