@@ -10,6 +10,7 @@ import {
   type WeekStartDay,
 } from '@/lib/dates';
 import { getProgressColor } from '@/lib/progressColors';
+import { useTheme } from '@/context/ThemeContext';
 
 const RING_SIZE = 48;
 const RADIUS = 20;
@@ -34,6 +35,7 @@ export function WeekCalendar({
   onDateSelect,
   weekStartsOn,
 }: WeekCalendarProps) {
+  const { colors } = useTheme();
   const scrollRef = useRef<ScrollView>(null);
   const [containerWidth, setContainerWidth] = useState(0);
   const weeks = weeksProp ?? [getWeekDates(selectedDate, weekStartsOn)];
@@ -69,13 +71,13 @@ export function WeekCalendar({
         style={[styles.dayItem, fillWeek && styles.dayItemFill]}
         accessibilityLabel={`Select ${date}`}
       >
-        <Text style={[styles.dayLabel, isSelected ? styles.dayLabelActive : null]}>
+        <Text style={[styles.dayLabel, { color: colors.text2 }, isSelected && { color: colors.teal }]}>
           {dayLabel}
         </Text>
         <View style={styles.circleWrapper}>
           {isSelected ? (
             <Svg width={RING_SIZE} height={RING_SIZE} viewBox={`0 0 ${RING_SIZE} ${RING_SIZE}`}>
-              <Circle cx={CX} cy={CY} r={RADIUS} fill="#008080" />
+              <Circle cx={CX} cy={CY} r={RADIUS} fill={colors.teal} />
             </Svg>
           ) : (
             <Svg
@@ -84,7 +86,7 @@ export function WeekCalendar({
               viewBox={`0 0 ${RING_SIZE} ${RING_SIZE}`}
               style={{ transform: [{ rotate: '-90deg' }], opacity: isFutureDate ? 0.45 : 1 }}
             >
-              <Circle cx={CX} cy={CY} r={RADIUS} fill="none" stroke="#E5E5E7" strokeWidth={STROKE_WIDTH} />
+              <Circle cx={CX} cy={CY} r={RADIUS} fill="none" stroke={colors.ring} strokeWidth={STROKE_WIDTH} />
               {completion > 0 && (
                 <Circle
                   cx={CX}
@@ -104,7 +106,8 @@ export function WeekCalendar({
             <Text
               style={[
                 styles.dateNumber,
-                isSelected ? styles.dateNumberSelected : null,
+                { color: colors.text1 },
+                isSelected && { color: colors.white, fontWeight: '600' },
                 !isSelected && isFutureDate ? styles.dateNumberFaded : null,
                 !isSelected && isTodayDate ? styles.dateNumberToday : null,
               ]}
@@ -182,11 +185,7 @@ const styles = StyleSheet.create({
   dayLabel: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#8E8E93',
     letterSpacing: 0.3,
-  },
-  dayLabelActive: {
-    color: '#008080',
   },
   circleWrapper: {
     width: RING_SIZE,
@@ -201,11 +200,6 @@ const styles = StyleSheet.create({
   dateNumber: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#1A1A1A',
-  },
-  dateNumberSelected: {
-    color: '#FFFFFF',
-    fontWeight: '600',
   },
   dateNumberFaded: {
     opacity: 0.45,

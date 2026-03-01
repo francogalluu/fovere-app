@@ -13,8 +13,8 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { Check, Minus, Plus } from 'lucide-react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { WizardStackParamList } from '@/navigation/types';
+import { useTheme } from '@/context/ThemeContext';
 import { useWizardStore } from '@/store/wizardStore';
-import { C } from '@/lib/tokens';
 
 type Props = NativeStackScreenProps<WizardStackParamList, 'MeasureBy'>;
 
@@ -80,6 +80,7 @@ function totalMinutesToHoursMinutes(total: number): { hours: number; minutes: nu
 }
 
 export default function MeasureByStep({ navigation }: Props) {
+  const { colors, isDark } = useTheme();
   const { kind, target, unit, goalType, setKind, setTarget, setUnit } = useWizardStore();
   const timeMode = isTimeMode(kind, unit);
 
@@ -89,12 +90,12 @@ export default function MeasureByStep({ navigation }: Props) {
       headerRight: () => (
         <View style={s.doneBtnWrap}>
           <Pressable onPress={() => navigation.goBack()} hitSlop={8}>
-            <Text style={s.doneBtn}>Done</Text>
+            <Text style={[s.doneBtn, { color: colors.teal }]}>Done</Text>
           </Pressable>
         </View>
       ),
     });
-  }, [navigation]);
+  }, [navigation, colors.teal]);
 
   const handleDecrement = () => setTarget(Math.max(1, target - 1));
   const handleIncrement = () => setTarget(target + 1);
@@ -157,28 +158,28 @@ export default function MeasureByStep({ navigation }: Props) {
   };
 
   return (
-    <SafeAreaView style={s.safe} edges={['bottom']}>
+    <SafeAreaView style={[s.safe, { backgroundColor: colors.bgSecondary }]} edges={['bottom']}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
       >
         <ScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled">
-          <Text style={s.helper}>How will you measure progress?</Text>
+          <Text style={[s.helper, { color: colors.text2 }]}>How will you measure progress?</Text>
 
           {/* ── Kind selector ──────────────────────────────────────────── */}
-          <View style={s.card}>
+          <View style={[s.card, { backgroundColor: colors.bgCard }]}>
             {/* Completion */}
             <Pressable
               onPress={selectCompletion}
-              style={({ pressed }) => [s.row, s.rowBorder, pressed && { backgroundColor: '#F9F9F9' }]}
+              style={({ pressed }) => [s.row, s.rowBorder, { borderBottomColor: colors.separator }, pressed && { backgroundColor: colors.bgAnalytics }]}
             >
               <View style={s.rowText}>
-                <Text style={s.label}>Completion</Text>
-                <Text style={s.desc}>Done / not done — simple toggle</Text>
+                <Text style={[s.label, { color: colors.text1 }]}>Completion</Text>
+                <Text style={[s.desc, { color: colors.text2 }]}>Done / not done — simple toggle</Text>
               </View>
               {kind === 'boolean' && (
-                <View style={s.checkCircle}>
-                  <Check size={14} color="#fff" strokeWidth={3} />
+                <View style={[s.checkCircle, { backgroundColor: colors.teal }]}>
+                  <Check size={14} color={colors.white} strokeWidth={3} />
                 </View>
               )}
             </Pressable>
@@ -186,15 +187,15 @@ export default function MeasureByStep({ navigation }: Props) {
             {/* Quantity */}
             <Pressable
               onPress={selectQuantity}
-              style={({ pressed }) => [s.row, s.rowBorder, pressed && { backgroundColor: '#F9F9F9' }]}
+              style={({ pressed }) => [s.row, s.rowBorder, { borderBottomColor: colors.separator }, pressed && { backgroundColor: colors.bgAnalytics }]}
             >
               <View style={s.rowText}>
-                <Text style={s.label}>Quantity</Text>
-                <Text style={s.desc}>Count toward a numeric goal</Text>
+                <Text style={[s.label, { color: colors.text1 }]}>Quantity</Text>
+                <Text style={[s.desc, { color: colors.text2 }]}>Count toward a numeric goal</Text>
               </View>
               {kind === 'numeric' && !timeMode && (
-                <View style={s.checkCircle}>
-                  <Check size={14} color="#fff" strokeWidth={3} />
+                <View style={[s.checkCircle, { backgroundColor: colors.teal }]}>
+                  <Check size={14} color={colors.white} strokeWidth={3} />
                 </View>
               )}
             </Pressable>
@@ -202,15 +203,15 @@ export default function MeasureByStep({ navigation }: Props) {
             {/* Time */}
             <Pressable
               onPress={selectTime}
-              style={({ pressed }) => [s.row, pressed && { backgroundColor: '#F9F9F9' }]}
+              style={({ pressed }) => [s.row, pressed && { backgroundColor: colors.bgAnalytics }]}
             >
               <View style={s.rowText}>
-                <Text style={s.label}>Time</Text>
-                <Text style={s.desc}>Track duration (e.g. 30 min meditation)</Text>
+                <Text style={[s.label, { color: colors.text1 }]}>Time</Text>
+                <Text style={[s.desc, { color: colors.text2 }]}>Track duration (e.g. 30 min meditation)</Text>
               </View>
               {timeMode && (
-                <View style={s.checkCircle}>
-                  <Check size={14} color="#fff" strokeWidth={3} />
+                <View style={[s.checkCircle, { backgroundColor: colors.teal }]}>
+                  <Check size={14} color={colors.white} strokeWidth={3} />
                 </View>
               )}
             </Pressable>
@@ -219,16 +220,16 @@ export default function MeasureByStep({ navigation }: Props) {
           {/* ── Target: Quantity (stepper + unit) ───────────────────────── */}
           {kind === 'numeric' && !timeMode && (
             <>
-              <Text style={s.sectionLabel}>TARGET</Text>
-              <View style={s.card}>
-                <View style={[s.row, s.rowBorder]}>
-                  <Text style={s.label}>{goalType === 'break' ? 'Daily limit' : 'Daily target'}</Text>
+              <Text style={[s.sectionLabel, { color: colors.text2 }]}>TARGET</Text>
+              <View style={[s.card, { backgroundColor: colors.bgCard }]}>
+                <View style={[s.row, s.rowBorder, { borderBottomColor: colors.separator }]}>
+                  <Text style={[s.label, { color: colors.text1 }]}>{goalType === 'break' ? 'Daily limit' : 'Daily target'}</Text>
                   <View style={s.stepper}>
                     <Pressable onPress={handleDecrement} style={s.stepBtn}>
-                      <Minus size={18} color={target <= 1 ? '#C7C7CC' : C.teal} strokeWidth={2.5} />
+                      <Minus size={18} color={target <= 1 ? colors.chevron : colors.teal} strokeWidth={2.5} />
                     </Pressable>
                     <TextInput
-                      style={s.stepValueInput}
+                      style={[s.stepValueInput, { color: colors.text1 }]}
                       value={quantityDisplayValue}
                       onChangeText={onQuantityChange}
                       onFocus={onQuantityFocus}
@@ -240,18 +241,18 @@ export default function MeasureByStep({ navigation }: Props) {
                       accessibilityLabel="Daily target"
                     />
                     <Pressable onPress={handleIncrement} style={s.stepBtn}>
-                      <Plus size={18} color={C.teal} strokeWidth={2.5} />
+                      <Plus size={18} color={colors.teal} strokeWidth={2.5} />
                     </Pressable>
                   </View>
                 </View>
                 <View style={[s.row]}>
-                  <Text style={s.label}>Unit</Text>
+                  <Text style={[s.label, { color: colors.text1 }]}>Unit</Text>
                   <TextInput
-                    style={s.unitInput}
+                    style={[s.unitInput, { color: colors.text2 }]}
                     value={unit}
                     onChangeText={setUnit}
                     placeholder="min, glasses, pages…"
-                    placeholderTextColor="#C7C7CC"
+                    placeholderTextColor={colors.chevron}
                     returnKeyType="done"
                     maxLength={20}
                     textAlign="right"
@@ -264,8 +265,8 @@ export default function MeasureByStep({ navigation }: Props) {
           {/* ── Target: Time — iOS native countdown wheel; Android hours+minutes stepper ───── */}
           {timeMode && (
             <>
-              <Text style={s.sectionLabel}>DURATION</Text>
-              <View style={s.card}>
+              <Text style={[s.sectionLabel, { color: colors.text2 }]}>DURATION</Text>
+              <View style={[s.card, { backgroundColor: colors.bgCard }]}>
                 {Platform.OS === 'ios' ? (
                   <>
                     <View style={s.timePickerWrap}>
@@ -276,40 +277,41 @@ export default function MeasureByStep({ navigation }: Props) {
                         display="spinner"
                         minuteInterval={1}
                         style={s.timePicker}
+                        {...(Platform.OS === 'ios' && { themeVariant: isDark ? 'dark' : 'light' })}
                       />
                     </View>
-                    <View style={[s.row, s.durationSummary]}>
-                      <Text style={s.durationSummaryText}>{target} min</Text>
+                    <View style={[s.row, s.durationSummary, { borderTopColor: colors.separator }]}>
+                      <Text style={[s.durationSummaryText, { color: colors.text2 }]}>{target} min</Text>
                     </View>
                   </>
                 ) : (
                   <>
-                    <View style={[s.row, s.rowBorder]}>
-                      <Text style={s.label}>Hours</Text>
+                    <View style={[s.row, s.rowBorder, { borderBottomColor: colors.separator }]}>
+                      <Text style={[s.label, { color: colors.text1 }]}>Hours</Text>
                       <View style={s.stepper}>
                         <Pressable onPress={() => changeHours(-1)} style={s.stepBtn} disabled={hours <= 0}>
-                          <Minus size={18} color={hours <= 0 ? '#C7C7CC' : C.teal} strokeWidth={2.5} />
+                          <Minus size={18} color={hours <= 0 ? colors.chevron : colors.teal} strokeWidth={2.5} />
                         </Pressable>
-                        <Text style={s.stepValue}>{hours}</Text>
+                        <Text style={[s.stepValue, { color: colors.text1 }]}>{hours}</Text>
                         <Pressable onPress={() => changeHours(1)} style={s.stepBtn} disabled={hours >= 24}>
-                          <Plus size={18} color={hours >= 24 ? '#C7C7CC' : C.teal} strokeWidth={2.5} />
+                          <Plus size={18} color={hours >= 24 ? colors.chevron : colors.teal} strokeWidth={2.5} />
                         </Pressable>
                       </View>
                     </View>
                     <View style={[s.row]}>
-                      <Text style={s.label}>Minutes</Text>
+                      <Text style={[s.label, { color: colors.text1 }]}>Minutes</Text>
                       <View style={s.stepper}>
                         <Pressable onPress={() => changeMinutes(-1)} style={s.stepBtn} disabled={target <= 1}>
-                          <Minus size={18} color={target <= 1 ? '#C7C7CC' : C.teal} strokeWidth={2.5} />
+                          <Minus size={18} color={target <= 1 ? colors.chevron : colors.teal} strokeWidth={2.5} />
                         </Pressable>
-                        <Text style={s.stepValue}>{mins}</Text>
+                        <Text style={[s.stepValue, { color: colors.text1 }]}>{mins}</Text>
                         <Pressable onPress={() => changeMinutes(1)} style={s.stepBtn} disabled={hours >= 24 || (hours >= 23 && mins >= 59)}>
-                          <Plus size={18} color={hours >= 24 || (hours >= 23 && mins >= 59) ? '#C7C7CC' : C.teal} strokeWidth={2.5} />
+                          <Plus size={18} color={hours >= 24 || (hours >= 23 && mins >= 59) ? colors.chevron : colors.teal} strokeWidth={2.5} />
                         </Pressable>
                       </View>
                     </View>
-                    <View style={[s.row, s.durationSummary]}>
-                      <Text style={s.durationSummaryText}>
+                    <View style={[s.row, s.durationSummary, { borderTopColor: colors.separator }]}>
+                      <Text style={[s.durationSummaryText, { color: colors.text2 }]}>
                         {hours}h {mins}m ({target} min)
                       </Text>
                     </View>
@@ -325,20 +327,19 @@ export default function MeasureByStep({ navigation }: Props) {
 }
 
 const s = StyleSheet.create({
-  safe:    { flex: 1, backgroundColor: '#F2F2F7' },
+  safe:    { flex: 1 },
   doneBtnWrap: { marginLeft: 'auto', paddingRight: 4 },
-  doneBtn: { fontSize: 17, fontWeight: '600', color: C.teal },
+  doneBtn: { fontSize: 17, fontWeight: '600' },
   scroll:  { paddingBottom: 40 },
 
   helper: {
     fontSize: 15,
-    color: C.text2,
     paddingHorizontal: 20,
     paddingTop: 16,
     paddingBottom: 12,
   },
   sectionLabel: {
-    fontSize: 13, color: '#6D6D72',
+    fontSize: 13,
     textTransform: 'uppercase',
     letterSpacing: 0.4,
     paddingHorizontal: 20,
@@ -347,7 +348,6 @@ const s = StyleSheet.create({
   },
   card: {
     marginHorizontal: 16,
-    backgroundColor: '#FFFFFF',
     borderRadius: 16,
     overflow: 'hidden',
   },
@@ -361,14 +361,12 @@ const s = StyleSheet.create({
   },
   rowBorder: {
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: 'rgba(0,0,0,0.06)',
   },
   rowText:   { flex: 1 },
-  label:     { fontSize: 17, color: '#1A1A1A', fontWeight: '400' },
-  desc:      { fontSize: 13, color: C.text2, marginTop: 2 },
+  label:     { fontSize: 17, fontWeight: '400' },
+  desc:      { fontSize: 13, marginTop: 2 },
   checkCircle: {
     width: 24, height: 24, borderRadius: 12,
-    backgroundColor: C.teal,
     alignItems: 'center', justifyContent: 'center',
   },
 
@@ -380,11 +378,11 @@ const s = StyleSheet.create({
   },
   stepBtn:   { padding: 4 },
   stepValue: {
-    fontSize: 20, fontWeight: '600', color: '#1A1A1A',
+    fontSize: 20, fontWeight: '600',
     minWidth: 36, textAlign: 'center',
   },
   stepValueInput: {
-    fontSize: 20, fontWeight: '600', color: '#1A1A1A',
+    fontSize: 20, fontWeight: '600',
     minWidth: 48, paddingVertical: 4, paddingHorizontal: 8,
     textAlign: 'center',
     borderWidth: 1, borderColor: 'transparent', borderRadius: 8,
@@ -393,7 +391,6 @@ const s = StyleSheet.create({
   // Unit input
   unitInput: {
     fontSize: 17,
-    color: '#8E8E93',
     flex: 1,
     textAlign: 'right',
     paddingLeft: 16,
@@ -411,10 +408,8 @@ const s = StyleSheet.create({
   },
   durationSummary: {
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: 'rgba(0,0,0,0.06)',
   },
   durationSummaryText: {
     fontSize: 15,
-    color: C.text2,
   },
 });

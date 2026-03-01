@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { formatDateTitle, isToday } from '@/lib/dates';
+import { useTheme } from '@/context/ThemeContext';
 import { ScoreRing } from '@/components/ScoreRing';
 
 interface ProgressHeroProps {
@@ -21,12 +22,13 @@ export function ProgressHero({
   onPress,
   compact = false,
 }: ProgressHeroProps) {
+  const { colors } = useTheme();
   const targetPercentage = total > 0 ? Math.round((completed / total) * 100) : 0;
   const title = isToday(selectedDate) ? 'Completed Today' : formatDateTitle(selectedDate);
-  const cardStyle = compact ? [styles.card, styles.cardCompact] : styles.card;
+  const cardStyle = compact ? [styles.card, styles.cardCompact, { backgroundColor: colors.bgCard }] : [styles.card, { backgroundColor: colors.bgCard }];
   const leftStyle = compact ? [styles.leftContent, styles.leftContentCompact] : styles.leftContent;
-  const titleStyle = compact ? [styles.title, styles.titleCompact] : styles.title;
-  const subStyle = compact ? [styles.subtitle, styles.subtitleCompact] : styles.subtitle;
+  const titleStyle = compact ? [styles.title, styles.titleCompact, { color: colors.text1 }] : [styles.title, { color: colors.text1 }];
+  const subStyle = compact ? [styles.subtitle, styles.subtitleCompact, { color: colors.text2 }] : [styles.subtitle, { color: colors.text2 }];
   const ringStyle = compact ? [styles.ringContainer, styles.ringContainerCompact] : styles.ringContainer;
 
   const content = (
@@ -41,7 +43,7 @@ export function ProgressHero({
           <Text style={subStyle}>No habits yet.{'\n'}Add one below!</Text>
         )}
         {overLimit > 0 && (
-          <Text style={[styles.overLimitWarn, compact && styles.overLimitWarnCompact]}>
+          <Text style={[styles.overLimitWarn, { color: colors.danger }, compact && styles.overLimitWarnCompact]}>
             {overLimit} break {overLimit === 1 ? 'habit' : 'habits'} over limit
           </Text>
         )}
@@ -54,7 +56,7 @@ export function ProgressHero({
           strokeWidth={compact ? 10 : 14}
           radius={compact ? 34 : 50}
           animationSlot="home"
-          labelStyle={compact ? styles.percentageTextCompact : styles.percentageText}
+          labelStyle={[compact ? styles.percentageTextCompact : styles.percentageText, { color: colors.text1 }]}
           labelStyleWhenFull={compact ? styles.percentageTextFullCompact : styles.percentageTextFull}
         />
       </View>
@@ -77,7 +79,6 @@ const styles = StyleSheet.create({
     paddingVertical: 24,
     paddingHorizontal: 24,
     borderRadius: 24,
-    backgroundColor: '#FFFFFF',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -107,7 +108,6 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#000000',
     marginBottom: 6,
     letterSpacing: -0.4,
   },
@@ -118,7 +118,6 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 17,
     fontWeight: '400',
-    color: '#8E8E93',
     lineHeight: 22,
   },
   subtitleCompact: {
@@ -154,7 +153,6 @@ const styles = StyleSheet.create({
   overLimitWarn: {
     fontSize: 13,
     fontWeight: '500',
-    color: '#FF3B30',
     marginTop: 6,
   },
   overLimitWarnCompact: {

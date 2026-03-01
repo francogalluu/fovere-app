@@ -12,9 +12,9 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { X, Check, AlertTriangle } from 'lucide-react-native';
 import { formatDateTitle } from '@/lib/dates';
+import { useTheme } from '@/context/ThemeContext';
 import { ScoreRing } from '@/components/ScoreRing';
 import { PROGRESS_COLORS } from '@/lib/progressColors';
-import { C } from '@/lib/tokens';
 import type { Habit } from '@/types/habit';
 
 export interface DaySummaryHabit {
@@ -41,6 +41,7 @@ function AnimatedSummaryRow({
   isCompleted,
   isOverLimit: over,
   styles: st,
+  colors,
 }: {
   visible: boolean;
   animationIndex: number;
@@ -63,6 +64,7 @@ function AnimatedSummaryRow({
     dot: object;
     pct: object;
   };
+  colors: { bgCard: string; success: string; danger: string; text1: string; text2: string; ring: string };
 }) {
   const opacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(14)).current;
@@ -102,15 +104,15 @@ function AnimatedSummaryRow({
         { opacity, transform: [{ translateY }] },
       ]}
     >
-      <View style={[st.iconWrap, isCompleted && !over && st.iconWrapDone]}>
+      <View style={[st.iconWrap, { backgroundColor: colors.ring }, isCompleted && !over && [st.iconWrapDone, { backgroundColor: colors.success }]]}>
         <Text style={st.icon}>{habit.icon}</Text>
       </View>
       <View style={st.rowCenter}>
-        <Text style={st.habitName} numberOfLines={1}>
+        <Text style={[st.habitName, { color: colors.text1 }]} numberOfLines={1}>
           {habit.name}
         </Text>
         {habit.kind === 'numeric' && (
-          <Text style={[st.rowMeta, over && st.rowMetaDanger]}>
+          <Text style={[st.rowMeta, { color: colors.text2 }, over && { color: colors.danger }]}>
             {currentValue} / {habit.target}
             {habit.unit ? ` ${habit.unit}` : ''}
             {over ? ' · Over limit' : ''}
@@ -119,13 +121,13 @@ function AnimatedSummaryRow({
       </View>
       <View style={st.statusWrap}>
         {isCompleted && !over ? (
-          <Check size={20} color={PROGRESS_COLORS.HIGH} strokeWidth={2.5} />
+          <Check size={20} color={colors.success} strokeWidth={2.5} />
         ) : over ? (
-          <AlertTriangle size={20} color={PROGRESS_COLORS.LOW} strokeWidth={2} />
+          <AlertTriangle size={20} color={colors.danger} strokeWidth={2} />
         ) : habit.kind === 'boolean' ? (
-          <View style={st.dot} />
+          <View style={[st.dot, { backgroundColor: colors.text2 }]} />
         ) : (
-          <Text style={st.pct}>{Math.min(100, Math.round((currentValue / habit.target) * 100))}%</Text>
+          <Text style={[st.pct, { color: colors.text2 }]}>{Math.min(100, Math.round((currentValue / habit.target) * 100))}%</Text>
         )}
       </View>
     </Animated.View>
@@ -151,6 +153,7 @@ export function DaySummaryModal({
   overLimit = 0,
   sections,
 }: DaySummaryModalProps) {
+  const { colors } = useTheme();
   const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
   const hasAnyHabits = sections.some((sec) => sec.habits.length > 0);
 
@@ -161,15 +164,15 @@ export function DaySummaryModal({
       presentationStyle="pageSheet"
       onRequestClose={onClose}
     >
-      <SafeAreaView style={s.safe} edges={['top', 'bottom']}>
-        <View style={s.header}>
-          <Text style={s.title}>{formatDateTitle(date)}</Text>
+      <SafeAreaView style={[s.safe, { backgroundColor: colors.bgSecondary }]} edges={['top', 'bottom']}>
+        <View style={[s.header, { borderBottomColor: colors.separatorLight, backgroundColor: colors.bgCard }]}>
+          <Text style={[s.title, { color: colors.text1 }]}>{formatDateTitle(date)}</Text>
           <Pressable
             onPress={onClose}
             style={({ pressed }) => [s.closeBtn, pressed && s.closeBtnPressed]}
             accessibilityLabel="Close"
           >
-            <X size={24} color={C.text1} strokeWidth={2} />
+            <X size={24} color={colors.text1} strokeWidth={2} />
           </Pressable>
         </View>
 
@@ -178,18 +181,18 @@ export function DaySummaryModal({
           contentContainerStyle={s.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          <View style={s.hero}>
+          <View style={[s.hero, { backgroundColor: colors.bgCard }]}>
             <View style={s.heroLeft}>
-              <Text style={s.heroLabel}>Completion</Text>
+              <Text style={[s.heroLabel, { color: colors.text2 }]}>Completion</Text>
               {total > 0 ? (
-                <Text style={s.heroSub}>
+                <Text style={[s.heroSub, { color: colors.text1 }]}>
                   {completed} of {total} habits completed
                 </Text>
               ) : (
-                <Text style={s.heroSub}>No habits for this day</Text>
+                <Text style={[s.heroSub, { color: colors.text1 }]}>No habits for this day</Text>
               )}
               {overLimit > 0 && (
-                <Text style={s.overLimit}>
+                <Text style={[s.overLimit, { color: colors.danger }]}>
                   {overLimit} break {overLimit === 1 ? 'habit' : 'habits'} over limit
                 </Text>
               )}
@@ -200,7 +203,7 @@ export function DaySummaryModal({
                 size={100}
                 strokeWidth={10}
                 radius={40}
-                labelStyle={s.ringLabel}
+                labelStyle={[s.ringLabel, { color: colors.text1 }]}
                 labelStyleWhenFull={s.ringLabelFull}
               />
             </View>
@@ -214,8 +217,8 @@ export function DaySummaryModal({
                   (section) =>
                     section.habits.length > 0 && (
                       <View key={section.title} style={s.categoryBlock}>
-                        <Text style={s.sectionTitle}>{section.title}</Text>
-                        <View style={s.list}>
+                        <Text style={[s.sectionTitle, { color: colors.text2 }]}>{section.title}</Text>
+                        <View style={[s.list, { backgroundColor: colors.bgCard }]}>
                           {section.habits.map(({ habit, currentValue, isCompleted, isOverLimit: over }, index) => {
                             const animIndex = globalIndex++;
                             return (
@@ -229,6 +232,7 @@ export function DaySummaryModal({
                                 isCompleted={isCompleted}
                                 isOverLimit={over}
                                 styles={s}
+                                colors={colors}
                               />
                             );
                           })}
@@ -240,7 +244,7 @@ export function DaySummaryModal({
             </View>
           ) : (
             <View style={s.empty}>
-              <Text style={s.emptyText}>No habits for this day</Text>
+              <Text style={[s.emptyText, { color: colors.text2 }]}>No habits for this day</Text>
             </View>
           )}
         </ScrollView>
@@ -252,7 +256,6 @@ export function DaySummaryModal({
 const s = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: C.bgSecondary,
   },
   header: {
     flexDirection: 'row',
@@ -261,13 +264,10 @@ const s = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: C.separatorLight,
-    backgroundColor: '#fff',
   },
   title: {
     fontSize: 18,
     fontWeight: '600',
-    color: C.text1,
   },
   closeBtn: {
     padding: 8,
@@ -291,7 +291,6 @@ const s = StyleSheet.create({
     paddingVertical: 20,
     paddingHorizontal: 20,
     borderRadius: 20,
-    backgroundColor: '#fff',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
@@ -305,19 +304,16 @@ const s = StyleSheet.create({
   heroLabel: {
     fontSize: 13,
     fontWeight: '600',
-    color: C.text2,
     letterSpacing: 0.3,
     marginBottom: 4,
   },
   heroSub: {
     fontSize: 17,
     fontWeight: '500',
-    color: C.text1,
   },
   overLimit: {
     fontSize: 13,
     fontWeight: '500',
-    color: PROGRESS_COLORS.LOW,
     marginTop: 6,
   },
   ringWrap: {
@@ -342,14 +338,12 @@ const s = StyleSheet.create({
   sectionTitle: {
     fontSize: 13,
     fontWeight: '600',
-    color: C.text2,
     letterSpacing: 0.3,
     marginBottom: 12,
     paddingHorizontal: 4,
   },
   list: {
     borderRadius: 16,
-    backgroundColor: '#fff',
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
@@ -363,7 +357,6 @@ const s = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: C.separatorLight,
   },
   rowLast: {
     borderBottomWidth: 0,
@@ -372,14 +365,11 @@ const s = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: C.bgSecondary,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
   },
-  iconWrapDone: {
-    backgroundColor: 'rgba(52, 199, 89, 0.12)',
-  },
+  iconWrapDone: {},
   icon: {
     fontSize: 20,
   },
@@ -390,16 +380,12 @@ const s = StyleSheet.create({
   habitName: {
     fontSize: 16,
     fontWeight: '600',
-    color: C.text1,
   },
   rowMeta: {
     fontSize: 13,
-    color: C.text2,
     marginTop: 2,
   },
-  rowMetaDanger: {
-    color: PROGRESS_COLORS.LOW,
-  },
+  rowMetaDanger: {},
   statusWrap: {
     width: 44,
     alignItems: 'flex-end',
@@ -407,13 +393,11 @@ const s = StyleSheet.create({
   pct: {
     fontSize: 13,
     fontWeight: '600',
-    color: C.text2,
   },
   dot: {
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: C.separatorLight,
   },
   empty: {
     marginTop: 32,
@@ -422,6 +406,5 @@ const s = StyleSheet.create({
   },
   emptyText: {
     fontSize: 15,
-    color: C.text2,
   },
 });

@@ -3,7 +3,7 @@ import { View, Text, Pressable, StyleSheet } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import { Check, ChevronRight, TriangleAlert } from 'lucide-react-native';
 import { getProgressColor, PROGRESS_COLORS } from '@/lib/progressColors';
-import { C } from '@/lib/tokens';
+import { useTheme } from '@/context/ThemeContext';
 import { ScoreRing } from '@/components/ScoreRing';
 import type { Habit } from '@/types/habit';
 
@@ -37,7 +37,7 @@ const ICON_CIRC_COMPACT = 2 * Math.PI * ICON_R_COMPACT;
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 /** Thin decorative arc drawn around the habit icon when pct > 0 and not complete */
-function IconArc({ pct, color, compact }: { pct: number; color: string; compact?: boolean }) {
+function IconArc({ pct, color, compact, ringColor }: { pct: number; color: string; compact?: boolean; ringColor: string }) {
   const wrap = compact ? ICON_WRAP_COMPACT : ICON_WRAP;
   const r = compact ? ICON_R_COMPACT : ICON_R;
   const circ = compact ? ICON_CIRC_COMPACT : ICON_CIRC;
@@ -51,7 +51,7 @@ function IconArc({ pct, color, compact }: { pct: number; color: string; compact?
     >
       <Circle
         cx={wrap / 2} cy={wrap / 2} r={r}
-        fill="none" stroke={C.ring} strokeWidth={2}
+        fill="none" stroke={ringColor} strokeWidth={2}
       />
       <Circle
         cx={wrap / 2} cy={wrap / 2} r={r}
@@ -73,6 +73,7 @@ export function HabitCard({
   onPress,
   compact = false,
 }: HabitCardProps) {
+  const { colors } = useTheme();
   const isBreak       = habit.goalType === 'break';
   const isOverLimit   = isBreak && currentValue > habit.target;
   const pct           = Math.min(100, Math.round((currentValue / habit.target) * 100));
@@ -81,11 +82,11 @@ export function HabitCard({
     ? (pct >= 100 ? PROGRESS_COLORS.LOW : pct >= 50 ? PROGRESS_COLORS.MID : PROGRESS_COLORS.MID_LOW)
     : getProgressColor(pct);
 
-  const cardStyle = compact ? [s.card, s.cardCompact] : s.card;
+  const cardStyle = compact ? [s.card, s.cardCompact, { backgroundColor: colors.bgCard }] : [s.card, { backgroundColor: colors.bgCard }];
   const iconWrapStyle = compact ? [s.iconWrapper, s.iconWrapperCompact] : s.iconWrapper;
-  const iconCircleStyle = compact ? [s.iconCircle, s.iconCircleCompact] : s.iconCircle;
-  const nameStyle = compact ? [s.habitName, s.habitNameCompact] : s.habitName;
-  const progressStyle = compact ? [s.progressText, s.progressTextCompact] : s.progressText;
+  const iconCircleStyle = compact ? [s.iconCircle, s.iconCircleCompact, { backgroundColor: colors.bgSecondary }] : [s.iconCircle, { backgroundColor: colors.bgSecondary }];
+  const nameStyle = compact ? [s.habitName, s.habitNameCompact, { color: colors.text1 }] : [s.habitName, { color: colors.text1 }];
+  const progressStyle = compact ? [s.progressText, s.progressTextCompact, { color: colors.text2 }] : [s.progressText, { color: colors.text2 }];
   const ringSize = compact ? 36 : 48;
   const ringRadius = compact ? 15 : 20;
   const checkSize = compact ? 14 : 18;
@@ -105,13 +106,12 @@ export function HabitCard({
       {/* ── Icon + decorative arc ──────────────────────────────────────── */}
       <View style={iconWrapStyle}>
         {pct > 0 && !isCompleted && (
-          <IconArc pct={pct} color={progressColor} compact={compact} />
+          <IconArc pct={pct} color={progressColor} compact={compact} ringColor={colors.ring} />
         )}
         <View style={[
           iconCircleStyle,
-          // Green border when completed (build done, or break under limit). Red when break over limit.
-          isCompleted && !isOverLimit && { borderColor: PROGRESS_COLORS.HIGH, borderWidth: 1.5 },
-          isOverLimit && { borderColor: PROGRESS_COLORS.LOW, borderWidth: 1.5 },
+          isCompleted && !isOverLimit && { borderColor: colors.success, borderWidth: 1.5 },
+          isOverLimit && { borderColor: colors.danger, borderWidth: 1.5 },
         ]}>
           <Text style={compact ? [s.iconEmoji, s.iconEmojiCompact] : s.iconEmoji}>{habit.icon}</Text>
         </View>
@@ -121,7 +121,7 @@ export function HabitCard({
       <View style={s.infoCol}>
         <Text style={nameStyle} numberOfLines={1}>{habit.name}</Text>
         {habit.kind === 'numeric' && (
-          <Text style={[progressStyle, isOverLimit && { color: PROGRESS_COLORS.LOW }]}>
+          <Text style={[progressStyle, isOverLimit && { color: colors.danger }]}>
             {currentValue} / {habit.target}{habit.unit ? ` ${habit.unit}` : ''}
             {isOverLimit ? '  Over limit' : ''}
           </Text>
@@ -129,23 +129,22 @@ export function HabitCard({
       </View>
 
       {/* ── Progress ring (right side) ─────────────────────────────────── */}
-      {/* In compact view: ring only (no number/icon in center) to avoid text touching the ring. */}
       <ScoreRing
         value={isCompleted ? 100 : pct}
         size={ringSize}
         strokeWidth={compact ? 2.5 : 3}
         radius={ringRadius}
-        strokeColor={isCompleted ? PROGRESS_COLORS.HIGH : progressColor}
+        strokeColor={isCompleted ? colors.success : progressColor}
         renderCenter={(displayPercent) =>
           compact
             ? null
             : isCompleted
               ? (
-                  <Check size={checkSize} color={PROGRESS_COLORS.HIGH} strokeWidth={3} />
+                  <Check size={checkSize} color={colors.success} strokeWidth={3} />
                 )
               : isBreak && pct >= 100
                 ? (
-                    <TriangleAlert size={checkSize} color={PROGRESS_COLORS.LOW} strokeWidth={2.5} />
+                    <TriangleAlert size={checkSize} color={colors.danger} strokeWidth={2.5} />
                   )
                 : pct > 0
                   ? (
@@ -157,7 +156,7 @@ export function HabitCard({
 
       {/* ── Chevron ───────────────────────────────────────────────────── */}
       <View style={[s.chevron, compact && s.chevronCompact, isCompleted && { opacity: 0.4 }]}>
-        <ChevronRight size={compact ? 16 : 20} color={C.chevron} strokeWidth={2} />
+        <ChevronRight size={compact ? 16 : 20} color={colors.chevron} strokeWidth={2} />
       </View>
     </Pressable>
   );
@@ -173,7 +172,6 @@ const s = StyleSheet.create({
     paddingHorizontal: 20,
     borderRadius: 24,
     marginBottom: 12,
-    backgroundColor: '#FFFFFF',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08,
@@ -204,7 +202,6 @@ const s = StyleSheet.create({
     width: ICON_INNER,
     height: ICON_INNER,
     borderRadius: ICON_INNER / 2,
-    backgroundColor: C.bgCard,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
@@ -226,7 +223,6 @@ const s = StyleSheet.create({
   habitName: {
     fontSize: 17,
     fontWeight: '600',
-    color: C.text1,
     marginBottom: 2,
   },
   habitNameCompact: {
@@ -236,7 +232,6 @@ const s = StyleSheet.create({
   progressText: {
     fontSize: 15,
     fontWeight: '400',
-    color: C.text2,
   },
   progressTextCompact: {
     fontSize: 13,

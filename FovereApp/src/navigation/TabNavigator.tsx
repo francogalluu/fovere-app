@@ -3,6 +3,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Home, Calendar, BarChart3, Settings } from 'lucide-react-native';
 import type { TabParamList } from './types';
 
+import { useTheme } from '@/context/ThemeContext';
 import HomeScreen from '@/screens/HomeScreen';
 import CalendarScreen from '@/screens/CalendarScreen';
 import AnalyticsScreen from '@/screens/AnalyticsScreen';
@@ -10,19 +11,17 @@ import SettingsScreen from '@/screens/SettingsScreen';
 
 const Tab = createBottomTabNavigator<TabParamList>();
 
-const TEAL = '#008080';
-const INACTIVE = '#999';
-
 export default function TabNavigator() {
+  const { colors } = useTheme();
   return (
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: TEAL,
-        tabBarInactiveTintColor: INACTIVE,
+        tabBarActiveTintColor: colors.teal,
+        tabBarInactiveTintColor: colors.text4,
         tabBarStyle: {
-          backgroundColor: '#FAFAFA',
-          borderTopColor: 'rgba(0, 0, 0, 0.08)',
+          backgroundColor: colors.bgSecondary,
+          borderTopColor: colors.separator,
           borderTopWidth: 1,
         },
         tabBarLabelStyle: {

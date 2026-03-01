@@ -2,6 +2,7 @@ import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import type { WizardStackParamList } from './types';
 
+import { useTheme } from '@/context/ThemeContext';
 import HabitSourceStep from '@/screens/wizard/HabitSourceStep';
 import HabitTypeStep from '@/screens/wizard/HabitTypeStep';
 import HabitNameStep from '@/screens/wizard/HabitNameStep';
@@ -15,17 +16,18 @@ import ReminderStep from '@/screens/wizard/ReminderStep';
 const Stack = createNativeStackNavigator<WizardStackParamList>();
 
 export default function WizardNavigator() {
+  const { colors } = useTheme();
   return (
     <Stack.Navigator
       initialRouteName="HabitSource"
       screenOptions={{
         headerShown: true,
         headerBackTitle: 'Back',
-        headerTintColor: '#008080',
-        headerStyle: { backgroundColor: '#F2F2F7' },
+        headerTintColor: colors.teal,
+        headerStyle: { backgroundColor: colors.bgSecondary },
         headerShadowVisible: false,
-        headerTitleStyle: { fontWeight: '600', color: '#1A1A1A' },
-        contentStyle: { backgroundColor: '#F2F2F7' },
+        headerTitleStyle: { fontWeight: '600', color: colors.text1 },
+        contentStyle: { backgroundColor: colors.bgSecondary },
       }}
     >
       <Stack.Screen

@@ -18,7 +18,7 @@ import type { WizardStackParamList } from '@/navigation/types';
 
 import { useHabitStore } from '@/store';
 import { useWizardStore } from '@/store/wizardStore';
-import { C } from '@/lib/tokens';
+import { useTheme } from '@/context/ThemeContext';
 
 type Props = NativeStackScreenProps<WizardStackParamList, 'HabitType'>;
 
@@ -42,6 +42,7 @@ function measureByLabel(kind: 'boolean' | 'numeric', target: number, unit: strin
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function HabitTypeStep({ navigation }: Props) {
+  const { colors } = useTheme();
   // ── Wizard store ───────────────────────────────────────────────────────────
   const {
     habitId, goalType, name, icon, description, kind, frequency,
@@ -129,16 +130,16 @@ export default function HabitTypeStep({ navigation }: Props) {
       title: isEdit ? 'Edit Habit' : 'New Habit',
       headerLeft: () => (
         <Pressable onPress={handleCancel} hitSlop={8}>
-          <Text style={s.headerBtn}>Cancel</Text>
+          <Text style={[s.headerBtn, { color: colors.teal }]}>Cancel</Text>
         </Pressable>
       ),
       headerRight: () => (
         <Pressable onPress={handleSave} hitSlop={8}>
-          <Text style={[s.headerBtn, s.headerBtnSave]}>Save</Text>
+          <Text style={[s.headerBtn, s.headerBtnSave, { color: colors.teal }]}>Save</Text>
         </Pressable>
       ),
     });
-  }, [isEdit, navigation, handleSave, handleCancel]);
+  }, [isEdit, navigation, handleSave, handleCancel, colors.teal]);
 
   // ── Derived display values ─────────────────────────────────────────────────
   const freqLabel    = frequency.charAt(0).toUpperCase() + frequency.slice(1);
@@ -147,11 +148,11 @@ export default function HabitTypeStep({ navigation }: Props) {
   // ── UI ─────────────────────────────────────────────────────────────────────
 
   return (
-    <SafeAreaView style={s.safe} edges={['bottom']}>
+    <SafeAreaView style={[s.safe, { backgroundColor: colors.bgSecondary }]} edges={['bottom']}>
       <ScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled">
 
         {/* ── Section 1: Name & Icon ──────────────────────────────────── */}
-        <View style={s.section}>
+        <View style={[s.section, { backgroundColor: colors.bgCard }]}>
           <Row
             label="Habit Name"
             value={name.trim() || 'Tap to set'}
@@ -173,7 +174,7 @@ export default function HabitTypeStep({ navigation }: Props) {
         </View>
 
         {/* ── Section 2: Frequency & Measure By ──────────────────────── */}
-        <View style={s.section}>
+        <View style={[s.section, { backgroundColor: colors.bgCard }]}>
           <Row
             label="Frequency"
             value={freqLabel}
@@ -188,14 +189,14 @@ export default function HabitTypeStep({ navigation }: Props) {
         </View>
 
         {/* ── Section 3: Reminder ─────────────────────────────────────── */}
-        <View style={s.section}>
-          <View style={[s.row, !reminderEnabled && s.rowLast]}>
-            <Text style={s.rowLabel}>Reminder</Text>
+        <View style={[s.section, { backgroundColor: colors.bgCard }]}>
+          <View style={[s.row, { backgroundColor: colors.bgCard, borderBottomColor: colors.separator }, !reminderEnabled && s.rowLast]}>
+            <Text style={[s.rowLabel, { color: colors.text1 }]}>Reminder</Text>
             <Switch
               value={reminderEnabled}
               onValueChange={setReminderEnabled}
-              trackColor={{ false: '#E5E5EA', true: C.teal }}
-              thumbColor="#fff"
+              trackColor={{ false: colors.separatorLight, true: colors.teal }}
+              thumbColor={colors.white}
             />
           </View>
           {reminderEnabled && (
@@ -224,21 +225,23 @@ function Row({
   onPress?: () => void;
   last?: boolean;
 }) {
+  const { colors } = useTheme();
   return (
     <Pressable
       onPress={onPress}
       style={({ pressed }) => [
         s.row,
+        { backgroundColor: colors.bgCard, borderBottomColor: colors.separator },
         last && s.rowLast,
-        pressed && { backgroundColor: '#F2F2F7' },
+        pressed && { backgroundColor: colors.bgSecondary },
       ]}
     >
-      <Text style={s.rowLabel}>{label}</Text>
+      <Text style={[s.rowLabel, { color: colors.text1 }]}>{label}</Text>
       <View style={s.rowRight}>
-        <Text style={[s.rowValue, valueFaded && { color: '#C7C7CC' }]} numberOfLines={1}>
+        <Text style={[s.rowValue, { color: colors.text2 }, valueFaded && { color: colors.chevron }]} numberOfLines={1}>
           {value}
         </Text>
-        <ChevronRight size={20} color="#C7C7CC" strokeWidth={2.5} />
+        <ChevronRight size={20} color={colors.chevron} strokeWidth={2.5} />
       </View>
     </Pressable>
   );
@@ -247,18 +250,17 @@ function Row({
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
-  safe:   { flex: 1, backgroundColor: '#F2F2F7' },
+  safe:   { flex: 1 },
   scroll: { paddingTop: 24, paddingBottom: 40 },
 
   // Header buttons
-  headerBtn:     { fontSize: 17, color: C.teal },
+  headerBtn:     { fontSize: 17 },
   headerBtnSave: { fontWeight: '600' },
 
   // Section card
   section: {
     marginHorizontal: 16,
     marginTop: 16,
-    backgroundColor: '#FFFFFF',
     borderRadius: 16,
     overflow: 'hidden',
   },
@@ -270,13 +272,11 @@ const s = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 12,
     paddingHorizontal: 16,
-    backgroundColor: '#FFFFFF',
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: 'rgba(0,0,0,0.06)',
     minHeight: 44,
   },
   rowLast: { borderBottomWidth: 0 },
-  rowLabel: { fontSize: 17, color: '#1A1A1A', flexShrink: 0 },
+  rowLabel: { fontSize: 17, flexShrink: 0 },
   rowRight: { flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1, marginLeft: 16 },
-  rowValue: { fontSize: 17, color: '#8E8E93', flexShrink: 1 },
+  rowValue: { fontSize: 17, flexShrink: 1 },
 });

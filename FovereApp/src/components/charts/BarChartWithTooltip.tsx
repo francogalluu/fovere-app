@@ -8,6 +8,7 @@ import { View, Text, Pressable, StyleSheet, Animated as RNAnimated, Dimensions }
 import Animated, { useSharedValue, useAnimatedStyle, runOnJS, type SharedValue } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { getProgressColor } from '@/lib/progressColors';
+import { useTheme } from '@/context/ThemeContext';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -104,6 +105,7 @@ function ChartTooltip({
     content: { dateLabel: string; pct: number; detail: string },
   ) => void;
 }) {
+  const { colors } = useTheme();
   const [tooltipSize, setTooltipSize] = useState({ width: TOOLTIP_MIN_WIDTH, height: 56 });
   const tooltipWrapRef = useRef<View>(null);
 
@@ -171,7 +173,7 @@ function ChartTooltip({
     >
       <View
         ref={tooltipWrapRef}
-        style={[styles.chartTooltip, { width }]}
+        style={[styles.chartTooltip, { width, backgroundColor: colors.tooltipBg }]}
         onLayout={e => {
           const { width: w, height: h } = e.nativeEvent.layout;
           setTooltipSize(prev => (prev.width === w && prev.height === h ? prev : { width: w, height: h }));
@@ -196,7 +198,7 @@ function ChartTooltip({
             borderTopWidth: arrowHeight,
             borderLeftColor: 'transparent',
             borderRightColor: 'transparent',
-            borderTopColor: '#1A1A1A',
+            borderTopColor: colors.tooltipBg,
           },
           arrowStyle,
         ]}
@@ -226,6 +228,7 @@ function BarWithTooltip({
   onPressIn: () => void;
   onPressOut: () => void;
 }) {
+  const { colors } = useTheme();
   const MAX_BAR_PX = chartAreaHeight - 20;
   const animHeight = useRef(new RNAnimated.Value(0)).current;
   const pct = safePercent(bar.percent);
@@ -245,7 +248,7 @@ function BarWithTooltip({
     <Pressable
       onPressIn={onPressIn}
       onPressOut={onPressOut}
-      style={[styles.barCol, isHighlighted && styles.barColHighlighted]}
+      style={[styles.barCol, isHighlighted && [styles.barColHighlighted, { backgroundColor: colors.separator }]]}
     >
       <View style={[styles.barWrapper, { height: chartAreaHeight }]}>
         <View style={styles.barGroup}>
@@ -266,7 +269,7 @@ function BarWithTooltip({
         </View>
       </View>
       {axisLabel !== null ? (
-        <Text style={[styles.barLabel, isToday && styles.barLabelToday]} numberOfLines={1}>
+        <Text style={[styles.barLabel, { color: colors.text2 }, isToday && { color: colors.success }]} numberOfLines={1}>
           {axisLabel}
         </Text>
       ) : (
@@ -306,6 +309,7 @@ export function BarChartWithTooltip({
   getAxisLabel,
   onTooltipLayout,
 }: BarChartWithTooltipProps) {
+  const { colors } = useTheme();
   const [pressedBarIndex, setPressedBarIndex] = useState<number | null>(null);
   const [chartLayout, setChartLayout] = useState({ width: 0, height: 0 });
   const [chartScreenX, setChartScreenX] = useState(0);
@@ -363,7 +367,7 @@ export function BarChartWithTooltip({
   if (bars.length === 0) {
     return (
       <View style={styles.barEmpty}>
-        <Text style={styles.barEmptyText}>{emptyMessage}</Text>
+        <Text style={[styles.barEmptyText, { color: colors.text2 }]}>{emptyMessage}</Text>
       </View>
     );
   }
@@ -481,11 +485,10 @@ const styles = StyleSheet.create({
   barGroup: { width: '100%', height: '100%', justifyContent: 'flex-end', alignItems: 'center' },
   barSpacer: { flex: 1, minHeight: 4 },
   bar: { width: '75%', maxWidth: 48, borderTopLeftRadius: 8, borderTopRightRadius: 8 },
-  barLabel: { fontSize: 11, color: '#8E8E93', fontWeight: '500', marginTop: 6 },
+  barLabel: { fontSize: 11, fontWeight: '500', marginTop: 6 },
   barLabelPlaceholder: { height: 18, marginTop: 6 },
-  barLabelToday: { color: '#34C759' },
   barEmpty: { minHeight: 200, justifyContent: 'center', alignItems: 'center' },
-  barEmptyText: { fontSize: 15, color: '#8E8E93' },
+  barEmptyText: { fontSize: 15 },
   chartTooltipWrap: {
     position: 'absolute',
     minWidth: TOOLTIP_MIN_WIDTH,
@@ -493,7 +496,6 @@ const styles = StyleSheet.create({
     alignItems: 'stretch',
   },
   chartTooltip: {
-    backgroundColor: '#1A1A1A',
     borderRadius: 10,
     paddingVertical: 10,
     paddingHorizontal: 14,
@@ -516,6 +518,5 @@ const styles = StyleSheet.create({
     borderTopWidth: 6,
     borderLeftColor: 'transparent',
     borderRightColor: 'transparent',
-    borderTopColor: '#1A1A1A',
   },
 });

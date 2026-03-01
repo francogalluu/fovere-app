@@ -2,6 +2,7 @@ import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import type { RootStackParamList } from './types';
 
+import { useTheme } from '@/context/ThemeContext';
 import TabNavigator from './TabNavigator';
 import WizardNavigator from './WizardNavigator';
 import HabitDetailScreen from '@/screens/HabitDetailScreen';
@@ -10,11 +11,12 @@ import DeletedHabitsScreen from '@/screens/DeletedHabitsScreen';
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function RootNavigator() {
+  const { colors } = useTheme();
   return (
     <Stack.Navigator
       screenOptions={{
         headerShown: false,
-        contentStyle: { backgroundColor: '#F2F2F7' },
+        contentStyle: { backgroundColor: colors.bgSecondary },
       }}
     >
       {/* Main tabs — always the base of the stack */}
@@ -27,8 +29,8 @@ export default function RootNavigator() {
         options={{
           headerShown: true,
           headerBackTitle: 'Back',
-          headerTintColor: '#008080',
-          headerStyle: { backgroundColor: '#F2F2F7' },
+          headerTintColor: colors.teal,
+          headerStyle: { backgroundColor: colors.bgSecondary },
           headerShadowVisible: false,
           headerTitle: '',
         }}
@@ -55,8 +57,8 @@ export default function RootNavigator() {
         options={{
           headerShown: true,
           headerBackTitle: 'Back',
-          headerTintColor: '#008080',
-          headerStyle: { backgroundColor: '#F2F2F7' },
+          headerTintColor: colors.teal,
+          headerStyle: { backgroundColor: colors.bgSecondary },
           headerShadowVisible: false,
           headerTitle: 'Deleted Habits',
         }}

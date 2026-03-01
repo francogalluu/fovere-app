@@ -25,11 +25,13 @@ import {
   searchPredetermined,
   type PredeterminedHabit,
 } from '@/lib/predeterminedHabits';
-import { C, R } from '@/lib/tokens';
+import { useTheme } from '@/context/ThemeContext';
+import { R } from '@/lib/tokens';
 
 type Props = NativeStackScreenProps<WizardStackParamList, 'HabitSource'>;
 
 export default function HabitSourceStep({ navigation, route }: Props) {
+  const { colors } = useTheme();
   const { reset, loadPredetermined, setGoalType } = useWizardStore();
   const [query, setQuery] = useState('');
   const goalType = route.params?.goalType;
@@ -52,7 +54,7 @@ export default function HabitSourceStep({ navigation, route }: Props) {
     navigation.setOptions({
       headerLeft: () => (
         <Pressable onPress={handleCancel} hitSlop={12} style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}>
-          <Text style={styles.cancelText}>Cancel</Text>
+          <Text style={[styles.cancelText, { color: colors.teal }]}>Cancel</Text>
         </Pressable>
       ),
       headerRight: () => null,
@@ -81,7 +83,7 @@ export default function HabitSourceStep({ navigation, route }: Props) {
   );
 
   return (
-    <SafeAreaView style={styles.safe} edges={['bottom']}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.bgSecondary }]} edges={['bottom']}>
       <KeyboardAvoidingView
         style={styles.keyboard}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -95,41 +97,42 @@ export default function HabitSourceStep({ navigation, route }: Props) {
         >
           <Pressable
             onPress={handleCreateCustom}
-            style={({ pressed }) => [styles.createCustomBtn, pressed && styles.createCustomBtnPressed]}
+            style={({ pressed }) => [styles.createCustomBtn, { backgroundColor: colors.teal }, pressed && styles.createCustomBtnPressed]}
           >
-            <Plus size={20} color="#fff" strokeWidth={2.5} />
-            <Text style={styles.createCustomText}>Create a custom habit</Text>
+            <Plus size={20} color={colors.white} strokeWidth={2.5} />
+            <Text style={[styles.createCustomText, { color: colors.white }]}>Create a custom habit</Text>
           </Pressable>
 
           <View style={styles.searchWrap}>
             <TextInput
               placeholder="Search habits"
-              placeholderTextColor={C.text4}
+              placeholderTextColor={colors.text4}
               value={query}
               onChangeText={setQuery}
-              style={styles.searchInput}
+              style={[styles.searchInput, { backgroundColor: colors.bgCard, color: colors.text1 }]}
             />
           </View>
 
           {categories.map((cat) => (
             <View key={cat.title} style={styles.category}>
-              <Text style={styles.categoryTitle}>{cat.title}</Text>
-              <View style={styles.card}>
+              <Text style={[styles.categoryTitle, { color: colors.text2 }]}>{cat.title}</Text>
+              <View style={[styles.card, { backgroundColor: colors.bgCard }]}>
                 {cat.habits.map((habit, index) => (
                   <Pressable
                     key={habit.id}
                     onPress={() => handleSelectPredetermined(habit)}
                     style={({ pressed }) => [
                       styles.habitRow,
+                      { borderBottomColor: colors.separatorLight },
                       index === cat.habits.length - 1 && styles.habitRowLast,
-                      pressed && styles.habitRowPressed,
+                      pressed && { backgroundColor: colors.separator },
                     ]}
                   >
                     <Text style={styles.habitIcon}>{habit.icon}</Text>
-                    <Text style={styles.habitName} numberOfLines={1}>
+                    <Text style={[styles.habitName, { color: colors.text1 }]} numberOfLines={1}>
                       {habit.name}
                     </Text>
-                    <ChevronRight size={18} color={C.chevron} />
+                    <ChevronRight size={18} color={colors.chevron} />
                   </Pressable>
                 ))}
               </View>
@@ -144,7 +147,6 @@ export default function HabitSourceStep({ navigation, route }: Props) {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: C.bgSecondary,
   },
   keyboard: {
     flex: 1,
@@ -157,7 +159,6 @@ const styles = StyleSheet.create({
     paddingBottom: 32,
   },
   cancelText: {
-    color: C.teal,
     fontSize: 17,
   },
   createCustomBtn: {
@@ -165,7 +166,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: C.teal,
     paddingVertical: 14,
     paddingHorizontal: 20,
     borderRadius: R.cardSm,
@@ -175,7 +175,6 @@ const styles = StyleSheet.create({
     opacity: 0.9,
   },
   createCustomText: {
-    color: '#fff',
     fontSize: 17,
     fontWeight: '600',
   },
@@ -183,12 +182,10 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   searchInput: {
-    backgroundColor: C.bgCard,
     borderRadius: R.cardSm,
     paddingVertical: 12,
     paddingHorizontal: 16,
     fontSize: 16,
-    color: C.text1,
   },
   category: {
     marginBottom: 20,
@@ -196,14 +193,12 @@ const styles = StyleSheet.create({
   categoryTitle: {
     fontSize: 13,
     fontWeight: '600',
-    color: C.text2,
     marginBottom: 8,
     marginLeft: 4,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   card: {
-    backgroundColor: C.bgCard,
     borderRadius: R.cardSm,
     overflow: 'hidden',
   },
@@ -213,13 +208,9 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 16,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: C.separatorLight,
   },
   habitRowLast: {
     borderBottomWidth: 0,
-  },
-  habitRowPressed: {
-    backgroundColor: 'rgba(0,0,0,0.04)',
   },
   habitIcon: {
     fontSize: 24,
@@ -230,6 +221,5 @@ const styles = StyleSheet.create({
   habitName: {
     flex: 1,
     fontSize: 17,
-    color: C.text1,
   },
 });

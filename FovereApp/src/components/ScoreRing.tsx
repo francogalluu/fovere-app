@@ -7,6 +7,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import { getProgressColor } from '@/lib/progressColors';
+import { useTheme } from '@/context/ThemeContext';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
@@ -52,10 +53,12 @@ export function ScoreRing({
   labelStyle,
   labelStyleWhenFull,
 }: ScoreRingProps) {
+  const { colors } = useTheme();
   const target = Math.max(0, Math.min(100, Math.round(value)));
   const radius = radiusProp ?? size / 2 - strokeWidth;
   const circumference = 2 * Math.PI * radius;
   const progressColor = strokeColorProp ?? getProgressColor(target);
+  const trackColor = colors.ring;
   const cx = size / 2;
   const cy = size / 2;
 
@@ -119,7 +122,7 @@ export function ScoreRing({
           cy={cy}
           r={radius}
           fill="none"
-          stroke="#E5E5E7"
+          stroke={trackColor}
           strokeWidth={strokeWidth}
         />
         <AnimatedCircle
@@ -143,7 +146,7 @@ export function ScoreRing({
                 styles.label,
                 labelStyle,
                 displayPercent === 100 && labelStyleWhenFull,
-                { color: displayPercent > 0 ? '#000000' : '#8E8E93' },
+                { color: displayPercent > 0 ? colors.text1 : colors.text2 },
               ]}>
                 {displayPercent}%
               </Text>

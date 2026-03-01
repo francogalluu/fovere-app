@@ -10,9 +10,11 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Minus, Plus } from 'lucide-react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import type { Palette } from '@/lib/theme';
 import type { RootStackParamList } from '@/navigation/types';
 import { useHabitStore } from '@/store';
 import { useSettingsStore } from '@/store/settingsStore';
+import { useTheme } from '@/context/ThemeContext';
 import { today, isFuture } from '@/lib/dates';
 import { getHabitCurrentValue, isHabitCompleted } from '@/lib/aggregates';
 import { getProgressColor, PROGRESS_COLORS } from '@/lib/progressColors';
@@ -21,6 +23,7 @@ import { ScoreRing } from '@/components/ScoreRing';
 type Props = NativeStackScreenProps<RootStackParamList, 'HabitDetail'>;
 
 export default function HabitDetailScreen({ route, navigation }: Props) {
+  const { colors } = useTheme();
   const { id, date: paramDate } = route.params;
   const todayStr = today();
   const viewDate = paramDate ?? todayStr;
@@ -121,9 +124,9 @@ export default function HabitDetailScreen({ route, navigation }: Props) {
 
   if (!habit) {
     return (
-      <SafeAreaView style={s.safe} edges={['bottom']}>
+      <SafeAreaView style={[s.safe, { backgroundColor: colors.bgSecondary }]} edges={['bottom']}>
         <View style={s.notFound}>
-          <Text style={s.notFoundText}>Habit not found.</Text>
+          <Text style={[s.notFoundText, { color: colors.text2 }]}>Habit not found.</Text>
         </View>
       </SafeAreaView>
     );
@@ -141,7 +144,7 @@ export default function HabitDetailScreen({ route, navigation }: Props) {
                        habit.unit ? `Count (${habit.unit})` : 'Count';
 
   return (
-    <SafeAreaView style={s.safe} edges={['bottom']}>
+    <SafeAreaView style={[s.safe, { backgroundColor: colors.bgSecondary }]} edges={['bottom']}>
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
 
         {/* ── Progress ring ─────────────────────────────────────────────── */}
@@ -155,30 +158,30 @@ export default function HabitDetailScreen({ route, navigation }: Props) {
             renderCenter={() => (
               <View style={s.ringCenter}>
                 {habit.kind === 'boolean' ? (
-                  <Text style={[s.ringBoolMark, { color: completed || (isBreak && progressPct >= 100) ? accentColor : '#C7C7CC' }]}>
+                  <Text style={[s.ringBoolMark, { color: completed || (isBreak && progressPct >= 100) ? accentColor : colors.chevron }]}>
                     {completed ? '✓' : '○'}
                   </Text>
                 ) : (
                   <Text>
-                    <Text style={s.ringCurrent}>{currentValue}</Text>
-                    <Text style={s.ringTarget}>/{habit.target}</Text>
+                    <Text style={[s.ringCurrent, { color: colors.text1 }]}>{currentValue}</Text>
+                    <Text style={[s.ringTarget, { color: colors.text4 }]}>/{habit.target}</Text>
                   </Text>
                 )}
                 {habit.kind === 'numeric' && habit.unit ? (
-                  <Text style={s.ringUnit}>{habit.unit}</Text>
+                  <Text style={[s.ringUnit, { color: colors.text4 }]}>{habit.unit}</Text>
                 ) : null}
               </View>
             )}
           />
-          <Text style={s.goalLabel}>{goalLabel}</Text>
+          <Text style={[s.goalLabel, { color: colors.text3 }]}>{goalLabel}</Text>
           {overLimit && (
-            <Text style={s.overLimitBadge}>Over limit — {currentValue - habit.target} too many</Text>
+            <Text style={[s.overLimitBadge, { color: colors.danger }]}>Over limit — {currentValue - habit.target} too many</Text>
           )}
         </View>
 
         {/* ── Controls ──────────────────────────────────────────────────── */}
         {isViewingFuture && (
-          <Text style={s.futureDateNote}>You can't add progress for future dates.</Text>
+          <Text style={[s.futureDateNote, { color: colors.text2 }]}>You can't add progress for future dates.</Text>
         )}
         {habit.kind === 'boolean' ? (
           <View style={s.boolRow}>
@@ -193,7 +196,7 @@ export default function HabitDetailScreen({ route, navigation }: Props) {
                 isViewingFuture && s.ctrlBtnDisabled,
               ]}
             >
-              <Text style={[s.boolBtnText, { color: accentColor }, completed && s.boolBtnTextDone]}>
+              <Text style={[s.boolBtnText, { color: accentColor }, completed && { color: colors.white }]}>
                 {completed ? 'Done ✓' : 'Mark Done'}
               </Text>
             </Pressable>
@@ -203,12 +206,12 @@ export default function HabitDetailScreen({ route, navigation }: Props) {
             <Pressable
               onPress={isViewingFuture ? undefined : handleDecrement}
               disabled={currentValue === 0 || isViewingFuture}
-              style={[s.ctrlBtn, (currentValue === 0 || isViewingFuture) && s.ctrlBtnDisabled]}
+              style={[s.ctrlBtn, { backgroundColor: colors.bgCard }, (currentValue === 0 || isViewingFuture) && s.ctrlBtnDisabled]}
             >
               <Minus size={24} color={accentColor} strokeWidth={2.5} />
             </Pressable>
 
-            <Text style={s.numValue}>{currentValue}</Text>
+            <Text style={[s.numValue, { color: colors.text1 }]}>{currentValue}</Text>
 
             <Pressable
               onPress={isViewingFuture ? undefined : handleIncrement}
@@ -219,20 +222,21 @@ export default function HabitDetailScreen({ route, navigation }: Props) {
                 ((!isBreak && currentValue >= habit.target) || isViewingFuture) && s.ctrlBtnDisabled,
               ]}
             >
-              <Plus size={24} color="#fff" strokeWidth={2.5} />
+              <Plus size={24} color={colors.white} strokeWidth={2.5} />
             </Pressable>
           </View>
         )}
 
         {/* ── Info rows ─────────────────────────────────────────────────── */}
         <View style={s.section}>
-          <View style={s.infoCard}>
-            <InfoRow label="Frequency"   value={freqLabel}    last={false} />
-            <InfoRow label="Measurement" value={measureLabel} last={false} />
+          <View style={[s.infoCard, { backgroundColor: colors.bgCard }]}>
+            <InfoRow label="Frequency"   value={freqLabel}    last={false} colors={colors} />
+            <InfoRow label="Measurement" value={measureLabel} last={false} colors={colors} />
             <InfoRow
               label={isBreak ? 'Limit' : 'Target'}
               value={`${habit.target}${habit.unit ? ' ' + habit.unit : ''}`}
               last={true}
+              colors={colors}
             />
           </View>
         </View>
@@ -240,9 +244,9 @@ export default function HabitDetailScreen({ route, navigation }: Props) {
         {/* ── Description (optional) ───────────────────────────────────────────── */}
         {habit.description ? (
           <View style={s.section}>
-            <View style={s.descriptionCard}>
-              <Text style={s.descriptionLabel}>Description</Text>
-              <Text style={s.descriptionText}>{habit.description}</Text>
+            <View style={[s.descriptionCard, { backgroundColor: colors.bgCard }]}>
+              <Text style={[s.descriptionLabel, { color: colors.text2 }]}>Description</Text>
+              <Text style={[s.descriptionText, { color: colors.text1 }]}>{habit.description}</Text>
             </View>
           </View>
         ) : null}
@@ -253,17 +257,17 @@ export default function HabitDetailScreen({ route, navigation }: Props) {
             <View style={s.section}>
               <Pressable
                 onPress={handlePause}
-                style={({ pressed }) => [s.pauseCard, pressed && { opacity: 0.7 }]}
+                style={({ pressed }) => [s.pauseCard, { backgroundColor: colors.bgCard }, pressed && { opacity: 0.7 }]}
               >
-                <Text style={s.pauseText}>Pause habit</Text>
+                <Text style={[s.pauseText, { color: colors.teal }]}>Pause habit</Text>
               </Pressable>
             </View>
             <View style={s.section}>
               <Pressable
                 onPress={handleDelete}
-                style={({ pressed }) => [s.deleteCard, pressed && { opacity: 0.7 }]}
+                style={({ pressed }) => [s.deleteCard, { backgroundColor: colors.bgCard }, pressed && { opacity: 0.7 }]}
               >
-                <Text style={s.deleteText}>Delete Habit</Text>
+                <Text style={[s.deleteText, { color: colors.danger }]}>Delete Habit</Text>
               </Pressable>
             </View>
           </>
@@ -277,11 +281,11 @@ export default function HabitDetailScreen({ route, navigation }: Props) {
 
 // ─── Sub-component ────────────────────────────────────────────────────────────
 
-function InfoRow({ label, value, last }: { label: string; value: string; last: boolean }) {
+function InfoRow({ label, value, last, colors }: { label: string; value: string; last: boolean; colors: Palette }) {
   return (
-    <View style={[s.infoRow, !last && s.infoRowBorder]}>
-      <Text style={s.infoLabel}>{label}</Text>
-      <Text style={s.infoValue}>{value}</Text>
+    <View style={[s.infoRow, !last && [s.infoRowBorder, { borderBottomColor: colors.separator }]]}>
+      <Text style={[s.infoLabel, { color: colors.text3 }]}>{label}</Text>
+      <Text style={[s.infoValue, { color: colors.text1 }]}>{value}</Text>
     </View>
   );
 }

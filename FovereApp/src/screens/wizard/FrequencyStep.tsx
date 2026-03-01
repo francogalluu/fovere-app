@@ -4,8 +4,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Check } from 'lucide-react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { WizardStackParamList } from '@/navigation/types';
+import { useTheme } from '@/context/ThemeContext';
 import { useWizardStore } from '@/store/wizardStore';
-import { C } from '@/lib/tokens';
 import type { Frequency } from '@/types/habit';
 
 type Props = NativeStackScreenProps<WizardStackParamList, 'Frequency'>;
@@ -17,6 +17,7 @@ const OPTIONS: { value: Frequency; label: string; description: string }[] = [
 ];
 
 export default function FrequencyStep({ navigation }: Props) {
+  const { colors } = useTheme();
   const frequency    = useWizardStore(s => s.frequency);
   const setFrequency = useWizardStore(s => s.setFrequency);
 
@@ -25,17 +26,17 @@ export default function FrequencyStep({ navigation }: Props) {
       title: 'Frequency',
       headerRight: () => (
         <Pressable onPress={() => navigation.goBack()} hitSlop={8}>
-          <Text style={s.doneBtn}>Done</Text>
+          <Text style={[s.doneBtn, { color: colors.teal }]}>Done</Text>
         </Pressable>
       ),
     });
-  }, [navigation]);
+  }, [navigation, colors.teal]);
 
   return (
-    <SafeAreaView style={s.safe} edges={['bottom']}>
-      <Text style={s.helper}>How often do you want to track this habit?</Text>
+    <SafeAreaView style={[s.safe, { backgroundColor: colors.bgSecondary }]} edges={['bottom']}>
+      <Text style={[s.helper, { color: colors.text2 }]}>How often do you want to track this habit?</Text>
 
-      <View style={s.card}>
+      <View style={[s.card, { backgroundColor: colors.bgCard }]}>
         {OPTIONS.map((opt, i) => {
           const selected = frequency === opt.value;
           const last     = i === OPTIONS.length - 1;
@@ -45,17 +46,17 @@ export default function FrequencyStep({ navigation }: Props) {
               onPress={() => setFrequency(opt.value)}
               style={({ pressed }) => [
                 s.row,
-                !last && s.rowBorder,
-                pressed && { backgroundColor: '#F9F9F9' },
+                !last && [s.rowBorder, { borderBottomColor: colors.separator }],
+                pressed && { backgroundColor: colors.bgAnalytics },
               ]}
             >
               <View style={s.rowText}>
-                <Text style={s.label}>{opt.label}</Text>
-                <Text style={s.desc}>{opt.description}</Text>
+                <Text style={[s.label, { color: colors.text1 }]}>{opt.label}</Text>
+                <Text style={[s.desc, { color: colors.text2 }]}>{opt.description}</Text>
               </View>
               {selected && (
-                <View style={s.checkCircle}>
-                  <Check size={14} color="#fff" strokeWidth={3} />
+                <View style={[s.checkCircle, { backgroundColor: colors.teal }]}>
+                  <Check size={14} color={colors.white} strokeWidth={3} />
                 </View>
               )}
             </Pressable>
@@ -67,19 +68,17 @@ export default function FrequencyStep({ navigation }: Props) {
 }
 
 const s = StyleSheet.create({
-  safe:    { flex: 1, backgroundColor: '#F2F2F7' },
-  doneBtn: { fontSize: 17, fontWeight: '600', color: C.teal },
+  safe:    { flex: 1 },
+  doneBtn: { fontSize: 17, fontWeight: '600' },
 
   helper: {
     fontSize: 15,
-    color: C.text2,
     paddingHorizontal: 20,
     paddingTop: 16,
     paddingBottom: 12,
   },
   card: {
     marginHorizontal: 16,
-    backgroundColor: '#FFFFFF',
     borderRadius: 16,
     overflow: 'hidden',
   },
@@ -93,16 +92,14 @@ const s = StyleSheet.create({
   },
   rowBorder: {
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: 'rgba(0,0,0,0.06)',
   },
   rowText: { flex: 1 },
-  label:   { fontSize: 17, color: '#1A1A1A', fontWeight: '400' },
-  desc:    { fontSize: 13, color: C.text2, marginTop: 2 },
+  label:   { fontSize: 17, fontWeight: '400' },
+  desc:    { fontSize: 13, marginTop: 2 },
   checkCircle: {
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: C.teal,
     alignItems: 'center',
     justifyContent: 'center',
   },

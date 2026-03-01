@@ -5,14 +5,15 @@ import { Check } from 'lucide-react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { WizardStackParamList } from '@/navigation/types';
 import { useWizardStore } from '@/store/wizardStore';
+import { useTheme } from '@/context/ThemeContext';
 import { searchEmojis } from '@/lib/emojiPickerData';
-import { C } from '@/lib/tokens';
 
 type Props = NativeStackScreenProps<WizardStackParamList, 'HabitIcon'>;
 
 const NUM_COLS = 6;
 
 export default function HabitIconStep({ navigation }: Props) {
+  const { colors } = useTheme();
   const icon    = useWizardStore(s => s.icon);
   const setIcon = useWizardStore(s => s.setIcon);
   const [query, setQuery] = useState('');
@@ -24,21 +25,21 @@ export default function HabitIconStep({ navigation }: Props) {
       title: 'Icon',
       headerRight: () => (
         <Pressable onPress={() => navigation.goBack()} hitSlop={8}>
-          <Text style={s.doneBtn}>Done</Text>
+          <Text style={[s.doneBtn, { color: colors.teal }]}>Done</Text>
         </Pressable>
       ),
     });
-  }, [navigation]);
+  }, [navigation, colors.teal]);
 
   return (
-    <SafeAreaView style={s.safe} edges={['bottom']}>
-      <Text style={s.helper}>Choose an emoji to represent your habit.</Text>
+    <SafeAreaView style={[s.safe, { backgroundColor: colors.bgSecondary }]} edges={['bottom']}>
+      <Text style={[s.helper, { color: colors.text2 }]}>Choose an emoji to represent your habit.</Text>
       <TextInput
         placeholder="Search emojis (e.g. water, run, book)"
-        placeholderTextColor={C.text4}
+        placeholderTextColor={colors.text4}
         value={query}
         onChangeText={setQuery}
-        style={s.searchInput}
+        style={[s.searchInput, { backgroundColor: colors.bgCard, color: colors.text1 }]}
       />
       <FlatList
         data={emojis}
@@ -52,14 +53,15 @@ export default function HabitIconStep({ navigation }: Props) {
               onPress={() => setIcon(item.emoji)}
               style={({ pressed }) => [
                 s.cell,
-                selected && s.cellActive,
+                { backgroundColor: colors.bgCard },
+                selected && [s.cellActive, { backgroundColor: colors.tealSoft, borderColor: colors.teal }],
                 pressed && { opacity: 0.7 },
               ]}
             >
               <Text style={s.emoji}>{item.emoji}</Text>
               {selected && (
-                <View style={s.checkBadge}>
-                  <Check size={10} color="#fff" strokeWidth={3} />
+                <View style={[s.checkBadge, { backgroundColor: colors.teal }]}>
+                  <Check size={10} color={colors.white} strokeWidth={3} />
                 </View>
               )}
             </Pressable>
@@ -73,23 +75,20 @@ export default function HabitIconStep({ navigation }: Props) {
 const CELL = 52;
 
 const s = StyleSheet.create({
-  safe:  { flex: 1, backgroundColor: '#F2F2F7' },
-  doneBtn: { fontSize: 17, fontWeight: '600', color: C.teal },
+  safe:  { flex: 1 },
+  doneBtn: { fontSize: 17, fontWeight: '600' },
 
   helper: {
     fontSize: 15,
-    color: C.text2,
     paddingHorizontal: 20,
     paddingTop: 16,
     paddingBottom: 8,
   },
   searchInput: {
-    backgroundColor: '#FFFFFF',
     borderRadius: 12,
     paddingVertical: 10,
     paddingHorizontal: 14,
     fontSize: 16,
-    color: C.text1,
     marginHorizontal: 16,
     marginBottom: 12,
   },
@@ -102,14 +101,11 @@ const s = StyleSheet.create({
     height: CELL,
     margin: 4,
     borderRadius: 14,
-    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
   },
   cellActive: {
-    backgroundColor: C.tealSoft,
     borderWidth: 2,
-    borderColor: C.teal,
   },
   emoji: { fontSize: 28 },
   checkBadge: {
@@ -119,7 +115,6 @@ const s = StyleSheet.create({
     width: 16,
     height: 16,
     borderRadius: 8,
-    backgroundColor: C.teal,
     alignItems: 'center',
     justifyContent: 'center',
   },

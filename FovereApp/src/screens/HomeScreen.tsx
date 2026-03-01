@@ -28,7 +28,7 @@ import {
   isHabitCompleted,
 } from '@/lib/aggregates';
 import { today, isFuture, getWeekDates, getWeeksRange, formatDateTitle, addDays } from '@/lib/dates';
-import { C } from '@/lib/tokens';
+import { useTheme } from '@/context/ThemeContext';
 import type { RootStackParamList } from '@/navigation/types';
 import type { Habit } from '@/types/habit';
 
@@ -47,11 +47,13 @@ function HomeDayContent({
   onJumpToToday,
   compact = false,
   weekStartsOn,
+  colors,
 }: {
   date: string;
   onJumpToToday: () => void;
   compact?: boolean;
   weekStartsOn: 0 | 1;
+  colors: ReturnType<typeof useTheme>['colors'];
 }) {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const haptic = Boolean(useSettingsStore(s => s.hapticFeedback));
@@ -236,7 +238,7 @@ function HomeDayContent({
   return (
     <>
     <ScrollView
-      style={s.dayScroll}
+      style={[s.dayScroll, { backgroundColor: colors.bgHome }]}
       contentContainerStyle={s.scrollContent}
       showsVerticalScrollIndicator={false}
     >
@@ -254,10 +256,10 @@ function HomeDayContent({
       {dailyBuildHabitsOnDate.length > 0 && (
         <View style={[s.section, compact && s.sectionCompact]}>
           <View style={s.sectionTitleRow}>
-            <Text style={[s.sectionTitle, compact && s.sectionTitleCompact]}>{dailySectionLabel}</Text>
+            <Text style={[s.sectionTitle, compact && s.sectionTitleCompact, { color: colors.text1 }]}>{dailySectionLabel}</Text>
             {!isTodayDate && (
-              <View style={s.badge}>
-                <Text style={s.badgeText}>{isReadOnly ? 'Upcoming' : 'Past'}</Text>
+              <View style={[s.badge, { backgroundColor: colors.bgSecondary }]}>
+                <Text style={[s.badgeText, { color: colors.text2 }]}>{isReadOnly ? 'Upcoming' : 'Past'}</Text>
               </View>
             )}
           </View>
@@ -270,10 +272,10 @@ function HomeDayContent({
       {allBreakHabitsOnDate.length > 0 && (
         <View style={[s.section, compact && s.sectionCompact]}>
           <View style={s.sectionTitleRow}>
-            <Text style={[s.sectionTitle, compact && s.sectionTitleCompact]}>Break Habits</Text>
+            <Text style={[s.sectionTitle, compact && s.sectionTitleCompact, { color: colors.text1 }]}>Break Habits</Text>
             {!isTodayDate && (
-              <View style={s.badge}>
-                <Text style={s.badgeText}>{isReadOnly ? 'Upcoming' : 'Past'}</Text>
+              <View style={[s.badge, { backgroundColor: colors.bgSecondary }]}>
+                <Text style={[s.badgeText, { color: colors.text2 }]}>{isReadOnly ? 'Upcoming' : 'Past'}</Text>
               </View>
             )}
           </View>
@@ -286,9 +288,9 @@ function HomeDayContent({
       {weeklyBuildHabitsOnDate.length > 0 && (
         <View style={[s.section, compact && s.sectionCompact]}>
           <View style={s.sectionTitleRow}>
-            <Text style={[s.sectionTitle, compact && s.sectionTitleCompact]}>Weekly Habits</Text>
+            <Text style={[s.sectionTitle, compact && s.sectionTitleCompact, { color: colors.text1 }]}>Weekly Habits</Text>
             {weeklyBuildTotal > 0 && (
-              <Text style={s.weeklyPct}>
+              <Text style={[s.weeklyPct, { color: colors.text2 }]}>
                 {Math.round((weeklyBuildCompleted / weeklyBuildTotal) * 100)}% this week
               </Text>
             )}
@@ -302,9 +304,9 @@ function HomeDayContent({
       {monthlyBuildHabitsOnDate.length > 0 && (
         <View style={[s.section, compact && s.sectionCompact]}>
           <View style={s.sectionTitleRow}>
-            <Text style={[s.sectionTitle, compact && s.sectionTitleCompact]}>Monthly Habits</Text>
+            <Text style={[s.sectionTitle, compact && s.sectionTitleCompact, { color: colors.text1 }]}>Monthly Habits</Text>
             {monthlyBuildTotal > 0 && (
-              <Text style={s.weeklyPct}>
+              <Text style={[s.weeklyPct, { color: colors.text2 }]}>
                 {Math.round((monthlyBuildCompleted / monthlyBuildTotal) * 100)}% this month
               </Text>
             )}
@@ -317,38 +319,38 @@ function HomeDayContent({
 
       {habits.length === 0 && (
         <View style={s.emptyState}>
-          <Text style={s.emptyTitle}>No habits yet</Text>
-          <Text style={s.emptyBody}>
+          <Text style={[s.emptyTitle, { color: colors.text1 }]}>No habits yet</Text>
+          <Text style={[s.emptyBody, { color: colors.text2 }]}>
             Tap + above to create your first habit.
           </Text>
         </View>
       )}
 
       {!isTodayDate && (
-        <Pressable onPress={onJumpToToday} style={s.todayPill}>
-          <Text style={s.todayPillText}>Jump to Today</Text>
+        <Pressable onPress={onJumpToToday} style={[s.todayPill, { backgroundColor: colors.bgHome, borderColor: colors.tealSoft }]}>
+          <Text style={[s.todayPillText, { color: colors.teal }]}>Jump to Today</Text>
         </Pressable>
       )}
 
       {isTodayDate && pausedHabits.length > 0 && (
         <View style={[s.section, compact && s.sectionCompact]}>
           <View style={s.sectionTitleRow}>
-            <Text style={[s.sectionTitle, compact && s.sectionTitleCompact]}>Paused</Text>
+            <Text style={[s.sectionTitle, compact && s.sectionTitleCompact, { color: colors.text1 }]}>Paused</Text>
           </View>
           <View style={s.pausedList}>
             {pausedHabits.map(h => (
-              <View key={h.id} style={s.pausedRow}>
+              <View key={h.id} style={[s.pausedRow, { backgroundColor: colors.bgCard }]}>
                 <Text style={s.pausedIcon}>{h.icon}</Text>
-                <Text style={s.pausedName} numberOfLines={1}>{h.name}</Text>
+                <Text style={[s.pausedName, { color: colors.text1 }]} numberOfLines={1}>{h.name}</Text>
                 <Pressable
                   onPress={() => {
                     if (haptic) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                     unpauseHabit(h.id);
                   }}
-                  style={({ pressed }) => [s.resumeBtn, pressed && { opacity: 0.8 }]}
+                  style={({ pressed }) => [s.resumeBtn, { backgroundColor: colors.teal }, pressed && { opacity: 0.8 }]}
                 >
-                  <Play size={16} color="#fff" strokeWidth={2.5} />
-                  <Text style={s.resumeBtnText}>Resume</Text>
+                  <Play size={16} color={colors.white} strokeWidth={2.5} />
+                  <Text style={[s.resumeBtnText, { color: colors.white }]}>Resume</Text>
                 </Pressable>
               </View>
             ))}
@@ -373,6 +375,7 @@ function HomeDayContent({
 
 export default function HomeScreen() {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+  const { colors } = useTheme();
   const haptic = Boolean(useSettingsStore(s => s.hapticFeedback));
   const compactHomeView = useSettingsStore(s => s.compactHomeView);
   const setCompactHomeView = useSettingsStore(s => s.setCompactHomeView);
@@ -544,23 +547,23 @@ export default function HomeScreen() {
   }, [haptic, compactHomeView]);
 
   return (
-    <SafeAreaView style={s.safe}>
-      <View style={s.header}>
-        <Text style={s.appTitle}>Fovere</Text>
+    <SafeAreaView style={[s.safe, { backgroundColor: colors.bgHome }]}>
+      <View style={[s.header, { backgroundColor: colors.bgHome }]}>
+        <Text style={[s.appTitle, { color: colors.text1 }]}>Fovere</Text>
         <View style={s.headerActions}>
           <Pressable
             onPress={handleToggleCompact}
-            style={[s.compactToggle, compactHomeView && s.compactToggleActive]}
+            style={[s.compactToggle, compactHomeView && [s.compactToggleActive, { backgroundColor: colors.teal, borderColor: colors.teal }], !compactHomeView && { borderColor: colors.teal }]}
             accessibilityLabel={compactHomeView ? 'Switch to full view' : 'Switch to compact view'}
           >
-            <LayoutGrid size={20} color={compactHomeView ? '#fff' : C.teal} strokeWidth={2.5} />
+            <LayoutGrid size={20} color={compactHomeView ? colors.white : colors.teal} strokeWidth={2.5} />
           </Pressable>
           <Pressable
             onPress={openAddSheet}
-            style={s.addButton}
+            style={[s.addButton, { backgroundColor: colors.teal }]}
             accessibilityLabel="Add new habit"
           >
-            <Plus size={20} color="#fff" strokeWidth={2.5} />
+            <Plus size={20} color={colors.white} strokeWidth={2.5} />
           </Pressable>
         </View>
       </View>
@@ -577,7 +580,7 @@ export default function HomeScreen() {
         ref={listRef}
         data={dates}
         keyExtractor={(d) => d}
-        style={s.dayList}
+        style={[s.dayList, { backgroundColor: colors.bgHome }]}
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
@@ -596,6 +599,7 @@ export default function HomeScreen() {
               onJumpToToday={handleJumpToToday}
               compact={compactHomeView}
               weekStartsOn={weekStartsOn}
+              colors={colors}
             />
           </View>
         )}
@@ -609,25 +613,25 @@ export default function HomeScreen() {
       >
         <View style={s.addSheetBackdrop}>
           <Pressable style={StyleSheet.absoluteFill} onPress={closeAddSheet} />
-          <Animated.View style={[s.addSheetCard, { transform: [{ translateY: addSheetSlide }] }]}>
-            <Text style={s.addSheetTitle}>New habit</Text>
+          <Animated.View style={[s.addSheetCard, { backgroundColor: colors.bgCard, borderColor: colors.separator, transform: [{ translateY: addSheetSlide }] }]}>
+            <Text style={[s.addSheetTitle, { color: colors.text2 }]}>New habit</Text>
             <Pressable
               onPress={handleBuildHabit}
-              style={({ pressed }) => [s.addSheetOption, pressed && s.addSheetOptionPressed]}
+              style={({ pressed }) => [s.addSheetOption, pressed && { backgroundColor: colors.bgSecondary }]}
             >
-              <View style={s.addSheetIconWrapBuild}>
-                <Sprout size={22} color="#34C759" strokeWidth={2.5} />
+              <View style={[s.addSheetIconWrapBuild, { backgroundColor: colors.successSoft }]}>
+                <Sprout size={22} color={colors.success} strokeWidth={2.5} />
               </View>
-              <Text style={s.addSheetOptionText}>Build good habit</Text>
+              <Text style={[s.addSheetOptionText, { color: colors.text1 }]}>Build good habit</Text>
             </Pressable>
             <Pressable
               onPress={handleBreakHabit}
-              style={({ pressed }) => [s.addSheetOption, pressed && s.addSheetOptionPressed]}
+              style={({ pressed }) => [s.addSheetOption, pressed && { backgroundColor: colors.bgSecondary }]}
             >
-              <View style={s.addSheetIconWrapBreak}>
-                <CircleSlash size={22} color="#fff" strokeWidth={2.5} />
+              <View style={[s.addSheetIconWrapBreak, { backgroundColor: colors.dangerSoft }]}>
+                <CircleSlash size={22} color={colors.white} strokeWidth={2.5} />
               </View>
-              <Text style={s.addSheetOptionText}>Break bad habit</Text>
+              <Text style={[s.addSheetOptionText, { color: colors.text1 }]}>Break bad habit</Text>
             </Pressable>
           </Animated.View>
         </View>
@@ -641,7 +645,6 @@ export default function HomeScreen() {
 const s = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: C.bgHome,
   },
   dayList: {
     flex: 1,
@@ -651,7 +654,6 @@ const s = StyleSheet.create({
   },
   dayScroll: {
     flex: 1,
-    backgroundColor: C.bgHome,
   },
   scrollContent: {
     // Extra padding so card shadows (shadowRadius ~12, offset 4) aren’t cropped
@@ -667,12 +669,10 @@ const s = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 8,
     paddingHorizontal: 28,
-    backgroundColor: C.bgHome,
   },
   appTitle: {
     fontSize: 34,
     fontWeight: '700',
-    color: C.text1,
     letterSpacing: -0.5,
   },
   headerActions: {
@@ -688,17 +688,12 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1.5,
-    borderColor: C.teal,
   },
-  compactToggleActive: {
-    backgroundColor: C.teal,
-    borderColor: C.teal,
-  },
+  compactToggleActive: {},
   addButton: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: C.teal,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -721,7 +716,6 @@ const s = StyleSheet.create({
   sectionTitle: {
     fontSize: 22,
     fontWeight: '600',
-    color: C.text1,
     marginLeft: 4,
   },
   sectionTitleCompact: {
@@ -733,12 +727,10 @@ const s = StyleSheet.create({
     marginLeft: 'auto',
     fontSize: 13,
     fontWeight: '400',
-    color: C.text2,
   },
 
   // Past/Upcoming badge
   badge: {
-    backgroundColor: C.bgSecondary,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
@@ -746,7 +738,6 @@ const s = StyleSheet.create({
   badgeText: {
     fontSize: 13,
     fontWeight: '500',
-    color: C.text2,
   },
 
   // Empty state
@@ -759,12 +750,10 @@ const s = StyleSheet.create({
   emptyTitle: {
     fontSize: 22,
     fontWeight: '700',
-    color: C.text1,
     marginBottom: 10,
   },
   emptyBody: {
     fontSize: 16,
-    color: C.text2,
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: 28,
@@ -775,10 +764,8 @@ const s = StyleSheet.create({
     marginTop: 12,
     paddingVertical: 8,
     paddingHorizontal: 20,
-    backgroundColor: C.bgHome,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: 'rgba(0,128,128,0.25)',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -787,7 +774,6 @@ const s = StyleSheet.create({
   },
   todayPillText: {
     fontSize: 14,
-    color: C.teal,
     fontWeight: '600',
   },
 
@@ -798,7 +784,6 @@ const s = StyleSheet.create({
   pausedRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
     borderRadius: 14,
     paddingVertical: 12,
     paddingHorizontal: 14,
@@ -816,13 +801,11 @@ const s = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     fontWeight: '500',
-    color: C.text1,
   },
   resumeBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: C.teal,
     paddingVertical: 8,
     paddingHorizontal: 14,
     borderRadius: 10,
@@ -830,7 +813,6 @@ const s = StyleSheet.create({
   resumeBtnText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#fff',
   },
 
   // Add-habit bottom sheet (Build / Break choice)
@@ -840,7 +822,6 @@ const s = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   addSheetCard: {
-    backgroundColor: '#fff',
     borderRadius: 20,
     marginHorizontal: 16,
     marginBottom: 34,
@@ -848,7 +829,6 @@ const s = StyleSheet.create({
     paddingBottom: 20,
     paddingHorizontal: 20,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.06)',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.18,
@@ -858,7 +838,6 @@ const s = StyleSheet.create({
   addSheetTitle: {
     fontSize: 15,
     fontWeight: '600',
-    color: C.text2,
     marginBottom: 4,
     paddingHorizontal: 4,
   },
@@ -891,6 +870,5 @@ const s = StyleSheet.create({
   addSheetOptionText: {
     fontSize: 17,
     fontWeight: '600',
-    color: C.text1,
   },
 });

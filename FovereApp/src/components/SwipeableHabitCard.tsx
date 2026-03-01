@@ -2,8 +2,8 @@ import React, { useRef } from 'react';
 import { View, Text, StyleSheet, Pressable, Alert } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
 import { Trash2 } from 'lucide-react-native';
+import { useTheme } from '@/context/ThemeContext';
 import { HabitCard } from './HabitCard';
-import { C } from '@/lib/tokens';
 import type { Habit } from '@/types/habit';
 
 interface SwipeableHabitCardProps {
@@ -22,25 +22,25 @@ interface SwipeableHabitCardProps {
   compact?: boolean;
 }
 
-function RightActions({ isCompleted }: { isCompleted: boolean }) {
+function RightActions({ isCompleted, colors }: { isCompleted: boolean; colors: { teal: string; danger: string; white: string } }) {
   return (
-    <View style={[s.rightAction, isCompleted && s.rightActionUndo]}>
-      <Text style={s.actionText}>{isCompleted ? 'Undo' : 'Done'}</Text>
+    <View style={[s.rightAction, { backgroundColor: colors.teal }, isCompleted && [s.rightActionUndo, { backgroundColor: colors.danger }]]}>
+      <Text style={[s.actionText, { color: colors.white }]}>{isCompleted ? 'Undo' : 'Done'}</Text>
     </View>
   );
 }
 
-function LeftActions({ onDelete }: { onDelete: () => void }) {
+function LeftActions({ onDelete, colors }: { onDelete: () => void; colors: { danger: string; white: string } }) {
   return (
-    <View style={s.leftAction}>
+    <View style={[s.leftAction, { backgroundColor: colors.danger }]}>
       <Pressable
         onPress={onDelete}
         style={({ pressed }) => [s.deleteBtn, pressed && { opacity: 0.8 }]}
         accessibilityRole="button"
         accessibilityLabel="Delete habit"
       >
-        <Trash2 size={22} color="#fff" strokeWidth={2} />
-        <Text style={s.actionText}>Delete</Text>
+        <Trash2 size={22} color={colors.white} strokeWidth={2} />
+        <Text style={[s.actionText, { color: colors.white }]}>Delete</Text>
       </Pressable>
     </View>
   );
@@ -57,6 +57,7 @@ export function SwipeableHabitCard({
   onPause,
   compact = false,
 }: SwipeableHabitCardProps) {
+  const { colors } = useTheme();
   const swipeRef = useRef<Swipeable>(null);
   const pendingActionRef = useRef<'complete' | 'undo' | null>(null);
 
@@ -95,8 +96,8 @@ export function SwipeableHabitCard({
   return (
     <Swipeable
       ref={swipeRef}
-      renderRightActions={() => <RightActions isCompleted={isCompleted} />}
-      renderLeftActions={onDelete ? () => <LeftActions onDelete={showDeleteAlert} /> : undefined}
+      renderRightActions={() => <RightActions isCompleted={isCompleted} colors={colors} />}
+      renderLeftActions={onDelete ? () => <LeftActions onDelete={showDeleteAlert} colors={colors} /> : undefined}
       onSwipeableLeftOpen={onDelete ? handleLeftOpen : undefined}
       onSwipeableRightOpen={handleRightOpen}
       onSwipeableClose={handleSwipeClose}
@@ -134,16 +135,12 @@ const s = StyleSheet.create({
     width: 90,
     marginBottom: 12,
     borderRadius: 16,
-    backgroundColor: C.success,
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: 8,
   },
-  rightActionUndo: {
-    backgroundColor: C.danger,
-  },
+  rightActionUndo: {},
   actionText: {
-    color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '600',
   },
@@ -151,7 +148,6 @@ const s = StyleSheet.create({
     width: 90,
     marginBottom: 12,
     borderRadius: 16,
-    backgroundColor: C.danger,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 8,

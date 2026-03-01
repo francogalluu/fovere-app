@@ -9,9 +9,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { useTheme } from '@/context/ThemeContext';
 import { useHabitStore } from '@/store';
 
 export default function DeletedHabitsScreen() {
+  const { colors } = useTheme();
   const habits = useHabitStore(s => s.habits);
   const unarchiveHabit = useHabitStore(s => s.unarchiveHabit);
 
@@ -32,24 +34,24 @@ export default function DeletedHabitsScreen() {
   }, [deletedHabits, query]);
 
   return (
-    <SafeAreaView style={s.safe} edges={['top']}>
+    <SafeAreaView style={[s.safe, { backgroundColor: colors.bgSecondary }]} edges={['top']}>
       <ScrollView contentContainerStyle={s.scroll}>
-        <View style={s.card}>
+        <View style={[s.card, { backgroundColor: colors.bgCard }]}>
           <TextInput
             placeholder="Search deleted habits"
-            placeholderTextColor="#A1A1A6"
+            placeholderTextColor={colors.text2}
             value={query}
             onChangeText={setQuery}
-            style={s.searchInput}
+            style={[s.searchInput, { color: colors.text1, backgroundColor: colors.bgSecondary, borderColor: colors.separator }]}
           />
           {filtered.length === 0 ? (
-            <Text style={s.emptyText}>No deleted habits.</Text>
+            <Text style={[s.emptyText, { color: colors.text2 }]}>No deleted habits.</Text>
           ) : (
             filtered.map(h => (
-              <View key={h.id} style={s.row}>
+              <View key={h.id} style={[s.row, { borderBottomColor: colors.separator }]}>
                 <View style={s.left}>
                   <Text style={s.icon}>{h.icon}</Text>
-                  <Text style={s.name} numberOfLines={1}>
+                  <Text style={[s.name, { color: colors.text1 }]} numberOfLines={1}>
                     {h.name}
                   </Text>
                 </View>
@@ -57,10 +59,11 @@ export default function DeletedHabitsScreen() {
                   onPress={() => unarchiveHabit(h.id)}
                   style={({ pressed }) => [
                     s.restoreBtn,
+                    { backgroundColor: colors.teal },
                     pressed && { opacity: 0.7 },
                   ]}
                 >
-                  <Text style={s.restoreText}>Reactivate</Text>
+                  <Text style={[s.restoreText, { color: colors.white }]}>Reactivate</Text>
                 </Pressable>
               </View>
             ))
@@ -74,13 +77,11 @@ export default function DeletedHabitsScreen() {
 const s = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: '#F2F2F7',
   },
   scroll: {
     padding: 16,
   },
   card: {
-    backgroundColor: '#fff',
     borderRadius: 16,
     paddingHorizontal: 12,
     paddingVertical: 8,
@@ -88,18 +89,14 @@ const s = StyleSheet.create({
   searchInput: {
     borderRadius: 10,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(0,0,0,0.12)',
     paddingHorizontal: 10,
     paddingVertical: 6,
     marginBottom: 8,
     fontSize: 15,
-    color: '#1A1A1A',
-    backgroundColor: '#F2F2F7',
   },
   emptyText: {
     paddingVertical: 8,
     fontSize: 14,
-    color: '#8E8E93',
   },
   row: {
     flexDirection: 'row',
@@ -107,7 +104,6 @@ const s = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 10,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: 'rgba(0,0,0,0.06)',
   },
   left: {
     flexDirection: 'row',
@@ -122,18 +118,15 @@ const s = StyleSheet.create({
   name: {
     flex: 1,
     fontSize: 16,
-    color: '#1A1A1A',
   },
   restoreBtn: {
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 12,
-    backgroundColor: '#008080',
   },
   restoreText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#fff',
   },
 });
 

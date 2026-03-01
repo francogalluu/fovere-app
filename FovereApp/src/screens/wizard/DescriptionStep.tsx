@@ -11,12 +11,13 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { WizardStackParamList } from '@/navigation/types';
+import { useTheme } from '@/context/ThemeContext';
 import { useWizardStore } from '@/store/wizardStore';
-import { C } from '@/lib/tokens';
 
 type Props = NativeStackScreenProps<WizardStackParamList, 'Description'>;
 
 export default function DescriptionStep({ navigation }: Props) {
+  const { colors } = useTheme();
   const description = useWizardStore((s) => s.description);
   const setDescription = useWizardStore((s) => s.setDescription);
 
@@ -25,30 +26,30 @@ export default function DescriptionStep({ navigation }: Props) {
       title: 'Description',
       headerRight: () => (
         <Pressable onPress={() => navigation.goBack()} hitSlop={8}>
-          <Text style={s.doneBtn}>Done</Text>
+          <Text style={[s.doneBtn, { color: colors.teal }]}>Done</Text>
         </Pressable>
       ),
     });
-  }, [navigation]);
+  }, [navigation, colors.teal]);
 
   return (
-    <SafeAreaView style={s.safe} edges={['bottom']}>
+    <SafeAreaView style={[s.safe, { backgroundColor: colors.bgSecondary }]} edges={['bottom']}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
       >
         <View style={s.container}>
-          <Text style={s.helper}>
+          <Text style={[s.helper, { color: colors.text2 }]}>
             Add an optional note about this habit. It will appear on the habit detail screen.
           </Text>
 
-          <View style={s.inputCard}>
+          <View style={[s.inputCard, { backgroundColor: colors.bgCard }]}>
             <TextInput
-              style={s.input}
+              style={[s.input, { color: colors.text1 }]}
               value={description}
               onChangeText={setDescription}
               placeholder="e.g. Run for at least 30 minutes before work"
-              placeholderTextColor={C.text4}
+              placeholderTextColor={colors.text4}
               multiline
               numberOfLines={4}
               textAlignVertical="top"
@@ -56,7 +57,7 @@ export default function DescriptionStep({ navigation }: Props) {
             />
           </View>
 
-          <Text style={s.counter}>{description.length} / 500</Text>
+          <Text style={[s.counter, { color: colors.text4 }]}>{description.length} / 500</Text>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -64,8 +65,8 @@ export default function DescriptionStep({ navigation }: Props) {
 }
 
 const s = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#F2F2F7' },
-  doneBtn: { fontSize: 17, fontWeight: '600', color: C.teal },
+  safe: { flex: 1 },
+  doneBtn: { fontSize: 17, fontWeight: '600' },
 
   container: {
     flex: 1,
@@ -74,25 +75,21 @@ const s = StyleSheet.create({
   },
   helper: {
     fontSize: 15,
-    color: C.text2,
     marginBottom: 16,
     paddingLeft: 4,
   },
   inputCard: {
-    backgroundColor: '#FFFFFF',
     borderRadius: 16,
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
   input: {
     fontSize: 17,
-    color: C.text1,
     minHeight: 120,
     paddingVertical: 4,
   },
   counter: {
     fontSize: 13,
-    color: C.text4,
     textAlign: 'right',
     marginTop: 8,
     paddingRight: 4,

@@ -5,6 +5,7 @@ import Svg, { Circle } from 'react-native-svg';
 import { ChevronLeft, ChevronRight, Flame, CalendarCheck } from 'lucide-react-native';
 import { useHabitStore } from '@/store';
 import { useSettingsStore } from '@/store/settingsStore';
+import { useTheme } from '@/context/ThemeContext';
 import { today, datesInRange, addDays, toLocalDateString, getWeekDates, getShortDayLabels } from '@/lib/dates';
 import { getDaySummary } from '@/lib/daySummary';
 import { getHabitCurrentValue, dailyCompletedCount, isHabitActiveOnDate } from '@/lib/aggregates';
@@ -26,6 +27,7 @@ function formatMonthDay(dateKey: string): string {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function CalendarScreen() {
+  const { colors } = useTheme();
   const rawHabits = useHabitStore(s => s.habits);
   const entries   = useHabitStore(s => s.entries);
   const weekStartsOn = useSettingsStore(s => s.weekStartsOn);
@@ -211,20 +213,20 @@ export default function CalendarScreen() {
   const weekEndStr    = toLocalDateString(weekEnd);
 
   return (
-    <SafeAreaView style={s.safe} edges={['top']}>
+    <SafeAreaView style={[s.safe, { backgroundColor: colors.bgSecondary }]} edges={['top']}>
       {/* ── Header ────────────────────────────────────────────────────── */}
       <View style={s.header}>
-        <Text style={s.headerTitle}>Calendar</Text>
+        <Text style={[s.headerTitle, { color: colors.text1 }]}>Calendar</Text>
 
         {/* Segmented control */}
-        <View style={s.seg}>
+        <View style={[s.seg, { backgroundColor: colors.separatorLight }]}>
           {(['weekly', 'monthly'] as const).map(v => (
             <Pressable
               key={v}
               onPress={() => setView(v)}
-              style={[s.segBtn, view === v && s.segBtnActive]}
+              style={[s.segBtn, view === v && [s.segBtnActive, { backgroundColor: colors.bgCard }]]}
             >
-              <Text style={[s.segBtnText, view === v && s.segBtnTextActive]}>
+              <Text style={[s.segBtnText, { color: colors.text3 }, view === v && { color: colors.teal }]}>
                 {v.charAt(0).toUpperCase() + v.slice(1)}
               </Text>
             </Pressable>
@@ -256,11 +258,11 @@ export default function CalendarScreen() {
             <ChevronLeft
               size={20}
               strokeWidth={2.5}
-              color={(view === 'monthly' && !canPrevMonth) ? '#C7C7CC' : '#008080'}
+              color={(view === 'monthly' && !canPrevMonth) ? colors.chevron : colors.teal}
             />
           </Pressable>
 
-          <Text style={s.periodLabel}>
+          <Text style={[s.periodLabel, { color: colors.text1 }]}>
             {view === 'monthly' ? monthLabel : weekLabel}
           </Text>
 
@@ -285,8 +287,8 @@ export default function CalendarScreen() {
               strokeWidth={2.5}
               color={
                 (view === 'monthly' && !canNextMonth) || (view === 'weekly' && weekEndStr >= todayStr)
-                  ? '#C7C7CC'
-                  : '#008080'
+                  ? colors.chevron
+                  : colors.teal
               }
             />
           </Pressable>
@@ -295,10 +297,10 @@ export default function CalendarScreen() {
         {view === 'monthly' ? (
           <>
             {/* ── Monthly calendar grid ──────────────────────────────── */}
-            <View style={s.calCard}>
+            <View style={[s.calCard, { backgroundColor: colors.bgCard }]}>
               <View style={s.dayHeaders}>
                 {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
-                  <Text key={d} style={s.dayHeader}>{d}</Text>
+                  <Text key={d} style={[s.dayHeader, { color: colors.text4 }]}>{d}</Text>
                 ))}
               </View>
               <View style={s.calGrid}>
@@ -317,11 +319,11 @@ export default function CalendarScreen() {
                         {isToday ? (
                           <>
                             <Svg width={40} height={40} viewBox="0 0 40 40">
-                              <Circle cx={20} cy={20} r={20} fill="#008080" />
+                              <Circle cx={20} cy={20} r={20} fill={colors.teal} />
                             </Svg>
                             <View style={StyleSheet.absoluteFillObject}>
                               <View style={s.cellCenter}>
-                                <Text style={s.dayNumToday}>{dayNum}</Text>
+                                <Text style={[s.dayNumToday, { color: colors.white }]}>{dayNum}</Text>
                               </View>
                             </View>
                           </>
@@ -341,7 +343,7 @@ export default function CalendarScreen() {
                             </Svg>
                             <View style={StyleSheet.absoluteFillObject}>
                               <View style={s.cellCenter}>
-                                <Text style={s.dayNum}>{dayNum}</Text>
+                                <Text style={[s.dayNum, { color: colors.text1 }]}>{dayNum}</Text>
                               </View>
                             </View>
                           </>
@@ -364,7 +366,7 @@ export default function CalendarScreen() {
         ) : (
           <>
             {/* ── Weekly bar chart (shared with Analytics) ───────────────────── */}
-            <View style={s.barCard}>
+            <View style={[s.barCard, { backgroundColor: colors.bgCard }]}>
               <BarChartWithTooltip
                 bars={weekChartBars}
                 chartAreaHeight={220}
@@ -386,26 +388,26 @@ export default function CalendarScreen() {
         )}
 
         {/* ── Habit breakdown ───────────────────────────────────────── */}
-        <Text style={s.breakdownTitle}>
+        <Text style={[s.breakdownTitle, { color: colors.text1 }]}>
           {view === 'monthly' ? 'This Month' : 'This Week'}
         </Text>
 
         {habitBreakdown.length === 0 ? (
-          <View style={s.emptyCard}>
-            <Text style={s.emptyText}>No habits yet. Add one on the Home tab.</Text>
+          <View style={[s.emptyCard, { backgroundColor: colors.bgCard }]}>
+            <Text style={[s.emptyText, { color: colors.text2 }]}>No habits yet. Add one on the Home tab.</Text>
           </View>
         ) : (
-          <View style={s.breakdownCard}>
+          <View style={[s.breakdownCard, { backgroundColor: colors.bgCard }]}>
             {habitBreakdown.map((h, i) => (
               <View
                 key={h.id}
-                style={[s.breakdownRow, i < habitBreakdown.length - 1 && s.breakdownBorder]}
+                style={[s.breakdownRow, i < habitBreakdown.length - 1 && [s.breakdownBorder, { borderBottomColor: colors.separator }]]}
               >
-                <View style={s.breakdownIconWrap}>
+                <View style={[s.breakdownIconWrap, { backgroundColor: colors.ring }]}>
                   <Text style={s.breakdownIcon}>{h.icon}</Text>
                 </View>
-                <Text style={s.breakdownName}>{h.name}</Text>
-                <Text style={s.breakdownValue}>{h.value}</Text>
+                <Text style={[s.breakdownName, { color: colors.text1 }]}>{h.name}</Text>
+                <Text style={[s.breakdownValue, { color: colors.text3 }]}>{h.value}</Text>
               </View>
             ))}
           </View>
@@ -421,6 +423,7 @@ export default function CalendarScreen() {
             style={[
               s.tooltipOverlayBubble,
               {
+                backgroundColor: colors.tooltipBg,
                 position: 'absolute',
                 left: tooltipOverlay.x,
                 top: tooltipOverlay.y,
@@ -440,6 +443,7 @@ export default function CalendarScreen() {
             style={[
               s.tooltipOverlayPointer,
               {
+                borderTopColor: colors.tooltipBg,
                 position: 'absolute',
                 left: tooltipOverlay.pointerScreenX - 8,
                 top: tooltipOverlay.y + tooltipOverlay.height - 1,
@@ -459,11 +463,12 @@ function CompletionRingCard({
 }: {
   title: string; subtitle: string; pct: number; animationSlot?: string;
 }) {
+  const { colors } = useTheme();
   return (
-    <View style={s.completionCard}>
+    <View style={[s.completionCard, { backgroundColor: colors.bgCard }]}>
       <View style={{ flex: 1 }}>
-        <Text style={s.completionTitle}>{title}</Text>
-        <Text style={s.completionSub}>{subtitle}</Text>
+        <Text style={[s.completionTitle, { color: colors.text1 }]}>{title}</Text>
+        <Text style={[s.completionSub, { color: colors.text2 }]}>{subtitle}</Text>
       </View>
       <View style={s.completionRingWrap}>
         <ScoreRing
@@ -473,7 +478,7 @@ function CompletionRingCard({
           strokeWidth={14}
           radius={50}
           animationSlot={animationSlot}
-          labelStyle={s.completionPct}
+          labelStyle={[s.completionPct, { color: colors.text1 }]}
           labelStyleWhenFull={s.completionPctFull}
         />
       </View>
@@ -482,21 +487,22 @@ function CompletionRingCard({
 }
 
 function StreakCard({ streak, daysCompleted }: { streak: number; daysCompleted: number }) {
+  const { colors } = useTheme();
   return (
-    <View style={s.streakCard}>
+    <View style={[s.streakCard, { backgroundColor: colors.bgCard }]}>
       <View style={s.streakItem}>
-        <View style={s.streakIconWrapOrange}>
-          <Flame size={24} color="#FF9F0A" strokeWidth={2} />
+        <View style={[s.streakIconWrapOrange, { backgroundColor: colors.warningSoft }]}>
+          <Flame size={24} color={colors.warning} strokeWidth={2} />
         </View>
-        <Text style={s.streakNum}>{streak}</Text>
-        <Text style={s.streakLabel}>Current streak</Text>
+        <Text style={[s.streakNum, { color: colors.text1 }]}>{streak}</Text>
+        <Text style={[s.streakLabel, { color: colors.text2 }]}>Current streak</Text>
       </View>
       <View style={s.streakItem}>
-        <View style={s.streakIconWrapGreen}>
-          <CalendarCheck size={24} color="#34C759" strokeWidth={2} />
+        <View style={[s.streakIconWrapGreen, { backgroundColor: colors.successSoft }]}>
+          <CalendarCheck size={24} color={colors.success} strokeWidth={2} />
         </View>
-        <Text style={s.streakNum}>{daysCompleted}</Text>
-        <Text style={s.streakLabel}>Days completed</Text>
+        <Text style={[s.streakNum, { color: colors.text1 }]}>{daysCompleted}</Text>
+        <Text style={[s.streakLabel, { color: colors.text2 }]}>Days completed</Text>
       </View>
     </View>
   );
@@ -505,45 +511,44 @@ function StreakCard({ streak, daysCompleted }: { streak: number; daysCompleted: 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
-  safe:  { flex: 1, backgroundColor: '#F2F2F7' },
+  safe:  { flex: 1 },
   scroll: { flex: 1 },
   scrollContent: { paddingHorizontal: 16, paddingBottom: 20 },
 
   // Header
   header: { paddingHorizontal: 24, paddingTop: 8, paddingBottom: 12 },
   headerTitle: {
-    fontSize: 34, fontWeight: '700', color: '#1A1A1A',
+    fontSize: 34, fontWeight: '700',
     letterSpacing: -0.68, marginBottom: 12,
   },
 
   // Segmented control
   seg: {
-    flexDirection: 'row', backgroundColor: '#E5E5E5',
+    flexDirection: 'row',
     borderRadius: 10, padding: 2, marginBottom: 12,
   },
   segBtn:        { flex: 1, paddingVertical: 8, borderRadius: 8, alignItems: 'center' },
   segBtnActive:  {
-    backgroundColor: '#fff',
     shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.10, shadowRadius: 3, elevation: 1,
   },
-  segBtnText:    { fontSize: 15, fontWeight: '500', color: '#666' },
-  segBtnTextActive: { color: '#008080' },
+  segBtnText:    { fontSize: 15, fontWeight: '500' },
+  segBtnTextActive: {},
 
   // Period navigation
   periodNav:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, paddingHorizontal: 8 },
   navBtn:      { padding: 8 },
-  periodLabel: { fontSize: 17, fontWeight: '600', color: '#1A1A1A' },
+  periodLabel: { fontSize: 17, fontWeight: '600' },
 
   // Monthly calendar
   calCard:    {
-    backgroundColor: '#fff', borderRadius: 20,
+    borderRadius: 20,
     padding: 16, marginBottom: 12,
   },
   dayHeaders: { flexDirection: 'row', marginBottom: 8 },
   dayHeader:  {
     flex: 1, textAlign: 'center',
-    fontSize: 12, fontWeight: '600', color: '#999', paddingVertical: 8,
+    fontSize: 12, fontWeight: '600', paddingVertical: 8,
   },
   calGrid:    { flexDirection: 'row', flexWrap: 'wrap' },
   calCell:    {
@@ -552,12 +557,11 @@ const s = StyleSheet.create({
     paddingVertical: 4,
   },
   cellCenter:  { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  dayNum:      { fontSize: 15, color: '#1A1A1A' },
-  dayNumToday: { fontSize: 15, fontWeight: '600', color: '#fff' },
+  dayNum:      { fontSize: 15 },
+  dayNumToday: { fontSize: 15, fontWeight: '600' },
 
   // Completion ring card
   completionCard: {
-    backgroundColor: '#fff',
     borderRadius: 24, paddingVertical: 24, paddingHorizontal: 24,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     marginBottom: 12,
@@ -565,16 +569,16 @@ const s = StyleSheet.create({
     shadowOpacity: 0.08, shadowRadius: 40, elevation: 6,
   },
   completionTitle: {
-    fontSize: 22, fontWeight: '700', color: '#000', marginBottom: 6, letterSpacing: -0.4,
+    fontSize: 22, fontWeight: '700', marginBottom: 6, letterSpacing: -0.4,
   },
-  completionSub: { fontSize: 17, color: '#8E8E93', lineHeight: 22 },
+  completionSub: { fontSize: 17, lineHeight: 22 },
   completionRingWrap: {
     width: 130,
     height: 130,
     flexShrink: 0,
   },
   completionPct: {
-    fontSize: 28, fontWeight: '700', color: '#000', letterSpacing: -0.8,
+    fontSize: 28, fontWeight: '700', letterSpacing: -0.8,
   },
   completionPctFull: {
     fontSize: 22, letterSpacing: -0.5,
@@ -582,7 +586,7 @@ const s = StyleSheet.create({
 
   // Streak card
   streakCard: {
-    backgroundColor: '#fff', borderRadius: 20, paddingVertical: 24, paddingHorizontal: 16,
+    borderRadius: 20, paddingVertical: 24, paddingHorizontal: 16,
     flexDirection: 'row', justifyContent: 'space-around', marginBottom: 16,
     shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04, shadowRadius: 8, elevation: 2,
@@ -590,42 +594,40 @@ const s = StyleSheet.create({
   streakItem:          { alignItems: 'center' },
   streakIconWrapOrange: {
     width: 48, height: 48, borderRadius: 24, marginBottom: 12,
-    backgroundColor: 'rgba(255, 159, 10, 0.08)',
     alignItems: 'center', justifyContent: 'center',
   },
   streakIconWrapGreen: {
     width: 48, height: 48, borderRadius: 24, marginBottom: 12,
-    backgroundColor: 'rgba(52, 199, 89, 0.08)',
     alignItems: 'center', justifyContent: 'center',
   },
-  streakNum:   { fontSize: 48, fontWeight: '700', color: '#1A1A1A', lineHeight: 52, marginBottom: 8 },
-  streakLabel: { fontSize: 15, color: '#8E8E93' },
+  streakNum:   { fontSize: 48, fontWeight: '700', lineHeight: 52, marginBottom: 8 },
+  streakLabel: { fontSize: 15 },
 
   // Breakdown
   breakdownTitle: {
-    fontSize: 22, fontWeight: '600', color: '#1A1A1A',
+    fontSize: 22, fontWeight: '600',
     marginTop: 16, marginBottom: 12, paddingLeft: 4,
   },
   breakdownCard:  {
-    backgroundColor: '#fff', borderRadius: 16,
+    borderRadius: 16,
     overflow: 'hidden', marginBottom: 12,
   },
   breakdownRow:   {
     flexDirection: 'row', alignItems: 'center',
     paddingVertical: 12, paddingHorizontal: 16,
   },
-  breakdownBorder: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#F2F2F7' },
+  breakdownBorder: { borderBottomWidth: StyleSheet.hairlineWidth },
   breakdownIconWrap: {
-    width: 40, height: 40, borderRadius: 12, backgroundColor: '#F7F7F8',
+    width: 40, height: 40, borderRadius: 12,
     alignItems: 'center', justifyContent: 'center', marginRight: 12,
   },
   breakdownIcon:  { fontSize: 20 },
-  breakdownName:  { flex: 1, fontSize: 15, fontWeight: '500', color: '#1A1A1A' },
-  breakdownValue: { fontSize: 15, color: '#666' },
+  breakdownName:  { flex: 1, fontSize: 15, fontWeight: '500' },
+  breakdownValue: { fontSize: 15 },
 
   // Weekly bar chart (shared component; barCard wraps it)
   barCard: {
-    backgroundColor: '#fff', borderRadius: 20, padding: 24, marginBottom: 12,
+    borderRadius: 20, padding: 24, marginBottom: 12,
     overflow: 'visible',
     zIndex: 10,
   },
@@ -640,7 +642,6 @@ const s = StyleSheet.create({
     zIndex: 1000,
   },
   tooltipOverlayBubble: {
-    backgroundColor: '#1A1A1A',
     borderRadius: 10,
     paddingVertical: 10,
     paddingHorizontal: 14,
@@ -662,12 +663,11 @@ const s = StyleSheet.create({
     borderTopWidth: 6,
     borderLeftColor: 'transparent',
     borderRightColor: 'transparent',
-    borderTopColor: '#1A1A1A',
   },
 
   // Empty state
   emptyCard: {
-    backgroundColor: '#fff', borderRadius: 16, padding: 24, alignItems: 'center',
+    borderRadius: 16, padding: 24, alignItems: 'center',
   },
-  emptyText: { fontSize: 15, color: '#8E8E93', textAlign: 'center' },
+  emptyText: { fontSize: 15, textAlign: 'center' },
 });
