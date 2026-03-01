@@ -1,4 +1,4 @@
-import React, { useCallback, useLayoutEffect, useMemo } from 'react';
+import React, { useCallback, useLayoutEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -20,6 +20,7 @@ import { getHabitCurrentValue, isHabitCompleted } from '@/lib/aggregates';
 import { getProgressColor, PROGRESS_COLORS } from '@/lib/progressColors';
 import { ScoreRing } from '@/components/ScoreRing';
 import { InteractiveQuantityRing } from '@/components/InteractiveQuantityRing';
+import { ConfettiOverlay } from '@/components/ConfettiOverlay';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'HabitDetail'>;
 
@@ -79,6 +80,8 @@ export default function HabitDetailScreen({ route, navigation }: Props) {
     });
   }, [habit, navigation, accentColor]);
 
+  const [showConfetti, setShowConfetti] = useState(false);
+
   const handleToggle = useCallback(() => {
     if (!habit || isViewingFuture) return;
     if (completed) {
@@ -87,6 +90,7 @@ export default function HabitDetailScreen({ route, navigation }: Props) {
     } else {
       if (haptic) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       logEntry(habit.id, viewDate, 1);
+      setShowConfetti(true);
     }
   }, [habit, completed, deleteEntry, logEntry, viewDate, isViewingFuture, haptic]);
 
@@ -109,6 +113,7 @@ export default function HabitDetailScreen({ route, navigation }: Props) {
     const clamped = Math.max(0, Math.min(value, maxVal));
     if (haptic && clamped >= habit.target) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     logEntry(habit.id, viewDate, clamped);
+    if (clamped >= habit.target) setShowConfetti(true);
   }, [habit, isBreak, logEntry, viewDate, isViewingFuture, haptic]);
 
   const handlePause = () => {
@@ -270,6 +275,9 @@ export default function HabitDetailScreen({ route, navigation }: Props) {
 
         <View style={{ height: 40 }} />
       </ScrollView>
+      {showConfetti && (
+        <ConfettiOverlay onComplete={() => setShowConfetti(false)} />
+      )}
     </SafeAreaView>
   );
 }
