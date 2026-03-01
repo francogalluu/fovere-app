@@ -34,6 +34,9 @@ export interface Habit {
   /** Single emoji string, e.g. "🏃" */
   icon: string;
 
+  /** Optional user-written description shown on the habit detail screen */
+  description?: string;
+
   /** boolean = toggle; numeric = increment toward target */
   kind: HabitKind;
 

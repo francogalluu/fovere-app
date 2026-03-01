@@ -46,7 +46,7 @@ function measureByLabel(kind: 'boolean' | 'numeric', target: number, unit: strin
 export default function HabitTypeStep({ navigation }: Props) {
   // ── Wizard store ───────────────────────────────────────────────────────────
   const {
-    habitId, goalType, name, icon, kind, frequency,
+    habitId, goalType, name, icon, description, kind, frequency,
     target, unit, reminderEnabled, reminderTime,
     reset, loadHabit,
     setGoalType, setReminderEnabled,
@@ -94,11 +94,14 @@ export default function HabitTypeStep({ navigation }: Props) {
     const resolvedUnit   = kind === 'boolean' ? undefined : (unit.trim() || undefined);
     const resolvedReminder = reminderEnabled ? reminderTime : undefined;
 
+    const resolvedDescription = description.trim() || undefined;
+
     if (isEdit && habitId) {
       updateHabit(habitId, {
         goalType,
         name: trimmed,
         icon,
+        description: resolvedDescription,
         kind,
         frequency,
         target: resolvedTarget,
@@ -110,6 +113,7 @@ export default function HabitTypeStep({ navigation }: Props) {
         goalType,
         name: trimmed,
         icon,
+        description: resolvedDescription,
         kind,
         frequency,
         target: resolvedTarget,
@@ -119,7 +123,7 @@ export default function HabitTypeStep({ navigation }: Props) {
     }
     reset();
     navigation.getParent()?.goBack();
-  }, [name, icon, kind, frequency, target, unit, reminderEnabled, reminderTime, isEdit, habitId, addHabit, updateHabit, reset, navigation]);
+  }, [name, icon, description, kind, frequency, target, unit, reminderEnabled, reminderTime, isEdit, habitId, addHabit, updateHabit, reset, navigation]);
 
   // ── Header buttons ─────────────────────────────────────────────────────────
   useLayoutEffect(() => {
@@ -177,6 +181,12 @@ export default function HabitTypeStep({ navigation }: Props) {
             label="Icon"
             value={icon}
             onPress={() => navigation.navigate('HabitIcon')}
+          />
+          <Row
+            label="Description"
+            value={description.trim() || 'Tap to add (optional)'}
+            valueFaded={!description.trim()}
+            onPress={() => navigation.navigate('Description')}
             last
           />
         </View>
@@ -304,6 +314,6 @@ const s = StyleSheet.create({
   },
   rowLast: { borderBottomWidth: 0 },
   rowLabel: { fontSize: 17, color: '#1A1A1A', flexShrink: 0 },
-  rowRight: { flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1 },
+  rowRight: { flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1, marginLeft: 16 },
   rowValue: { fontSize: 17, color: '#8E8E93', flexShrink: 1 },
 });

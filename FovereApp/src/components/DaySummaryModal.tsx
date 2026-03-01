@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,8 @@ import {
   Modal,
   Pressable,
   ScrollView,
+  Animated,
+  Easing,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { X, Check, AlertTriangle } from 'lucide-react-native';
@@ -25,6 +27,109 @@ export interface DaySummaryHabit {
 export interface DaySummarySection {
   title: string;
   habits: DaySummaryHabit[];
+}
+
+const ROW_ANIM_DURATION = 420;
+const ROW_ANIM_DELAY_PER_ITEM = 85;
+
+function AnimatedSummaryRow({
+  visible,
+  animationIndex,
+  isLast,
+  habit,
+  currentValue,
+  isCompleted,
+  isOverLimit: over,
+  styles: st,
+}: {
+  visible: boolean;
+  animationIndex: number;
+  isLast: boolean;
+  habit: Habit;
+  currentValue: number;
+  isCompleted: boolean;
+  isOverLimit?: boolean;
+  styles: {
+    row: object;
+    rowLast: object;
+    iconWrap: object;
+    iconWrapDone: object;
+    icon: object;
+    rowCenter: object;
+    habitName: object;
+    rowMeta: object;
+    rowMetaDanger: object;
+    statusWrap: object;
+    dot: object;
+    pct: object;
+  };
+}) {
+  const opacity = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(14)).current;
+
+  useEffect(() => {
+    if (!visible) {
+      opacity.setValue(0);
+      translateY.setValue(14);
+      return;
+    }
+    const anim = Animated.sequence([
+      Animated.delay(animationIndex * ROW_ANIM_DELAY_PER_ITEM),
+      Animated.parallel([
+        Animated.timing(opacity, {
+          toValue: 1,
+          duration: ROW_ANIM_DURATION,
+          useNativeDriver: true,
+          easing: Easing.out(Easing.cubic),
+        }),
+        Animated.timing(translateY, {
+          toValue: 0,
+          duration: ROW_ANIM_DURATION,
+          useNativeDriver: true,
+          easing: Easing.out(Easing.cubic),
+        }),
+      ]),
+    ]);
+    anim.start();
+    return () => anim.stop();
+  }, [visible, animationIndex, opacity, translateY]);
+
+  return (
+    <Animated.View
+      style={[
+        st.row,
+        isLast && st.rowLast,
+        { opacity, transform: [{ translateY }] },
+      ]}
+    >
+      <View style={[st.iconWrap, isCompleted && !over && st.iconWrapDone]}>
+        <Text style={st.icon}>{habit.icon}</Text>
+      </View>
+      <View style={st.rowCenter}>
+        <Text style={st.habitName} numberOfLines={1}>
+          {habit.name}
+        </Text>
+        {habit.kind === 'numeric' && (
+          <Text style={[st.rowMeta, over && st.rowMetaDanger]}>
+            {currentValue} / {habit.target}
+            {habit.unit ? ` ${habit.unit}` : ''}
+            {over ? ' · Over limit' : ''}
+          </Text>
+        )}
+      </View>
+      <View style={st.statusWrap}>
+        {isCompleted && !over ? (
+          <Check size={20} color={PROGRESS_COLORS.HIGH} strokeWidth={2.5} />
+        ) : over ? (
+          <AlertTriangle size={20} color={PROGRESS_COLORS.LOW} strokeWidth={2} />
+        ) : habit.kind === 'boolean' ? (
+          <View style={st.dot} />
+        ) : (
+          <Text style={st.pct}>{Math.min(100, Math.round((currentValue / habit.target) * 100))}%</Text>
+        )}
+      </View>
+    </Animated.View>
+  );
 }
 
 interface DaySummaryModalProps {
@@ -103,49 +208,35 @@ export function DaySummaryModal({
 
           {hasAnyHabits ? (
             <View style={s.listSection}>
-              {sections.map(
-                (section) =>
-                  section.habits.length > 0 && (
-                    <View key={section.title} style={s.categoryBlock}>
-                      <Text style={s.sectionTitle}>{section.title}</Text>
-                      <View style={s.list}>
-                        {section.habits.map(({ habit, currentValue, isCompleted, isOverLimit: over }, index) => (
-                          <View
-                            key={habit.id}
-                            style={[s.row, index === section.habits.length - 1 && s.rowLast]}
-                          >
-                            <View style={[s.iconWrap, isCompleted && !over && s.iconWrapDone]}>
-                              <Text style={s.icon}>{habit.icon}</Text>
-                            </View>
-                            <View style={s.rowCenter}>
-                              <Text style={s.habitName} numberOfLines={1}>
-                                {habit.name}
-                              </Text>
-                              {habit.kind === 'numeric' && (
-                                <Text style={[s.rowMeta, over && s.rowMetaDanger]}>
-                                  {currentValue} / {habit.target}
-                                  {habit.unit ? ` ${habit.unit}` : ''}
-                                  {over ? ' · Over limit' : ''}
-                                </Text>
-                              )}
-                            </View>
-                            <View style={s.statusWrap}>
-                              {isCompleted && !over ? (
-                                <Check size={20} color={PROGRESS_COLORS.HIGH} strokeWidth={2.5} />
-                              ) : over ? (
-                                <AlertTriangle size={20} color={PROGRESS_COLORS.LOW} strokeWidth={2} />
-                              ) : habit.kind === 'boolean' ? (
-                                <View style={s.dot} />
-                              ) : (
-                                <Text style={s.pct}>{Math.min(100, Math.round((currentValue / habit.target) * 100))}%</Text>
-                              )}
-                            </View>
-                          </View>
-                        ))}
+              {(() => {
+                let globalIndex = 0;
+                return sections.map(
+                  (section) =>
+                    section.habits.length > 0 && (
+                      <View key={section.title} style={s.categoryBlock}>
+                        <Text style={s.sectionTitle}>{section.title}</Text>
+                        <View style={s.list}>
+                          {section.habits.map(({ habit, currentValue, isCompleted, isOverLimit: over }, index) => {
+                            const animIndex = globalIndex++;
+                            return (
+                              <AnimatedSummaryRow
+                                key={habit.id}
+                                visible={visible}
+                                animationIndex={animIndex}
+                                isLast={index === section.habits.length - 1}
+                                habit={habit}
+                                currentValue={currentValue}
+                                isCompleted={isCompleted}
+                                isOverLimit={over}
+                                styles={s}
+                              />
+                            );
+                          })}
+                        </View>
                       </View>
-                    </View>
-                  ),
-              )}
+                    ),
+                );
+              })()}
             </View>
           ) : (
             <View style={s.empty}>

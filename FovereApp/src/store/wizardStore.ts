@@ -12,6 +12,7 @@ interface WizardState {
   goalType: 'build' | 'break';
   name: string;
   icon: string;
+  description: string;
   kind: 'boolean' | 'numeric';
   frequency: 'daily' | 'weekly' | 'monthly';
   target: number;
@@ -35,6 +36,7 @@ interface WizardState {
   setGoalType: (v: 'build' | 'break') => void;
   setName: (v: string) => void;
   setIcon: (v: string) => void;
+  setDescription: (v: string) => void;
   setKind: (v: 'boolean' | 'numeric') => void;
   setFrequency: (v: 'daily' | 'weekly' | 'monthly') => void;
   setTarget: (v: number) => void;
@@ -44,7 +46,7 @@ interface WizardState {
 }
 
 const DEFAULTS: Omit<WizardState, keyof Pick<WizardState,
-  'reset' | 'loadHabit' | 'loadPredetermined' | 'setGoalType' | 'setName' | 'setIcon' |
+  'reset' | 'loadHabit' | 'loadPredetermined' | 'setGoalType' | 'setName' | 'setIcon' | 'setDescription' |
   'setKind' | 'setFrequency' | 'setTarget' | 'setUnit' |
   'setReminderEnabled' | 'setReminderTime'
 >> = {
@@ -52,6 +54,7 @@ const DEFAULTS: Omit<WizardState, keyof Pick<WizardState,
   goalType:        'build',
   name:            '',
   icon:            '⭐',
+  description:     '',
   kind:            'boolean',
   frequency:       'daily',
   target:          1,
@@ -70,6 +73,7 @@ export const useWizardStore = create<WizardState>()((set) => ({
     goalType:        habit.goalType ?? 'build',
     name:            habit.name,
     icon:            habit.icon,
+    description:     habit.description ?? '',
     kind:            habit.kind,
     frequency:       habit.frequency,
     target:          habit.target,
@@ -83,6 +87,7 @@ export const useWizardStore = create<WizardState>()((set) => ({
     goalType:        draft.goalType,
     name:            draft.name,
     icon:            draft.icon,
+    description:     '',
     kind:            draft.kind,
     frequency:       draft.frequency,
     target:          draft.target,
@@ -94,6 +99,7 @@ export const useWizardStore = create<WizardState>()((set) => ({
   setGoalType:        (goalType)        => set({ goalType }),
   setName:            (name)            => set({ name }),
   setIcon:            (icon)            => set({ icon }),
+  setDescription:     (description)    => set({ description }),
   setKind:            (kind)            => set({ kind }),
   setFrequency:       (frequency)       => set({ frequency }),
   setTarget:          (target)          => set({ target }),

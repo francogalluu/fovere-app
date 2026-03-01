@@ -235,6 +235,16 @@ export default function HabitDetailScreen({ route, navigation }: Props) {
           </View>
         </View>
 
+        {/* ── Description (optional) ───────────────────────────────────────────── */}
+        {habit.description ? (
+          <View style={s.section}>
+            <View style={s.descriptionCard}>
+              <Text style={s.descriptionLabel}>Description</Text>
+              <Text style={s.descriptionText}>{habit.description}</Text>
+            </View>
+          </View>
+        ) : null}
+
         {/* ── Pause / Delete (only when viewing today — not past or future) ───── */}
         {isViewingToday && (
           <>
@@ -282,6 +292,25 @@ const s = StyleSheet.create({
   notFound:  { flex: 1, alignItems: 'center', justifyContent: 'center' },
   notFoundText: { fontSize: 17, color: '#8E8E93' },
   headerEdit:   { color: '#008080', fontSize: 17 },
+
+  descriptionCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+  },
+  descriptionLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#8E8E93',
+    letterSpacing: 0.3,
+    marginBottom: 8,
+  },
+  descriptionText: {
+    fontSize: 16,
+    color: '#1A1A1A',
+    lineHeight: 22,
+  },
 
   // Ring
   ringSection: { alignItems: 'center', paddingTop: 32, paddingBottom: 4 },

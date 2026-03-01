@@ -34,14 +34,6 @@ import { ProgressHero } from '@/components/ProgressHero';
 import { SwipeableHabitCard } from '@/components/SwipeableHabitCard';
 import { DaySummaryModal, type DaySummaryHabit, type DaySummarySection } from '@/components/DaySummaryModal';
 
-// ─── Sample habits for testing before the wizard is built ─────────────────────
-const SAMPLE_HABITS: Array<Omit<Habit, 'id' | 'createdAt' | 'archivedAt' | 'sortOrder'>> = [
-  { name: 'Morning Run',  icon: '🏃', kind: 'numeric',  frequency: 'daily',  target: 30, unit: 'min' },
-  { name: 'Drink Water',  icon: '💧', kind: 'numeric',  frequency: 'daily',  target: 8,  unit: 'glasses' },
-  { name: 'Read',         icon: '📚', kind: 'boolean',  frequency: 'daily',  target: 1 },
-  { name: 'Yoga Class',   icon: '🧘', kind: 'numeric',  frequency: 'weekly', target: 3,  unit: 'times' },
-];
-
 const DAYS_BACK = 90;
 const DAYS_FORWARD = 30;
 
@@ -318,18 +310,8 @@ function HomeDayContent({
         <View style={s.emptyState}>
           <Text style={s.emptyTitle}>No habits yet</Text>
           <Text style={s.emptyBody}>
-            Tap + above to create your first habit,{'\n'}
-            or load sample data to explore the app.
+            Tap + above to create your first habit.
           </Text>
-          <Pressable
-            onPress={() => {
-              SAMPLE_HABITS.forEach(h => addHabit(h));
-              if (haptic) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            }}
-            style={s.sampleButton}
-          >
-            <Text style={s.sampleButtonText}>Load sample habits</Text>
-          </Pressable>
         </View>
       )}
 
@@ -463,7 +445,10 @@ export default function HomeScreen() {
     setSelectedDate(date);
   }, []);
 
-  const handleJumpToToday = useCallback(() => setSelectedDate(today()), []);
+  const handleJumpToToday = useCallback(() => {
+    calendarTapRef.current = true;
+    setSelectedDate(today());
+  }, []);
 
   const viewabilityConfig = useRef({
     itemVisiblePercentThreshold: 50,
@@ -508,11 +493,6 @@ export default function HomeScreen() {
     [],
   );
 
-  const handleAddSampleHabits = useCallback(() => {
-    SAMPLE_HABITS.forEach(h => addHabit(h));
-    if (haptic) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-  }, [addHabit, haptic]);
-
   return (
     <SafeAreaView style={s.safe}>
       <View style={s.header}>
@@ -556,13 +536,6 @@ export default function HomeScreen() {
         )}
       />
 
-      {rawHabits.length > 0 && (
-        <View style={s.devRow}>
-          <Pressable onPress={handleAddSampleHabits} style={s.devButton}>
-            <Text style={s.devButtonText}>＋ Add sample habits (dev)</Text>
-          </Pressable>
-        </View>
-      )}
     </SafeAreaView>
   );
 }
@@ -673,37 +646,6 @@ const s = StyleSheet.create({
     lineHeight: 22,
     marginBottom: 28,
   },
-  sampleButton: {
-    backgroundColor: C.teal,
-    paddingVertical: 14,
-    paddingHorizontal: 28,
-    borderRadius: 14,
-  },
-  sampleButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-
-  // Dev shortcut
-  devRow: {
-    alignItems: 'center',
-    marginTop: 16,
-    marginBottom: 4,
-  },
-  devButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(0,128,128,0.3)',
-  },
-  devButtonText: {
-    fontSize: 13,
-    color: C.teal,
-    fontWeight: '500',
-  },
-
   // Jump to today pill
   todayPill: {
     alignSelf: 'center',

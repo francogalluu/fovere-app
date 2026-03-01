@@ -6,6 +6,7 @@ import HabitSourceStep from '@/screens/wizard/HabitSourceStep';
 import HabitTypeStep from '@/screens/wizard/HabitTypeStep';
 import HabitNameStep from '@/screens/wizard/HabitNameStep';
 import HabitIconStep from '@/screens/wizard/HabitIconStep';
+import DescriptionStep from '@/screens/wizard/DescriptionStep';
 import FrequencyStep from '@/screens/wizard/FrequencyStep';
 import MeasureByStep from '@/screens/wizard/MeasureByStep';
 import TargetStep from '@/screens/wizard/TargetStep';
@@ -46,6 +47,11 @@ export default function WizardNavigator() {
         name="HabitIcon"
         component={HabitIconStep}
         options={{ title: 'Icon' }}
+      />
+      <Stack.Screen
+        name="Description"
+        component={DescriptionStep}
+        options={{ title: 'Description' }}
       />
       <Stack.Screen
         name="Frequency"

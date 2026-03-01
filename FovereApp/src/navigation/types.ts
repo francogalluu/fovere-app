@@ -6,6 +6,7 @@ export type WizardStackParamList = {
   HabitType: undefined;
   HabitName: undefined;
   HabitIcon: undefined;
+  Description: undefined;
   Frequency: undefined;
   MeasureBy: undefined;
   Target: undefined;
