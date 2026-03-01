@@ -407,28 +407,45 @@ export default function HomeScreen() {
     [todayStr],
   );
   const todayIndex = DAYS_BACK;
-  const mountTimeRef = useRef<number>(Date.now());
   const hasScrolledToSelectedRef = useRef(false);
   const programmaticScrollRef = useRef(false);
+  // True only when selectedDate was set by a calendar tap (not a swipe).
+  // The scroll effect reads this so swipe-originated changes do NOT re-trigger scrollToIndex,
+  // which would set programmaticScrollRef=true and make the next swipe miss its marker update.
+  const calendarTapRef = useRef(false);
+  const scrollDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Once on mount: open on today. (onMomentumScrollEnd is ignored for 500ms so this isn’t overwritten.)
+  // Once on mount: open on today.
   useEffect(() => {
     setSelectedDate(todayStr);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // When selectedDate changes (e.g. from week calendar tap), scroll list to that day.
-  // Skip on initial mount so we don't fight with initialScrollIndex (which shows today).
+  // Scroll list to selectedDate ONLY when the change came from a calendar tap.
   useEffect(() => {
     if (!hasScrolledToSelectedRef.current) {
       hasScrolledToSelectedRef.current = true;
       return;
     }
+    if (!calendarTapRef.current) return;
+    calendarTapRef.current = false;
+
     const idx = dates.indexOf(selectedDate);
-    if (idx >= 0 && listRef.current) {
+    if (idx < 0 || !listRef.current) return;
+
+    // Debounce: rapid taps cancel earlier scroll; only one scroll fires for the last-tapped day.
+    if (scrollDebounceRef.current) clearTimeout(scrollDebounceRef.current);
+    scrollDebounceRef.current = setTimeout(() => {
+      scrollDebounceRef.current = null;
       programmaticScrollRef.current = true;
-      listRef.current.scrollToIndex({ index: idx, animated: true });
-    }
+      listRef.current?.scrollToIndex({ index: idx, animated: true });
+    }, 80);
+    return () => {
+      if (scrollDebounceRef.current) {
+        clearTimeout(scrollDebounceRef.current);
+        scrollDebounceRef.current = null;
+      }
+    };
   }, [selectedDate, dates]);
 
   const scrollableWeeks = useMemo(() => getWeeksRange(12, 12), []);
@@ -441,7 +458,10 @@ export default function HomeScreen() {
     return result;
   }, [rawHabits, entries, scrollableWeeks]);
 
-  const handleDateSelect = (date: string) => setSelectedDate(date);
+  const handleDateSelect = useCallback((date: string) => {
+    calendarTapRef.current = true;
+    setSelectedDate(date);
+  }, []);
 
   const handleJumpToToday = useCallback(() => setSelectedDate(today()), []);
 
@@ -451,6 +471,7 @@ export default function HomeScreen() {
 
   const onViewableItemsChanged = useCallback(
     ({ viewableItems }: { viewableItems: Array<{ index: number | null }> }) => {
+      if (programmaticScrollRef.current) return;
       if (viewableItems.length === 0) return;
       const item = viewableItems[viewableItems.length - 1];
       const index = item.index;
@@ -461,15 +482,9 @@ export default function HomeScreen() {
     [dates],
   );
 
-  const onMomentumScrollEnd = useCallback(
-    (e: { nativeEvent: { contentOffset: { x: number } } }) => {
-      if (programmaticScrollRef.current) {
-        programmaticScrollRef.current = false;
-        return;
-      }
-    },
-    [],
-  );
+  const onMomentumScrollEnd = useCallback(() => {
+    if (programmaticScrollRef.current) programmaticScrollRef.current = false;
+  }, []);
 
   const getItemLayout = useCallback(
     (_: unknown, index: number) => ({
