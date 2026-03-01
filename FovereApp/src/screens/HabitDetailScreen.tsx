@@ -235,25 +235,27 @@ export default function HabitDetailScreen({ route, navigation }: Props) {
           </View>
         </View>
 
-        {/* ── Pause ─────────────────────────────────────────────────────── */}
-        <View style={s.section}>
-          <Pressable
-            onPress={handlePause}
-            style={({ pressed }) => [s.pauseCard, pressed && { opacity: 0.7 }]}
-          >
-            <Text style={s.pauseText}>Pause habit</Text>
-          </Pressable>
-        </View>
-
-        {/* ── Delete ────────────────────────────────────────────────────── */}
-        <View style={s.section}>
-          <Pressable
-            onPress={handleDelete}
-            style={({ pressed }) => [s.deleteCard, pressed && { opacity: 0.7 }]}
-          >
-            <Text style={s.deleteText}>Delete Habit</Text>
-          </Pressable>
-        </View>
+        {/* ── Pause / Delete (only when viewing today — not past or future) ───── */}
+        {isViewingToday && (
+          <>
+            <View style={s.section}>
+              <Pressable
+                onPress={handlePause}
+                style={({ pressed }) => [s.pauseCard, pressed && { opacity: 0.7 }]}
+              >
+                <Text style={s.pauseText}>Pause habit</Text>
+              </Pressable>
+            </View>
+            <View style={s.section}>
+              <Pressable
+                onPress={handleDelete}
+                style={({ pressed }) => [s.deleteCard, pressed && { opacity: 0.7 }]}
+              >
+                <Text style={s.deleteText}>Delete Habit</Text>
+              </Pressable>
+            </View>
+          </>
+        )}
 
         <View style={{ height: 40 }} />
       </ScrollView>

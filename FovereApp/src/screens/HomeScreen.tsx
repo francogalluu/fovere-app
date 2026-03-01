@@ -168,8 +168,8 @@ function HomeDayContent({
         readOnly={isReadOnly}
         onPress={() => handleNavigateToDetail(habit.id)}
         onComplete={() => handleComplete(habit)}
-        onDelete={() => archiveHabit(habit.id)}
-        onPause={() => pauseHabit(habit.id)}
+        onDelete={isTodayDate ? () => archiveHabit(habit.id) : undefined}
+        onPause={isTodayDate ? () => pauseHabit(habit.id) : undefined}
       />
     );
   };
