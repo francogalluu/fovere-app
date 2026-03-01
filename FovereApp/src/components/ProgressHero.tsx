@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { formatDateTitle, isToday } from '@/lib/dates';
 import { ScoreRing } from '@/components/ScoreRing';
 
@@ -8,6 +8,7 @@ interface ProgressHeroProps {
   completed: number;
   total: number;
   overLimit?: number;
+  onPress?: () => void;
 }
 
 export function ProgressHero({
@@ -15,12 +16,13 @@ export function ProgressHero({
   completed,
   total,
   overLimit = 0,
+  onPress,
 }: ProgressHeroProps) {
   const targetPercentage = total > 0 ? Math.round((completed / total) * 100) : 0;
   const title = isToday(selectedDate) ? 'Completed Today' : formatDateTitle(selectedDate);
 
-  return (
-    <View style={styles.card}>
+  const content = (
+    <>
       <View style={styles.leftContent}>
         <Text style={styles.title}>{title}</Text>
         {total > 0 ? (
@@ -48,8 +50,17 @@ export function ProgressHero({
           labelStyleWhenFull={styles.percentageTextFull}
         />
       </View>
-    </View>
+    </>
   );
+
+  if (onPress) {
+    return (
+      <Pressable onPress={onPress} style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}>
+        {content}
+      </Pressable>
+    );
+  }
+  return <View style={styles.card}>{content}</View>;
 }
 
 const styles = StyleSheet.create({
@@ -67,6 +78,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 20,
     elevation: 4,
+  },
+  cardPressed: {
+    opacity: 0.92,
   },
   leftContent: {
     flex: 1,

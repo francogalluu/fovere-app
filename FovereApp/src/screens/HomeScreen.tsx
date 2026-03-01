@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback, useRef, useEffect } from 'react';
+import React, { useMemo, useCallback, useRef, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -32,6 +32,7 @@ import type { Habit } from '@/types/habit';
 import { WeekCalendar } from '@/components/WeekCalendar';
 import { ProgressHero } from '@/components/ProgressHero';
 import { SwipeableHabitCard } from '@/components/SwipeableHabitCard';
+import { DaySummaryModal, type DaySummaryHabit, type DaySummarySection } from '@/components/DaySummaryModal';
 
 // ─── Sample habits for testing before the wizard is built ─────────────────────
 const SAMPLE_HABITS: Array<Omit<Habit, 'id' | 'createdAt' | 'archivedAt' | 'sortOrder'>> = [
@@ -116,6 +117,10 @@ function HomeDayContent({
     () => habits.filter(h => h.frequency === 'weekly' && h.goalType !== 'break'),
     [habits],
   );
+  const monthlyBuildHabits = useMemo(
+    () => habits.filter(h => h.frequency === 'monthly' && h.goalType !== 'break'),
+    [habits],
+  );
   const allBreakHabits = useMemo(
     () => [...dailyBreakHabits, ...weeklyBreakHabits],
     [dailyBreakHabits, weeklyBreakHabits],
@@ -136,6 +141,27 @@ function HomeDayContent({
       isCompleted: isHabitCompleted(habit, entries, date),
     }),
     [entries, date],
+  );
+
+  const [summaryVisible, setSummaryVisible] = useState(false);
+
+  const toSummaryHabit = useCallback(
+    (habit: Habit): DaySummaryHabit => {
+      const { currentValue, isCompleted } = getCardData(habit);
+      const isOverLimit = habit.goalType === 'break' && currentValue > habit.target;
+      return { habit, currentValue, isCompleted, isOverLimit };
+    },
+    [getCardData],
+  );
+
+  const summarySections: DaySummarySection[] = useMemo(
+    () => [
+      { title: 'Daily', habits: dailyBuildHabits.map(toSummaryHabit) },
+      { title: 'Weekly', habits: weeklyBuildHabits.map(toSummaryHabit) },
+      { title: 'Monthly', habits: monthlyBuildHabits.map(toSummaryHabit) },
+      { title: 'Break Habits', habits: allBreakHabits.map(toSummaryHabit) },
+    ],
+    [dailyBuildHabits, weeklyBuildHabits, monthlyBuildHabits, allBreakHabits, toSummaryHabit],
   );
 
   const handleComplete = useCallback(
@@ -175,6 +201,7 @@ function HomeDayContent({
   };
 
   return (
+    <>
     <ScrollView
       style={s.dayScroll}
       contentContainerStyle={s.scrollContent}
@@ -186,6 +213,7 @@ function HomeDayContent({
           completed={completed}
           total={total}
           overLimit={overLimitCount}
+          onPress={() => setSummaryVisible(true)}
         />
       </View>
 
@@ -288,6 +316,16 @@ function HomeDayContent({
         </View>
       )}
     </ScrollView>
+    <DaySummaryModal
+      visible={summaryVisible}
+      onClose={() => setSummaryVisible(false)}
+      date={date}
+      completed={completed}
+      total={total}
+      overLimit={overLimitCount}
+      sections={summarySections}
+    />
+    </>
   );
 }
 
