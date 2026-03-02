@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { appStorage } from './storage';
-import { getTodayNormalized, normalizeDate, getWeekRange, getMonthRange, datesInRange } from '@/lib/dates';
+import { getTodayNormalized, normalizeDate, getWeekRange, getMonthRange, datesInRange, addDays } from '@/lib/dates';
 import type { Habit, HabitEntry } from '@/types/habit';
 import { useSettingsStore } from './settingsStore';
 
@@ -352,6 +352,23 @@ export const useHabitStore = create<HabitState>()(
               seenEntries.add(e.id);
               return true;
             });
+        }
+
+        // Hard-delete archived habits (and their entries) older than 30 days.
+        const today = getTodayNormalized();
+        const cutoff = addDays(today, -30);
+        if (Array.isArray(state.habits) && Array.isArray(state.entries)) {
+          const removedIds = new Set<string>();
+          state.habits = state.habits.filter(h => {
+            if (h.archivedAt && h.archivedAt < cutoff) {
+              removedIds.add(h.id);
+              return false;
+            }
+            return true;
+          });
+          if (removedIds.size > 0) {
+            state.entries = state.entries.filter(e => !removedIds.has(e.habitId));
+          }
         }
       },
 

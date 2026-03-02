@@ -34,16 +34,30 @@ export default function DeletedHabitsScreen() {
   }, [deletedHabits, query]);
 
   return (
-    <SafeAreaView style={[s.safe, { backgroundColor: colors.bgSecondary }]} edges={['top']}>
-      <ScrollView contentContainerStyle={s.scroll}>
-        <View style={[s.card, { backgroundColor: colors.bgCard }]}>
+    <SafeAreaView style={[s.safe, { backgroundColor: colors.bgSecondary }]} edges={['bottom']}>
+      <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
+        <Text style={[s.title, { color: colors.text1 }]}>Deleted Habits</Text>
+
+        <Text style={[s.subtitle, { color: colors.text3 }]}>
+          Deleted habits stay here for 30 days, then are removed permanently.
+        </Text>
+
+        <View style={[s.card, { backgroundColor: colors.bgCard, borderColor: colors.separator }]}>
           <TextInput
             placeholder="Search deleted habits"
-            placeholderTextColor={colors.text2}
+            placeholderTextColor={colors.text3}
             value={query}
             onChangeText={setQuery}
-            style={[s.searchInput, { color: colors.text1, backgroundColor: colors.bgSecondary, borderColor: colors.separator }]}
+            style={[
+              s.searchInput,
+              {
+                color: colors.text1,
+                backgroundColor: colors.bgSecondary,
+                borderColor: colors.separatorLight,
+              },
+            ]}
           />
+
           {filtered.length === 0 ? (
             <Text style={[s.emptyText, { color: colors.text2 }]}>No deleted habits.</Text>
           ) : (
@@ -79,19 +93,30 @@ const s = StyleSheet.create({
     flex: 1,
   },
   scroll: {
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  subtitle: {
+    fontSize: 14,
+    marginBottom: 12,
   },
   card: {
     borderRadius: 16,
     paddingHorizontal: 12,
     paddingVertical: 8,
+    borderWidth: StyleSheet.hairlineWidth,
   },
   searchInput: {
     borderRadius: 10,
     borderWidth: StyleSheet.hairlineWidth,
     paddingHorizontal: 10,
     paddingVertical: 6,
-    marginBottom: 8,
+    marginBottom: 6,
     fontSize: 15,
   },
   emptyText: {

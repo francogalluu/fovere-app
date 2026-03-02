@@ -8,6 +8,8 @@ import WizardNavigator from './WizardNavigator';
 import HabitDetailScreen from '@/screens/HabitDetailScreen';
 import DeletedHabitsScreen from '@/screens/DeletedHabitsScreen';
 import NotificationSettingsScreen from '@/screens/NotificationSettingsScreen';
+import PrivacyPolicyScreen from '@/screens/PrivacyPolicyScreen';
+import TermsOfServiceScreen from '@/screens/TermsOfServiceScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -76,6 +78,32 @@ export default function RootNavigator() {
           headerStyle: { backgroundColor: colors.bgSecondary },
           headerShadowVisible: false,
           headerTitle: 'Deleted Habits',
+        }}
+      />
+
+      {/* Legal */}
+      <Stack.Screen
+        name="PrivacyPolicy"
+        component={PrivacyPolicyScreen}
+        options={{
+          headerShown: true,
+          headerBackTitle: 'Back',
+          headerTintColor: colors.teal,
+          headerStyle: { backgroundColor: colors.bgSecondary },
+          headerShadowVisible: false,
+          headerTitle: 'Privacy Policy',
+        }}
+      />
+      <Stack.Screen
+        name="TermsOfService"
+        component={TermsOfServiceScreen}
+        options={{
+          headerShown: true,
+          headerBackTitle: 'Back',
+          headerTintColor: colors.teal,
+          headerStyle: { backgroundColor: colors.bgSecondary },
+          headerShadowVisible: false,
+          headerTitle: 'Terms of Service',
         }}
       />
     </Stack.Navigator>

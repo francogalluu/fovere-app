@@ -97,18 +97,6 @@ export default function SettingsScreen() {
         {/* ── Data ────────────────────────────────────────────────────── */}
         <Section title="Data" colors={colors}>
           <SettingRow
-            label="Export Data"
-            onPress={() => handleComingSoon('Export Data')}
-            showChevron
-            colors={colors}
-          />
-          <SettingRow
-            label="Backup"
-            onPress={() => handleComingSoon('Backup')}
-            showChevron
-            colors={colors}
-          />
-          <SettingRow
             label="Deleted Habits"
             onPress={() => navigation.navigate('DeletedHabits')}
             showChevron
@@ -122,13 +110,13 @@ export default function SettingsScreen() {
           <SettingRow label="Version" value="1.0.0" colors={colors} />
           <SettingRow
             label="Privacy Policy"
-            onPress={() => handleComingSoon('Privacy Policy')}
+            onPress={() => navigation.navigate('PrivacyPolicy')}
             showChevron
             colors={colors}
           />
           <SettingRow
             label="Terms of Service"
-            onPress={() => handleComingSoon('Terms of Service')}
+            onPress={() => navigation.navigate('TermsOfService')}
             showChevron
             last
             colors={colors}

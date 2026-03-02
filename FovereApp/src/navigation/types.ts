@@ -21,6 +21,8 @@ export type RootStackParamList = {
   EditHabit: { id: string } & NavigatorScreenParams<WizardStackParamList>;
   Notifications: undefined;
   DeletedHabits: undefined;
+  PrivacyPolicy: undefined;
+  TermsOfService: undefined;
 };
 
 // ─── Bottom tab navigator ─────────────────────────────────────────────────────
