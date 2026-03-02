@@ -36,6 +36,7 @@ import { WeekCalendar } from '@/components/WeekCalendar';
 import { ProgressHero } from '@/components/ProgressHero';
 import { SwipeableHabitCard } from '@/components/SwipeableHabitCard';
 import { DaySummaryModal, type DaySummaryHabit, type DaySummarySection } from '@/components/DaySummaryModal';
+import { ConfettiBurst } from '@/components/ConfettiBurst';
 
 const DAYS_BACK = 90;
 const DAYS_FORWARD = 30;
@@ -178,6 +179,7 @@ function HomeDayContent({
   );
 
   const [summaryVisible, setSummaryVisible] = useState(false);
+  const [showMiniConfetti, setShowMiniConfetti] = useState(false);
 
   const toSummaryHabit = useCallback(
     (habit: Habit): DaySummaryHabit => {
@@ -208,6 +210,7 @@ function HomeDayContent({
       } else {
         if (haptic) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         logEntry(habit.id, date, habit.target);
+        if (habit.goalType !== 'break') setShowMiniConfetti(true);
       }
     },
     [isReadOnly, getCardData, haptic, deleteEntry, logEntry, date],
@@ -368,6 +371,9 @@ function HomeDayContent({
       overLimit={overLimitCount}
       sections={summarySections}
     />
+    {showMiniConfetti && (
+      <ConfettiBurst onComplete={() => setShowMiniConfetti(false)} />
+    )}
     </>
   );
 }

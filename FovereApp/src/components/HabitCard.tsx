@@ -77,7 +77,7 @@ export function HabitCard({
   const isBreak       = habit.goalType === 'break';
   const isOverLimit   = isBreak && currentValue > habit.target;
   const pct           = Math.min(100, Math.round((currentValue / habit.target) * 100));
-  // Break habits under limit: show green (same as completed). Over/at limit: danger meter.
+  // Break habits: orange/amber below limit, red at/over limit (never green).
   const progressColor = isBreak && !isCompleted
     ? (pct >= 100 ? PROGRESS_COLORS.LOW : pct >= 50 ? PROGRESS_COLORS.MID : PROGRESS_COLORS.MID_LOW)
     : getProgressColor(pct);

@@ -69,6 +69,8 @@ export function InteractiveQuantityRing({
       const c =
         isBreak && pct >= 100
           ? PROGRESS_COLORS.LOW
+          : isBreak && pct < 100
+            ? PROGRESS_COLORS.MID
           : !isBreak && pct >= 100
             ? PROGRESS_COLORS.HIGH
             : getProgressColor(pct);
@@ -83,11 +85,14 @@ export function InteractiveQuantityRing({
 
   const commitValue = useCallback(
     (v: number) => {
-      const rounded = Math.max(0, Math.min(target, Math.round(v)));
-      onValueChange(rounded);
+      const rounded = Math.max(0, Math.round(v));
+      onValueChange(isBreak ? rounded : Math.min(rounded, target));
     },
-    [target, onValueChange],
+    [target, isBreak, onValueChange],
   );
+
+  // Break: allow exceeding so one full circle spans 0..target*4; makes 4,5,6… reachable (not just 0–3 at wrap)
+  const maxRingValue = isBreak ? targetNum * 4 : targetNum;
 
   const panGesture = Gesture.Pan()
     .enabled(!disabled)
@@ -98,12 +103,18 @@ export function InteractiveQuantityRing({
       const angleDeg = (Math.atan2(dy, dx) * 180) / Math.PI;
       const progressDeg = (angleDeg + 90 + 360) % 360;
       const p = progressDeg / 360;
-      let v = p * targetNum;
-      v = Math.max(0, Math.min(targetNum, v));
-      const prev = lastDragValue.value;
-      if (prev >= targetNum * 0.95 && v < targetNum * 0.5) v = targetNum;
-      else if (prev <= targetNum * 0.05 && v > targetNum * 0.5) v = 0;
-      else v = Math.max(0, Math.min(targetNum, v));
+      let v: number;
+      if (isBreak) {
+        v = p * maxRingValue;
+        v = Math.max(0, Math.min(maxRingValue, v));
+      } else {
+        v = p * targetNum;
+        v = Math.max(0, Math.min(targetNum, v));
+        const prev = lastDragValue.value;
+        if (prev >= targetNum * 0.95 && v < targetNum * 0.5) v = targetNum;
+        else if (prev <= targetNum * 0.05 && v > targetNum * 0.5) v = 0;
+        else v = Math.max(0, Math.min(targetNum, v));
+      }
       lastDragValue.value = v;
       displayValue.value = v;
       runOnJS(setLabel)(v);
@@ -121,11 +132,17 @@ export function InteractiveQuantityRing({
       const angleDeg = (Math.atan2(dy, dx) * 180) / Math.PI;
       const progressDeg = (angleDeg + 90 + 360) % 360;
       const p = progressDeg / 360;
-      let v = p * targetNum;
-      const prev = lastDragValue.value;
-      if (prev >= targetNum * 0.95 && v < targetNum * 0.5) v = targetNum;
-      else if (prev <= targetNum * 0.05 && v > targetNum * 0.5) v = 0;
-      else v = Math.max(0, Math.min(targetNum, v));
+      let v: number;
+      if (isBreak) {
+        v = p * maxRingValue;
+        v = Math.max(0, Math.min(maxRingValue, v));
+      } else {
+        v = p * targetNum;
+        const prev = lastDragValue.value;
+        if (prev >= targetNum * 0.95 && v < targetNum * 0.5) v = targetNum;
+        else if (prev <= targetNum * 0.05 && v > targetNum * 0.5) v = 0;
+        else v = Math.max(0, Math.min(targetNum, v));
+      }
       lastDragValue.value = v;
       displayValue.value = v;
       runOnJS(setLabel)(v);
@@ -152,8 +169,8 @@ export function InteractiveQuantityRing({
 
   const animatedThumbProps = useAnimatedProps(() => {
     'worklet';
-    const p = Math.min(1, displayValue.value / targetNum);
-    const angleRad = p * 2 * Math.PI;
+    const progressForThumb = isBreak ? Math.min(4, displayValue.value / targetNum) : Math.min(1, displayValue.value / targetNum);
+    const angleRad = progressForThumb * 2 * Math.PI;
     return {
       cx: CENTER_X + RADIUS * Math.cos(angleRad),
       cy: CENTER_Y + RADIUS * Math.sin(angleRad),
