@@ -1,5 +1,6 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { useTranslation } from 'react-i18next';
 import type { RootStackParamList } from './types';
 
 import { useTheme } from '@/context/ThemeContext';
@@ -15,6 +16,7 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function RootNavigator() {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   return (
     <Stack.Navigator
       screenOptions={{
@@ -31,7 +33,7 @@ export default function RootNavigator() {
         component={HabitDetailScreen}
         options={{
           headerShown: true,
-          headerBackTitle: 'Back',
+          headerBackTitle: t('common.back'),
           headerTintColor: colors.teal,
           headerStyle: { backgroundColor: colors.bgSecondary },
           headerShadowVisible: false,
@@ -59,11 +61,11 @@ export default function RootNavigator() {
         component={NotificationSettingsScreen}
         options={{
           headerShown: true,
-          headerBackTitle: 'Back',
+          headerBackTitle: t('common.back'),
           headerTintColor: colors.teal,
           headerStyle: { backgroundColor: colors.bgSecondary },
           headerShadowVisible: false,
-          headerTitle: 'Notifications',
+          headerTitle: t('nav.notifications'),
         }}
       />
 
@@ -73,11 +75,11 @@ export default function RootNavigator() {
         component={DeletedHabitsScreen}
         options={{
           headerShown: true,
-          headerBackTitle: 'Back',
+          headerBackTitle: t('common.back'),
           headerTintColor: colors.teal,
           headerStyle: { backgroundColor: colors.bgSecondary },
           headerShadowVisible: false,
-          headerTitle: 'Deleted Habits',
+          headerTitle: t('nav.deletedHabits'),
         }}
       />
 
@@ -87,11 +89,11 @@ export default function RootNavigator() {
         component={PrivacyPolicyScreen}
         options={{
           headerShown: true,
-          headerBackTitle: 'Back',
+          headerBackTitle: t('common.back'),
           headerTintColor: colors.teal,
           headerStyle: { backgroundColor: colors.bgSecondary },
           headerShadowVisible: false,
-          headerTitle: 'Privacy Policy',
+          headerTitle: t('nav.privacyPolicy'),
         }}
       />
       <Stack.Screen
@@ -99,11 +101,11 @@ export default function RootNavigator() {
         component={TermsOfServiceScreen}
         options={{
           headerShown: true,
-          headerBackTitle: 'Back',
+          headerBackTitle: t('common.back'),
           headerTintColor: colors.teal,
           headerStyle: { backgroundColor: colors.bgSecondary },
           headerShadowVisible: false,
-          headerTitle: 'Terms of Service',
+          headerTitle: t('nav.termsOfService'),
         }}
       />
     </Stack.Navigator>

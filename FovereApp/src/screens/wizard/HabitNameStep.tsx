@@ -6,6 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { WizardStackParamList } from '@/navigation/types';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/context/ThemeContext';
 import { useWizardStore } from '@/store/wizardStore';
 
@@ -13,20 +14,21 @@ type Props = NativeStackScreenProps<WizardStackParamList, 'HabitName'>;
 
 export default function HabitNameStep({ navigation }: Props) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const name    = useWizardStore(s => s.name);
   const setName = useWizardStore(s => s.setName);
   const inputRef = useRef<TextInput>(null);
 
   useLayoutEffect(() => {
     navigation.setOptions({
-      title: 'Habit Name',
+      title: t('wizard.habitName'),
       headerRight: () => (
         <Pressable onPress={() => navigation.goBack()} hitSlop={8}>
-          <Text style={[s.doneBtn, { color: colors.teal }]}>Done</Text>
+          <Text style={[s.doneBtn, { color: colors.teal }]}>{t('wizard.done')}</Text>
         </Pressable>
       ),
     });
-  }, [navigation, colors.teal]);
+  }, [navigation, colors.teal, t]);
 
   return (
     <SafeAreaView style={[s.safe, { backgroundColor: colors.bgSecondary }]} edges={['bottom']}>
@@ -35,7 +37,7 @@ export default function HabitNameStep({ navigation }: Props) {
         style={{ flex: 1 }}
       >
         <View style={s.container}>
-          <Text style={[s.helper, { color: colors.text2 }]}>Give your habit a clear, motivating name.</Text>
+          <Text style={[s.helper, { color: colors.text2 }]}>{t('wizard.habitNameHelper')}</Text>
 
           <View style={[s.inputCard, { backgroundColor: colors.bgCard }]}>
             <TextInput
@@ -43,7 +45,7 @@ export default function HabitNameStep({ navigation }: Props) {
               style={[s.input, { color: colors.text1 }]}
               value={name}
               onChangeText={setName}
-              placeholder="e.g. Morning Run"
+              placeholder={t('wizard.habitNamePlaceholder')}
               placeholderTextColor={colors.chevron}
               autoFocus
               returnKeyType="done"

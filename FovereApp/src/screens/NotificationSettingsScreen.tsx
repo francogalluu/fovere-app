@@ -9,6 +9,7 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import * as Notifications from 'expo-notifications';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
@@ -37,6 +38,7 @@ function formatDisplay(h: number): { h12: string; ampm: string } {
 
 export default function NotificationSettingsScreen() {
   const { colors, isDark } = useTheme();
+  const { t } = useTranslation();
   const {
     notificationsEnabled,
     dailyReminderEnabled,
@@ -67,8 +69,8 @@ export default function NotificationSettingsScreen() {
       }
       if (status !== 'granted') {
         Alert.alert(
-          'Notifications disabled',
-          'To get daily reminders, enable notifications for Fovere in your system settings.',
+          t('notifications.disabledTitle'),
+          t('notifications.disabledMessage'),
         );
         return false;
       }
@@ -84,7 +86,7 @@ export default function NotificationSettingsScreen() {
       return true;
     } catch (error) {
       console.error('[notifications] Permission error', error);
-      Alert.alert('Notifications', 'Could not enable notifications. Please try again.');
+      Alert.alert(t('nav.notifications'), t('notifications.couldNotEnable'));
       return false;
     }
   };
@@ -95,8 +97,8 @@ export default function NotificationSettingsScreen() {
       await Notifications.cancelAllScheduledNotificationsAsync();
       await Notifications.scheduleNotificationAsync({
         content: {
-          title: 'Daily Reminder',
-          body: 'Remember to record your habits for today.',
+          title: t('notifications.dailyReminder'),
+          body: t('notifications.reminderBody'),
         },
         trigger: {
           type: Notifications.SchedulableTriggerInputTypes.DAILY,
@@ -156,15 +158,15 @@ export default function NotificationSettingsScreen() {
   return (
     <SafeAreaView style={[s.safe, { backgroundColor: colors.bgSecondary }]} edges={['bottom']}>
       <View style={s.content}>
-        <Text style={[s.title, { color: colors.text1 }]}>Daily Reminder</Text>
+        <Text style={[s.title, { color: colors.text1 }]}>{t('notifications.dailyReminder')}</Text>
         <Text style={[s.subtitle, { color: colors.text2 }]}>
-          Get reminded to record each day at your chosen time.
+          {t('notifications.dailyReminderSubtitle')}
         </Text>
 
         <View style={[s.card, { backgroundColor: colors.bgCard }]}>
           <View style={[s.row, s.rowTopBorder, { borderBottomColor: colors.separator }]}>
             <View style={s.rowText}>
-              <Text style={[s.rowLabel, { color: colors.text1 }]}>Get daily reminders</Text>
+              <Text style={[s.rowLabel, { color: colors.text1 }]}>{t('notifications.getDailyReminders')}</Text>
             </View>
             <Switch
               value={dailyReminderEnabled}
@@ -178,7 +180,7 @@ export default function NotificationSettingsScreen() {
           {Platform.OS === 'ios' ? (
             <View style={s.iosTimeSection}>
               <View style={s.rowText}>
-                <Text style={[s.rowLabel, { color: colors.text1 }]}>Remind me at</Text>
+                <Text style={[s.rowLabel, { color: colors.text1 }]}>{t('notifications.remindMeAt')}</Text>
                 <Text style={[s.timeValue, { color: colors.text2 }]}>{formattedTime}</Text>
               </View>
               <View style={[s.iosPickerWrap, !dailyReminderEnabled && s.timeControlsDisabled]}>
@@ -198,7 +200,7 @@ export default function NotificationSettingsScreen() {
           ) : (
             <View style={s.row}>
               <View style={s.rowText}>
-                <Text style={[s.rowLabel, { color: colors.text1 }]}>Remind me at</Text>
+                <Text style={[s.rowLabel, { color: colors.text1 }]}>{t('notifications.remindMeAt')}</Text>
               </View>
               <View style={[s.timeControls, !dailyReminderEnabled && s.timeControlsDisabled]}>
                 <Pressable
@@ -230,8 +232,8 @@ export default function NotificationSettingsScreen() {
                 const requested = await Notifications.requestPermissionsAsync();
                 if (requested.status !== 'granted') {
                   Alert.alert(
-                    'Notifications disabled',
-                    'Enable notifications for Fovere in your system settings to receive test alerts.',
+                    t('notifications.disabledTitle'),
+                    t('notifications.enableForTest'),
                   );
                   return;
                 }
@@ -239,8 +241,8 @@ export default function NotificationSettingsScreen() {
 
               await Notifications.scheduleNotificationAsync({
                 content: {
-                  title: 'Fovere test notification',
-                  body: 'If you see this, notifications are working 🎉',
+                  title: t('notifications.testNotificationTitle'),
+                  body: t('notifications.testNotificationBody'),
                 },
                 trigger: {
                   type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
@@ -249,18 +251,18 @@ export default function NotificationSettingsScreen() {
                 },
               });
 
-              Alert.alert('Scheduled', 'A test notification will appear in about 5 seconds.');
+              Alert.alert(t('notifications.scheduled'), t('notifications.testScheduledMessage'));
             } catch (error) {
               console.warn('[notifications] test schedule error', error);
               const message =
                 (error as any)?.message ??
-                (typeof error === 'string' ? error : 'Could not schedule a test notification.');
-              Alert.alert('Error', String(message));
+                (typeof error === 'string' ? error : t('notifications.couldNotScheduleTest'));
+              Alert.alert(t('notifications.error'), String(message));
             }
           }}
         >
           <Text style={[s.testButtonText, { color: colors.teal }]}>
-            Send test notification (5s)
+            {t('notifications.sendTestNotification')}
           </Text>
         </Pressable>
       </View>

@@ -16,6 +16,7 @@ import { ChevronRight } from 'lucide-react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { WizardStackParamList } from '@/navigation/types';
 
+import { useTranslation } from 'react-i18next';
 import { useHabitStore } from '@/store';
 import { useWizardStore } from '@/store/wizardStore';
 import { useTheme } from '@/context/ThemeContext';
@@ -33,16 +34,17 @@ function formatReminderTime(hhmm: string): string {
   return `${h12}:${String(m).padStart(2, '0')} ${ampm}`;
 }
 
-function measureByLabel(kind: 'boolean' | 'numeric', target: number, unit: string): string {
-  if (kind === 'boolean') return 'Completion';
-  const t = target > 0 ? target : 1;
-  return unit.trim() ? `${t} ${unit.trim()}` : String(t);
+function measureByLabel(kind: 'boolean' | 'numeric', target: number, unit: string, t: (k: string) => string): string {
+  if (kind === 'boolean') return t('wizard.completion');
+  const n = target > 0 ? target : 1;
+  return unit.trim() ? `${n} ${unit.trim()}` : String(n);
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function HabitTypeStep({ navigation }: Props) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   // ── Wizard store ───────────────────────────────────────────────────────────
   const {
     habitId, goalType, name, icon, description, kind, frequency,
@@ -86,7 +88,7 @@ export default function HabitTypeStep({ navigation }: Props) {
   const handleSave = useCallback(() => {
     const trimmed = name.trim();
     if (!trimmed) {
-      Alert.alert('Name required', 'Please enter a habit name.');
+      Alert.alert(t('wizard.nameRequiredTitle'), t('wizard.nameRequiredMessage'));
       return;
     }
     const resolvedTarget = kind === 'boolean' ? 1 : Math.max(1, target);
@@ -130,12 +132,12 @@ export default function HabitTypeStep({ navigation }: Props) {
       title: isEdit ? 'Edit Habit' : 'New Habit',
       headerLeft: () => (
         <Pressable onPress={handleCancel} hitSlop={8}>
-          <Text style={[s.headerBtn, { color: colors.teal }]}>Cancel</Text>
+          <Text style={[s.headerBtn, { color: colors.teal }]}>{t('wizard.cancel')}</Text>
         </Pressable>
       ),
       headerRight: () => (
         <Pressable onPress={handleSave} hitSlop={8}>
-          <Text style={[s.headerBtn, s.headerBtnSave, { color: colors.teal }]}>Save</Text>
+          <Text style={[s.headerBtn, s.headerBtnSave, { color: colors.teal }]}>{t('wizard.save')}</Text>
         </Pressable>
       ),
     });
@@ -143,7 +145,7 @@ export default function HabitTypeStep({ navigation }: Props) {
 
   // ── Derived display values ─────────────────────────────────────────────────
   const freqLabel    = frequency.charAt(0).toUpperCase() + frequency.slice(1);
-  const measureLabel = measureByLabel(kind, target, unit);
+  const measureLabel = measureByLabel(kind, target, unit, t);
 
   // ── UI ─────────────────────────────────────────────────────────────────────
 
@@ -154,18 +156,18 @@ export default function HabitTypeStep({ navigation }: Props) {
         {/* ── Section 1: Name & Icon ──────────────────────────────────── */}
         <View style={[s.section, { backgroundColor: colors.bgCard }]}>
           <Row
-            label="Habit Name"
+            label={t('wizard.habitName')}
             value={name.trim() || 'Tap to set'}
             valueFaded={!name.trim()}
             onPress={() => navigation.navigate('HabitName')}
           />
           <Row
-            label="Icon"
+            label={t('wizard.icon')}
             value={icon}
             onPress={() => navigation.navigate('HabitIcon')}
           />
           <Row
-            label="Description"
+            label={t('wizard.description')}
             value={description.trim() || 'Tap to add (optional)'}
             valueFaded={!description.trim()}
             onPress={() => navigation.navigate('Description')}
@@ -176,12 +178,12 @@ export default function HabitTypeStep({ navigation }: Props) {
         {/* ── Section 2: Frequency & Measure By ──────────────────────── */}
         <View style={[s.section, { backgroundColor: colors.bgCard }]}>
           <Row
-            label="Frequency"
+            label={t('wizard.frequency')}
             value={freqLabel}
             onPress={() => navigation.navigate('Frequency')}
           />
           <Row
-            label="Measure By"
+            label={t('wizard.measureBy')}
             value={measureLabel}
             onPress={() => navigation.navigate('MeasureBy')}
             last
@@ -191,7 +193,7 @@ export default function HabitTypeStep({ navigation }: Props) {
         {/* ── Section 3: Reminder ─────────────────────────────────────── */}
         <View style={[s.section, { backgroundColor: colors.bgCard }]}>
           <View style={[s.row, { backgroundColor: colors.bgCard, borderBottomColor: colors.separator }, !reminderEnabled && s.rowLast]}>
-            <Text style={[s.rowLabel, { color: colors.text1 }]}>Reminder</Text>
+            <Text style={[s.rowLabel, { color: colors.text1 }]}>{t('wizard.reminder')}</Text>
             <Switch
               value={reminderEnabled}
               onValueChange={setReminderEnabled}

@@ -25,6 +25,7 @@ import {
   searchPredetermined,
   type PredeterminedHabit,
 } from '@/lib/predeterminedHabits';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/context/ThemeContext';
 import { R } from '@/lib/tokens';
 
@@ -32,6 +33,7 @@ type Props = NativeStackScreenProps<WizardStackParamList, 'HabitSource'>;
 
 export default function HabitSourceStep({ navigation, route }: Props) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const { reset, loadPredetermined, setGoalType } = useWizardStore();
   const [query, setQuery] = useState('');
   const goalType = route.params?.goalType;
@@ -54,7 +56,7 @@ export default function HabitSourceStep({ navigation, route }: Props) {
     navigation.setOptions({
       headerLeft: () => (
         <Pressable onPress={handleCancel} hitSlop={12} style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}>
-          <Text style={[styles.cancelText, { color: colors.teal }]}>Cancel</Text>
+          <Text style={[styles.cancelText, { color: colors.teal }]}>{t('wizard.cancel')}</Text>
         </Pressable>
       ),
       headerRight: () => null,
@@ -100,12 +102,12 @@ export default function HabitSourceStep({ navigation, route }: Props) {
             style={({ pressed }) => [styles.createCustomBtn, { backgroundColor: colors.teal }, pressed && styles.createCustomBtnPressed]}
           >
             <Plus size={20} color={colors.white} strokeWidth={2.5} />
-            <Text style={[styles.createCustomText, { color: colors.white }]}>Create a custom habit</Text>
+            <Text style={[styles.createCustomText, { color: colors.white }]}>{t('wizard.createCustom')}</Text>
           </Pressable>
 
           <View style={styles.searchWrap}>
             <TextInput
-              placeholder="Search habits"
+              placeholder={t('wizard.searchHabitsPlaceholder')}
               placeholderTextColor={colors.text4}
               value={query}
               onChangeText={setQuery}

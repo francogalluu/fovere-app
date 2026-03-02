@@ -8,12 +8,14 @@ import {
   ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 
 import { useTheme } from '@/context/ThemeContext';
 import { useHabitStore } from '@/store';
 
 export default function DeletedHabitsScreen() {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const habits = useHabitStore(s => s.habits);
   const unarchiveHabit = useHabitStore(s => s.unarchiveHabit);
 
@@ -36,15 +38,15 @@ export default function DeletedHabitsScreen() {
   return (
     <SafeAreaView style={[s.safe, { backgroundColor: colors.bgSecondary }]} edges={['bottom']}>
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
-        <Text style={[s.title, { color: colors.text1 }]}>Deleted Habits</Text>
+        <Text style={[s.title, { color: colors.text1 }]}>{t('deletedHabits.title')}</Text>
 
         <Text style={[s.subtitle, { color: colors.text3 }]}>
-          Deleted habits stay here for 30 days, then are removed permanently.
+          {t('deletedHabits.subtitle')}
         </Text>
 
         <View style={[s.card, { backgroundColor: colors.bgCard, borderColor: colors.separator }]}>
           <TextInput
-            placeholder="Search deleted habits"
+            placeholder={t('deletedHabits.searchPlaceholder')}
             placeholderTextColor={colors.text3}
             value={query}
             onChangeText={setQuery}
@@ -59,7 +61,7 @@ export default function DeletedHabitsScreen() {
           />
 
           {filtered.length === 0 ? (
-            <Text style={[s.emptyText, { color: colors.text2 }]}>No deleted habits.</Text>
+            <Text style={[s.emptyText, { color: colors.text2 }]}>{t('deletedHabits.empty')}</Text>
           ) : (
             filtered.map(h => (
               <View key={h.id} style={[s.row, { borderBottomColor: colors.separator }]}>
@@ -77,7 +79,7 @@ export default function DeletedHabitsScreen() {
                     pressed && { opacity: 0.7 },
                   ]}
                 >
-                  <Text style={[s.restoreText, { color: colors.white }]}>Reactivate</Text>
+                  <Text style={[s.restoreText, { color: colors.white }]}>{t('deletedHabits.reactivate')}</Text>
                 </Pressable>
               </View>
             ))

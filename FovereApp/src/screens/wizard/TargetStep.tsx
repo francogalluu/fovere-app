@@ -7,6 +7,7 @@
 import React, { useLayoutEffect } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { Minus, Plus } from 'lucide-react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { WizardStackParamList } from '@/navigation/types';
@@ -16,23 +17,24 @@ import { useWizardStore } from '@/store/wizardStore';
 type Props = NativeStackScreenProps<WizardStackParamList, 'Target'>;
 
 export default function TargetStep({ navigation }: Props) {
+  const { t } = useTranslation();
   const { colors } = useTheme();
   const { target, unit, setTarget } = useWizardStore();
 
   useLayoutEffect(() => {
     navigation.setOptions({
-      title: 'Target',
+      title: t('wizard.target'),
       headerRight: () => (
         <Pressable onPress={() => navigation.goBack()} hitSlop={8}>
-          <Text style={[s.doneBtn, { color: colors.teal }]}>Done</Text>
+          <Text style={[s.doneBtn, { color: colors.teal }]}>{t('common.done')}</Text>
         </Pressable>
       ),
     });
-  }, [navigation, colors.teal]);
+  }, [navigation, colors.teal, t]);
 
   return (
     <SafeAreaView style={[s.safe, { backgroundColor: colors.bgSecondary }]} edges={['bottom']}>
-      <Text style={[s.helper, { color: colors.text2 }]}>Set the quantity you want to reach each time.</Text>
+      <Text style={[s.helper, { color: colors.text2 }]}>{t('wizard.targetHelper')}</Text>
 
       <View style={[s.card, { backgroundColor: colors.bgCard }]}>
         <View style={s.stepper}>

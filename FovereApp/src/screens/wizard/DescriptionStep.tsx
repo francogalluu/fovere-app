@@ -9,6 +9,7 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { WizardStackParamList } from '@/navigation/types';
 import { useTheme } from '@/context/ThemeContext';
@@ -17,20 +18,21 @@ import { useWizardStore } from '@/store/wizardStore';
 type Props = NativeStackScreenProps<WizardStackParamList, 'Description'>;
 
 export default function DescriptionStep({ navigation }: Props) {
+  const { t } = useTranslation();
   const { colors } = useTheme();
   const description = useWizardStore((s) => s.description);
   const setDescription = useWizardStore((s) => s.setDescription);
 
   useLayoutEffect(() => {
     navigation.setOptions({
-      title: 'Description',
+      title: t('wizard.description'),
       headerRight: () => (
         <Pressable onPress={() => navigation.goBack()} hitSlop={8}>
-          <Text style={[s.doneBtn, { color: colors.teal }]}>Done</Text>
+          <Text style={[s.doneBtn, { color: colors.teal }]}>{t('common.done')}</Text>
         </Pressable>
       ),
     });
-  }, [navigation, colors.teal]);
+  }, [navigation, colors.teal, t]);
 
   return (
     <SafeAreaView style={[s.safe, { backgroundColor: colors.bgSecondary }]} edges={['bottom']}>
@@ -40,7 +42,7 @@ export default function DescriptionStep({ navigation }: Props) {
       >
         <View style={s.container}>
           <Text style={[s.helper, { color: colors.text2 }]}>
-            Add an optional note about this habit. It will appear on the habit detail screen.
+            {t('wizard.descriptionHelper')}
           </Text>
 
           <View style={[s.inputCard, { backgroundColor: colors.bgCard }]}>
@@ -48,7 +50,7 @@ export default function DescriptionStep({ navigation }: Props) {
               style={[s.input, { color: colors.text1 }]}
               value={description}
               onChangeText={setDescription}
-              placeholder="e.g. Run for at least 30 minutes before work"
+              placeholder={t('wizard.descriptionPlaceholder')}
               placeholderTextColor={colors.text4}
               multiline
               numberOfLines={4}

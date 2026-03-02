@@ -9,6 +9,7 @@ import {
   TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import * as Haptics from 'expo-haptics';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { Palette } from '@/lib/theme';
@@ -27,6 +28,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'HabitDetail'>;
 
 export default function HabitDetailScreen({ route, navigation }: Props) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const { id, date: paramDate } = route.params;
   const todayStr = today();
   const viewDate = paramDate ?? todayStr;
@@ -77,7 +79,7 @@ export default function HabitDetailScreen({ route, navigation }: Props) {
           onPress={() => navigation.navigate('EditHabit', { id: habit.id, screen: 'HabitType' })}
           hitSlop={8}
         >
-          <Text style={[s.headerEdit, { color: accentColor }]}>Edit</Text>
+          <Text style={[s.headerEdit, { color: accentColor }]}>{t('habitDetail.edit')}</Text>
         </Pressable>
       ),
     });
@@ -143,11 +145,11 @@ export default function HabitDetailScreen({ route, navigation }: Props) {
   const handlePause = () => {
     if (!habit) return;
     Alert.alert(
-      'Pause habit',
-      `"${habit.name}" will be hidden from your daily list. You can resume it anytime from the Paused section on the home screen.`,
+      t('habitDetail.pauseTitle'),
+      t('habitDetail.pauseMessage', { name: habit.name }),
       [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Pause', onPress: () => { pauseHabit(id); navigation.goBack(); } },
+        { text: t('common.cancel'), style: 'cancel' },
+        { text: t('habitDetail.pause'), onPress: () => { pauseHabit(id); navigation.goBack(); } },
       ],
     );
   };
@@ -155,12 +157,12 @@ export default function HabitDetailScreen({ route, navigation }: Props) {
   const handleDelete = () => {
     if (!habit) return;
     Alert.alert(
-      'Delete Habit',
-      `"${habit.name}" will be removed from your Home screen from today onward, but its past history will stay in Calendar and Analytics.`,
+      t('habitDetail.deleteTitle'),
+      t('habitDetail.deleteMessage', { name: habit.name }),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('habitDetail.delete'),
           style: 'destructive',
           onPress: () => { archiveHabit(id); navigation.goBack(); },
         },
@@ -172,7 +174,7 @@ export default function HabitDetailScreen({ route, navigation }: Props) {
     return (
       <SafeAreaView style={[s.safe, { backgroundColor: colors.bgSecondary }]} edges={['bottom']}>
         <View style={s.notFound}>
-          <Text style={[s.notFoundText, { color: colors.text2 }]}>Habit not found.</Text>
+          <Text style={[s.notFoundText, { color: colors.text2 }]}>{t('habitDetail.notFound')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -213,13 +215,13 @@ export default function HabitDetailScreen({ route, navigation }: Props) {
           ) : null}
           <Text style={[s.goalLabel, { color: colors.text3 }]}>{goalLabel}</Text>
           {overLimit && (
-            <Text style={[s.overLimitBadge, { color: colors.danger }]}>Over limit — {currentValue - habit.target} too many</Text>
+            <Text style={[s.overLimitBadge, { color: colors.danger }]}>{t('habitDetail.overLimitTooMany', { count: currentValue - habit.target })}</Text>
           )}
         </View>
 
         {/* ── Controls ──────────────────────────────────────────────────── */}
         {isViewingFuture && (
-          <Text style={[s.futureDateNote, { color: colors.text2 }]}>You can't add progress for future dates.</Text>
+          <Text style={[s.futureDateNote, { color: colors.text2 }]}>{t('habitDetail.futureDateNote')}</Text>
         )}
         {habit.kind === 'boolean' ? (
           <View style={s.boolRow}>
@@ -235,13 +237,13 @@ export default function HabitDetailScreen({ route, navigation }: Props) {
               ]}
             >
               <Text style={[s.boolBtnText, { color: accentColor }, completed && { color: colors.white }]}>
-                {completed ? 'Done ✓' : 'Mark Done'}
+                {completed ? t('habitDetail.done') : t('habitDetail.markDone')}
               </Text>
             </Pressable>
           </View>
         ) : isBreak ? (
           <View style={s.breakQuantitySection}>
-            <Text style={[s.breakQuantityLabel, { color: colors.text2 }]}>Amount today</Text>
+            <Text style={[s.breakQuantityLabel, { color: colors.text2 }]}>{t('habitDetail.amountToday')}</Text>
             <TextInput
               style={[s.breakQuantityInput, { color: colors.text1, borderColor: colors.separator, backgroundColor: colors.bgCard }]}
               value={breakInputText}
@@ -259,7 +261,7 @@ export default function HabitDetailScreen({ route, navigation }: Props) {
               <Text style={[s.breakLimitText, { color: colors.text2 }]}>Limit: {habit.target}{habit.unit ? ` ${habit.unit}` : ''}</Text>
               {currentValue > habit.target && (
                 <Text style={[s.breakExceededText, { color: colors.danger }]}>
-                  Exceeded by {currentValue - habit.target}
+                  {t('habitDetail.exceededBy', { count: currentValue - habit.target })}
                 </Text>
               )}
             </View>
@@ -279,10 +281,10 @@ export default function HabitDetailScreen({ route, navigation }: Props) {
         {/* ── Info rows ─────────────────────────────────────────────────── */}
         <View style={s.section}>
           <View style={[s.infoCard, { backgroundColor: colors.bgCard }]}>
-            <InfoRow label="Frequency"   value={freqLabel}    last={false} colors={colors} />
-            <InfoRow label="Measurement" value={measureLabel} last={false} colors={colors} />
+            <InfoRow label={t('habitDetail.frequency')}   value={freqLabel}    last={false} colors={colors} />
+            <InfoRow label={t('habitDetail.measurement')} value={measureLabel} last={false} colors={colors} />
             <InfoRow
-              label={isBreak ? 'Limit' : 'Target'}
+              label={isBreak ? t('habitDetail.limit') : t('habitDetail.target')}
               value={`${habit.target}${habit.unit ? ' ' + habit.unit : ''}`}
               last={true}
               colors={colors}
@@ -294,7 +296,7 @@ export default function HabitDetailScreen({ route, navigation }: Props) {
         {habit.description ? (
           <View style={s.section}>
             <View style={[s.descriptionCard, { backgroundColor: colors.bgCard }]}>
-              <Text style={[s.descriptionLabel, { color: colors.text2 }]}>Description</Text>
+              <Text style={[s.descriptionLabel, { color: colors.text2 }]}>{t('habitDetail.description')}</Text>
               <Text style={[s.descriptionText, { color: colors.text1 }]}>{habit.description}</Text>
             </View>
           </View>
@@ -308,7 +310,7 @@ export default function HabitDetailScreen({ route, navigation }: Props) {
                 onPress={handlePause}
                 style={({ pressed }) => [s.pauseCard, { backgroundColor: colors.bgCard }, pressed && { opacity: 0.7 }]}
               >
-                <Text style={[s.pauseText, { color: colors.teal }]}>Pause habit</Text>
+                <Text style={[s.pauseText, { color: colors.teal }]}>{t('habitDetail.pauseButton')}</Text>
               </Pressable>
             </View>
             <View style={s.section}>
@@ -316,7 +318,7 @@ export default function HabitDetailScreen({ route, navigation }: Props) {
                 onPress={handleDelete}
                 style={({ pressed }) => [s.deleteCard, { backgroundColor: colors.bgCard }, pressed && { opacity: 0.7 }]}
               >
-                <Text style={[s.deleteText, { color: colors.danger }]}>Delete Habit</Text>
+                <Text style={[s.deleteText, { color: colors.danger }]}>{t('habitDetail.deleteButton')}</Text>
               </Pressable>
             </View>
           </>

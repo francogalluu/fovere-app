@@ -1,6 +1,7 @@
 import React, { useLayoutEffect, useMemo, useState } from 'react';
 import { View, Text, Pressable, FlatList, StyleSheet, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { Check } from 'lucide-react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { WizardStackParamList } from '@/navigation/types';
@@ -13,6 +14,7 @@ type Props = NativeStackScreenProps<WizardStackParamList, 'HabitIcon'>;
 const NUM_COLS = 6;
 
 export default function HabitIconStep({ navigation }: Props) {
+  const { t } = useTranslation();
   const { colors } = useTheme();
   const icon    = useWizardStore(s => s.icon);
   const setIcon = useWizardStore(s => s.setIcon);
@@ -22,20 +24,20 @@ export default function HabitIconStep({ navigation }: Props) {
 
   useLayoutEffect(() => {
     navigation.setOptions({
-      title: 'Icon',
+      title: t('wizard.icon'),
       headerRight: () => (
         <Pressable onPress={() => navigation.goBack()} hitSlop={8}>
-          <Text style={[s.doneBtn, { color: colors.teal }]}>Done</Text>
+          <Text style={[s.doneBtn, { color: colors.teal }]}>{t('common.done')}</Text>
         </Pressable>
       ),
     });
-  }, [navigation, colors.teal]);
+  }, [navigation, colors.teal, t]);
 
   return (
     <SafeAreaView style={[s.safe, { backgroundColor: colors.bgSecondary }]} edges={['bottom']}>
-      <Text style={[s.helper, { color: colors.text2 }]}>Choose an emoji to represent your habit.</Text>
+      <Text style={[s.helper, { color: colors.text2 }]}>{t('wizard.iconHelper')}</Text>
       <TextInput
-        placeholder="Search emojis (e.g. water, run, book)"
+        placeholder={t('wizard.searchEmojisPlaceholder')}
         placeholderTextColor={colors.text4}
         value={query}
         onChangeText={setQuery}

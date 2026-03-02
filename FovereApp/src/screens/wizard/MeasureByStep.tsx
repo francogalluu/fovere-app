@@ -9,6 +9,7 @@ import {
   ScrollView, StyleSheet, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Check, Minus, Plus } from 'lucide-react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -80,22 +81,23 @@ function totalMinutesToHoursMinutes(total: number): { hours: number; minutes: nu
 }
 
 export default function MeasureByStep({ navigation }: Props) {
+  const { t } = useTranslation();
   const { colors, isDark } = useTheme();
   const { kind, target, unit, goalType, setKind, setTarget, setUnit } = useWizardStore();
   const timeMode = isTimeMode(kind, unit);
 
   useLayoutEffect(() => {
     navigation.setOptions({
-      title: 'Measure By',
+      title: t('wizard.measureBy'),
       headerRight: () => (
         <View style={s.doneBtnWrap}>
           <Pressable onPress={() => navigation.goBack()} hitSlop={8}>
-            <Text style={[s.doneBtn, { color: colors.teal }]}>Done</Text>
+            <Text style={[s.doneBtn, { color: colors.teal }]}>{t('common.done')}</Text>
           </Pressable>
         </View>
       ),
     });
-  }, [navigation, colors.teal]);
+  }, [navigation, colors.teal, t]);
 
   const handleDecrement = () => setTarget(Math.max(1, target - 1));
   const handleIncrement = () => setTarget(target + 1);
@@ -220,10 +222,10 @@ export default function MeasureByStep({ navigation }: Props) {
           {/* ── Target: Quantity (stepper + unit) ───────────────────────── */}
           {kind === 'numeric' && !timeMode && (
             <>
-              <Text style={[s.sectionLabel, { color: colors.text2 }]}>TARGET</Text>
+              <Text style={[s.sectionLabel, { color: colors.text2 }]}>{t('wizard.target').toUpperCase()}</Text>
               <View style={[s.card, { backgroundColor: colors.bgCard }]}>
                 <View style={[s.row, s.rowBorder, { borderBottomColor: colors.separator }]}>
-                  <Text style={[s.label, { color: colors.text1 }]}>{goalType === 'break' ? 'Daily limit' : 'Daily target'}</Text>
+                  <Text style={[s.label, { color: colors.text1 }]}>{goalType === 'break' ? t('wizard.dailyLimit') : t('wizard.dailyTarget')}</Text>
                   <View style={s.stepper}>
                     <Pressable onPress={handleDecrement} style={s.stepBtn}>
                       <Minus size={18} color={target <= 1 ? colors.chevron : colors.teal} strokeWidth={2.5} />
@@ -238,7 +240,7 @@ export default function MeasureByStep({ navigation }: Props) {
                       returnKeyType="done"
                       maxLength={6}
                       selectTextOnFocus
-                      accessibilityLabel="Daily target"
+                      accessibilityLabel={t('wizard.dailyTarget')}
                     />
                     <Pressable onPress={handleIncrement} style={s.stepBtn}>
                       <Plus size={18} color={colors.teal} strokeWidth={2.5} />
@@ -246,12 +248,12 @@ export default function MeasureByStep({ navigation }: Props) {
                   </View>
                 </View>
                 <View style={[s.row]}>
-                  <Text style={[s.label, { color: colors.text1 }]}>Unit</Text>
+                  <Text style={[s.label, { color: colors.text1 }]}>{t('wizard.unit')}</Text>
                   <TextInput
                     style={[s.unitInput, { color: colors.text2 }]}
                     value={unit}
                     onChangeText={setUnit}
-                    placeholder="min, glasses, pages…"
+                    placeholder={t('wizard.unitPlaceholder')}
                     placeholderTextColor={colors.chevron}
                     returnKeyType="done"
                     maxLength={20}

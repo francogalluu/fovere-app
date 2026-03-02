@@ -1,6 +1,7 @@
 import React, { useLayoutEffect } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { Check } from 'lucide-react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { WizardStackParamList } from '@/navigation/types';
@@ -10,36 +11,37 @@ import type { Frequency } from '@/types/habit';
 
 type Props = NativeStackScreenProps<WizardStackParamList, 'Frequency'>;
 
-const OPTIONS: { value: Frequency; label: string; description: string }[] = [
-  { value: 'daily',   label: 'Daily',   description: 'Track every day' },
-  { value: 'weekly',  label: 'Weekly',  description: 'Track once a week' },
-  { value: 'monthly', label: 'Monthly', description: 'Track once a month' },
-];
-
 export default function FrequencyStep({ navigation }: Props) {
+  const { t } = useTranslation();
   const { colors } = useTheme();
   const frequency    = useWizardStore(s => s.frequency);
   const setFrequency = useWizardStore(s => s.setFrequency);
 
+  const options = React.useMemo(() => [
+    { value: 'daily' as Frequency, label: t('wizard.frequencyDaily'), description: t('wizard.frequencyDescDaily') },
+    { value: 'weekly' as Frequency, label: t('wizard.frequencyWeekly'), description: t('wizard.frequencyDescWeekly') },
+    { value: 'monthly' as Frequency, label: t('wizard.frequencyMonthly'), description: t('wizard.frequencyDescMonthly') },
+  ], [t]);
+
   useLayoutEffect(() => {
     navigation.setOptions({
-      title: 'Frequency',
+      title: t('wizard.frequency'),
       headerRight: () => (
         <Pressable onPress={() => navigation.goBack()} hitSlop={8}>
-          <Text style={[s.doneBtn, { color: colors.teal }]}>Done</Text>
+          <Text style={[s.doneBtn, { color: colors.teal }]}>{t('common.done')}</Text>
         </Pressable>
       ),
     });
-  }, [navigation, colors.teal]);
+  }, [navigation, colors.teal, t]);
 
   return (
     <SafeAreaView style={[s.safe, { backgroundColor: colors.bgSecondary }]} edges={['bottom']}>
-      <Text style={[s.helper, { color: colors.text2 }]}>How often do you want to track this habit?</Text>
+      <Text style={[s.helper, { color: colors.text2 }]}>{t('wizard.frequencyHelper')}</Text>
 
       <View style={[s.card, { backgroundColor: colors.bgCard }]}>
-        {OPTIONS.map((opt, i) => {
+        {options.map((opt, i) => {
           const selected = frequency === opt.value;
-          const last     = i === OPTIONS.length - 1;
+          const last     = i === options.length - 1;
           return (
             <Pressable
               key={opt.value}

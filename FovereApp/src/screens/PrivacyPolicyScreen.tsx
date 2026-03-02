@@ -1,41 +1,27 @@
 import React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 
 import { useTheme } from '@/context/ThemeContext';
 
 export default function PrivacyPolicyScreen() {
   const { colors } = useTheme();
+  const { t } = useTranslation();
 
   return (
     <SafeAreaView style={[s.safe, { backgroundColor: colors.bgSecondary }]} edges={['bottom']}>
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
-        <Text style={[s.title, { color: colors.text1 }]}>Privacy Policy</Text>
-        <Text style={[s.meta, { color: colors.text3 }]}>Last updated: March 2, 2026</Text>
+        <Text style={[s.title, { color: colors.text1 }]}>{t('legal.privacyTitle')}</Text>
+        <Text style={[s.meta, { color: colors.text3 }]}>{t('legal.privacyLastUpdated')}</Text>
 
         <View style={[s.card, { backgroundColor: colors.bgCard }]}>
+          <Text style={[s.paragraph, { color: colors.text1 }]}>{t('legal.privacyIntro')}</Text>
+          <Text style={[s.paragraph, { color: colors.text1 }]}>{t('legal.privacyNoData')}</Text>
+          <Text style={[s.paragraph, { color: colors.text1 }]}>{t('legal.privacyNotifications')}</Text>
+          <Text style={[s.paragraph, { color: colors.text1 }]}>{t('legal.privacyNoAnalytics')}</Text>
           <Text style={[s.paragraph, { color: colors.text1 }]}>
-            Fovere is developed and operated by me, Franco Galluzzo.
-          </Text>
-          <Text style={[s.paragraph, { color: colors.text1 }]}>
-            Fovere does not collect, store, or process any personal data on external servers. All
-            data you enter into the app (such as your habits and usage history) is stored locally
-            on your device and remains under your control. I do not operate a backend server for
-            Fovere, and I do not transmit your data to myself or to any third parties.
-          </Text>
-
-          <Text style={[s.paragraph, { color: colors.text1 }]}>
-            The app may use platform features such as local notifications to remind you about your
-            habits. These notifications are scheduled and handled by your device; the content of
-            your reminders is not sent to any servers that I control.
-          </Text>
-
-          <Text style={[s.paragraph, { color: colors.text1 }]}>
-            I do not use analytics, advertising, or tracking technologies in Fovere.
-          </Text>
-
-          <Text style={[s.paragraph, { color: colors.text1 }]}>
-            If you have any questions about this policy, you can contact me at:{' '}
+            {t('legal.privacyContact')}{' '}
             <Text style={[s.link, { color: colors.teal }]}>fovereapp@gmail.com</Text>.
           </Text>
         </View>

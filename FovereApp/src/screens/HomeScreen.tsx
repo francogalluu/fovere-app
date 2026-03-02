@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NavigationProp } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import * as Haptics from 'expo-haptics';
 import { Plus, Play, Sprout, CircleSlash, LayoutGrid } from 'lucide-react-native';
 
@@ -56,6 +57,7 @@ function HomeDayContent({
   colors: ReturnType<typeof useTheme>['colors'];
 }) {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+  const { t } = useTranslation();
   const haptic = Boolean(useSettingsStore(s => s.hapticFeedback));
   const rawHabits = useHabitStore(s => s.habits);
   const entries = useHabitStore(s => s.entries);
@@ -167,7 +169,7 @@ function HomeDayContent({
 
   const isReadOnly = isFuture(date);
   const isTodayDate = date === today();
-  const dailySectionLabel = `${formatDateTitle(date)}'s Habits`;
+  const dailySectionLabel = t('home.todaysHabits', { date: formatDateTitle(date) });
 
   const getCardData = useCallback(
     (habit: Habit) => ({
@@ -190,12 +192,12 @@ function HomeDayContent({
 
   const summarySections: DaySummarySection[] = useMemo(
     () => [
-      { title: 'Daily', habits: dailyBuildHabitsOnDate.map(toSummaryHabit) },
-      { title: 'Weekly', habits: weeklyBuildHabitsOnDate.map(toSummaryHabit) },
-      { title: 'Monthly', habits: monthlyBuildHabitsOnDate.map(toSummaryHabit) },
-      { title: 'Break Habits', habits: allBreakHabitsOnDate.map(toSummaryHabit) },
+      { title: t('daySummary.daily'), habits: dailyBuildHabitsOnDate.map(toSummaryHabit) },
+      { title: t('daySummary.weekly'), habits: weeklyBuildHabitsOnDate.map(toSummaryHabit) },
+      { title: t('daySummary.monthly'), habits: monthlyBuildHabitsOnDate.map(toSummaryHabit) },
+      { title: t('daySummary.breakHabits'), habits: allBreakHabitsOnDate.map(toSummaryHabit) },
     ],
-    [dailyBuildHabitsOnDate, weeklyBuildHabitsOnDate, monthlyBuildHabitsOnDate, allBreakHabitsOnDate, toSummaryHabit],
+    [t, dailyBuildHabitsOnDate, weeklyBuildHabitsOnDate, monthlyBuildHabitsOnDate, allBreakHabitsOnDate, toSummaryHabit],
   );
 
   const handleComplete = useCallback(
@@ -260,7 +262,7 @@ function HomeDayContent({
             <Text style={[s.sectionTitleText, compact && s.sectionTitleCompact, { color: colors.text1 }]}>{dailySectionLabel}</Text>
             {!isTodayDate && (
               <View style={[s.sectionBadge, { backgroundColor: colors.bgSecondary }]}>
-                <Text style={[s.sectionBadgeText, { color: colors.text2 }]}>{isReadOnly ? 'Upcoming' : 'Past'}</Text>
+                <Text style={[s.sectionBadgeText, { color: colors.text2 }]}>{isReadOnly ? t('home.upcoming') : t('home.past')}</Text>
               </View>
             )}
           </View>
@@ -273,10 +275,10 @@ function HomeDayContent({
       {allBreakHabitsOnDate.length > 0 && (
         <View style={[s.section, compact && s.sectionCompact]}>
           <View style={s.sectionTitleRow}>
-            <Text style={[s.sectionTitleText, compact && s.sectionTitleCompact, { color: colors.text1 }]}>Break Habits</Text>
+            <Text style={[s.sectionTitleText, compact && s.sectionTitleCompact, { color: colors.text1 }]}>{t('home.breakHabits')}</Text>
             {!isTodayDate && (
               <View style={[s.sectionBadge, { backgroundColor: colors.bgSecondary }]}>
-                <Text style={[s.sectionBadgeText, { color: colors.text2 }]}>{isReadOnly ? 'Upcoming' : 'Past'}</Text>
+                <Text style={[s.sectionBadgeText, { color: colors.text2 }]}>{isReadOnly ? t('home.upcoming') : t('home.past')}</Text>
               </View>
             )}
           </View>
@@ -289,7 +291,7 @@ function HomeDayContent({
       {weeklyBuildHabitsOnDate.length > 0 && (
         <View style={[s.section, compact && s.sectionCompact]}>
           <View style={s.sectionTitleRow}>
-            <Text style={[s.sectionTitleText, compact && s.sectionTitleCompact, { color: colors.text1 }]}>Weekly Habits</Text>
+            <Text style={[s.sectionTitleText, compact && s.sectionTitleCompact, { color: colors.text1 }]}>{t('home.weeklyHabits')}</Text>
             {weeklyBuildTotal > 0 && (
               <Text style={[s.sectionMeta, { color: colors.text2 }]}>
                 {Math.round((weeklyBuildCompleted / weeklyBuildTotal) * 100)}% this week
@@ -305,7 +307,7 @@ function HomeDayContent({
       {monthlyBuildHabitsOnDate.length > 0 && (
         <View style={[s.section, compact && s.sectionCompact]}>
           <View style={s.sectionTitleRow}>
-            <Text style={[s.sectionTitleText, compact && s.sectionTitleCompact, { color: colors.text1 }]}>Monthly Habits</Text>
+            <Text style={[s.sectionTitleText, compact && s.sectionTitleCompact, { color: colors.text1 }]}>{t('home.monthlyHabits')}</Text>
             {monthlyBuildTotal > 0 && (
               <Text style={[s.sectionMeta, { color: colors.text2 }]}>
                 {Math.round((monthlyBuildCompleted / monthlyBuildTotal) * 100)}% this month
@@ -320,9 +322,9 @@ function HomeDayContent({
 
       {habits.length === 0 && (
         <View style={s.emptyState}>
-          <Text style={[s.emptyTitle, { color: colors.text1 }]}>No habits yet</Text>
+          <Text style={[s.emptyTitle, { color: colors.text1 }]}>{t('home.noHabitsYetShort')}</Text>
           <Text style={[s.emptyBody, { color: colors.text2 }]}>
-            Tap + above to create your first habit.
+            {t('home.addOneBelow')}
           </Text>
         </View>
       )}
@@ -336,14 +338,14 @@ function HomeDayContent({
             pressed && { opacity: 0.85 },
           ]}
         >
-          <Text style={[s.todayPillText, { color: colors.teal }]}>Jump to Today</Text>
+          <Text style={[s.todayPillText, { color: colors.teal }]}>{t('home.jumpToToday')}</Text>
         </Pressable>
       )}
 
       {isTodayDate && pausedHabits.length > 0 && (
         <View style={[s.section, compact && s.sectionCompact]}>
           <View style={s.sectionTitleRow}>
-            <Text style={[s.sectionTitleText, compact && s.sectionTitleCompact, { color: colors.text1 }]}>Paused</Text>
+            <Text style={[s.sectionTitleText, compact && s.sectionTitleCompact, { color: colors.text1 }]}>{t('home.paused')}</Text>
           </View>
           <View style={s.pausedList}>
             {pausedHabits.map(h => (
@@ -358,7 +360,7 @@ function HomeDayContent({
                   style={({ pressed }) => [s.resumeBtn, { backgroundColor: colors.teal }, pressed && { opacity: 0.8 }]}
                 >
                   <Play size={16} color={colors.white} strokeWidth={2.5} />
-                  <Text style={[s.resumeBtnText, { color: colors.white }]}>Resume</Text>
+                  <Text style={[s.resumeBtnText, { color: colors.white }]}>{t('common.resume')}</Text>
                 </Pressable>
               </View>
             ))}
@@ -384,6 +386,7 @@ function HomeDayContent({
 export default function HomeScreen() {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const haptic = Boolean(useSettingsStore(s => s.hapticFeedback));
   const compactHomeView = useSettingsStore(s => s.compactHomeView);
   const setCompactHomeView = useSettingsStore(s => s.setCompactHomeView);
@@ -557,7 +560,7 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={[s.safe, { backgroundColor: colors.bgHome }]}>
       <View style={[s.header, { backgroundColor: colors.bgHome }]}>
-        <Text style={[s.titleApp, { color: colors.text1 }]}>Fovere</Text>
+        <Text style={[s.titleApp, { color: colors.text1 }]}>{t('home.title')}</Text>
         <View style={s.headerActions}>
           <Pressable
             onPress={handleToggleCompact}
@@ -625,7 +628,7 @@ export default function HomeScreen() {
         <View style={s.addSheetBackdrop}>
           <Pressable style={StyleSheet.absoluteFill} onPress={closeAddSheet} />
           <Animated.View style={[s.addSheetCard, { backgroundColor: colors.bgCard, borderColor: colors.separator, transform: [{ translateY: addSheetSlide }] }]}>
-            <Text style={[s.addSheetTitle, { color: colors.text2 }]}>New habit</Text>
+            <Text style={[s.addSheetTitle, { color: colors.text2 }]}>{t('home.newHabit')}</Text>
             <Pressable
               onPress={handleBuildHabit}
               style={({ pressed }) => [s.addSheetOption, pressed && { backgroundColor: colors.bgSecondary }]}
@@ -633,7 +636,7 @@ export default function HomeScreen() {
               <View style={[s.addSheetIconWrapBuild, { backgroundColor: colors.successSoft }]}>
                 <Sprout size={22} color={colors.success} strokeWidth={2.5} />
               </View>
-              <Text style={[s.addSheetOptionText, { color: colors.text1 }]}>Build good habit</Text>
+              <Text style={[s.addSheetOptionText, { color: colors.text1 }]}>{t('home.buildGoodHabit')}</Text>
             </Pressable>
             <Pressable
               onPress={handleBreakHabit}
@@ -642,7 +645,7 @@ export default function HomeScreen() {
               <View style={[s.addSheetIconWrapBreak, { backgroundColor: colors.dangerSoft }]}>
                 <CircleSlash size={22} color={colors.danger} strokeWidth={2.5} />
               </View>
-              <Text style={[s.addSheetOptionText, { color: colors.text1 }]}>Break bad habit</Text>
+              <Text style={[s.addSheetOptionText, { color: colors.text1 }]}>{t('home.breakBadHabit')}</Text>
             </Pressable>
           </Animated.View>
         </View>

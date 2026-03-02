@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { X, Check, AlertTriangle } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { formatDateTitle } from '@/lib/dates';
 import { useTheme } from '@/context/ThemeContext';
 import { ScoreRing } from '@/components/ScoreRing';
@@ -66,6 +67,7 @@ function AnimatedSummaryRow({
   };
   colors: { bgCard: string; success: string; danger: string; text1: string; text2: string; ring: string };
 }) {
+  const { t } = useTranslation();
   const opacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(14)).current;
 
@@ -115,7 +117,7 @@ function AnimatedSummaryRow({
           <Text style={[st.rowMeta, { color: colors.text2 }, over && { color: colors.danger }]}>
             {currentValue} / {habit.target}
             {habit.unit ? ` ${habit.unit}` : ''}
-            {over ? ' · Over limit' : ''}
+            {over ? ` · ${t('daySummary.overLimit')}` : ''}
           </Text>
         )}
       </View>
@@ -154,6 +156,7 @@ export function DaySummaryModal({
   sections,
 }: DaySummaryModalProps) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
   const hasAnyHabits = sections.some((sec) => sec.habits.length > 0);
 
@@ -170,7 +173,7 @@ export function DaySummaryModal({
           <Pressable
             onPress={onClose}
             style={({ pressed }) => [s.closeBtn, pressed && s.closeBtnPressed]}
-            accessibilityLabel="Close"
+            accessibilityLabel={t('common.close')}
           >
             <X size={24} color={colors.text1} strokeWidth={2} />
           </Pressable>
@@ -183,17 +186,20 @@ export function DaySummaryModal({
         >
           <View style={[s.hero, { backgroundColor: colors.bgCard }]}>
             <View style={s.heroLeft}>
-              <Text style={[s.heroLabel, { color: colors.text2 }]}>Completion</Text>
+              <Text style={[s.heroLabel, { color: colors.text2 }]}>{t('daySummary.todaysProgress')}</Text>
               {total > 0 ? (
                 <Text style={[s.heroSub, { color: colors.text1 }]}>
-                  {completed} of {total} habits completed
+                  {t('daySummary.ofHabitsCompleted', { completed, total })}
                 </Text>
               ) : (
-                <Text style={[s.heroSub, { color: colors.text1 }]}>No habits for this day</Text>
+                <Text style={[s.heroSub, { color: colors.text1 }]}>{t('daySummary.noHabitsForDay')}</Text>
               )}
               {overLimit > 0 && (
                 <Text style={[s.overLimit, { color: colors.danger }]}>
-                  {overLimit} break {overLimit === 1 ? 'habit' : 'habits'} over limit
+                  {t('daySummary.overLimitLine', {
+                    count: overLimit,
+                    habitWord: overLimit === 1 ? t('daySummaryOverLimit.habit') : t('daySummaryOverLimit.habits'),
+                  })}
                 </Text>
               )}
             </View>
@@ -244,7 +250,7 @@ export function DaySummaryModal({
             </View>
           ) : (
             <View style={s.empty}>
-              <Text style={[s.emptyText, { color: colors.text2 }]}>No habits for this day</Text>
+              <Text style={[s.emptyText, { color: colors.text2 }]}>{t('daySummary.noHabitsForDay')}</Text>
             </View>
           )}
         </ScrollView>

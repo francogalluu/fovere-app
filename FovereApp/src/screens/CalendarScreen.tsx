@@ -1,12 +1,14 @@
 import React, { useMemo, useState, useCallback, useEffect } from 'react';
 import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import Svg, { Circle } from 'react-native-svg';
+import { format } from 'date-fns';
 import { ChevronLeft, ChevronRight, Flame, CalendarCheck } from 'lucide-react-native';
 import { useHabitStore } from '@/store';
 import { useSettingsStore } from '@/store/settingsStore';
 import { useTheme } from '@/context/ThemeContext';
-import { today, datesInRange, addDays, toLocalDateString, getWeekDates, getShortDayLabels } from '@/lib/dates';
+import { today, datesInRange, addDays, toLocalDateString, getWeekDates, getShortDayLabels, getDateLocale } from '@/lib/dates';
 import { getDaySummary } from '@/lib/daySummary';
 import { getHabitCurrentValue, dailyCompletedCount, isHabitActiveOnDate } from '@/lib/aggregates';
 import { getProgressColor } from '@/lib/progressColors';
@@ -19,15 +21,17 @@ function isoDate(y: number, m: number, d: number): string {
   return `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
 }
 
-function formatMonthDay(dateKey: string): string {
+function formatMonthDay(dateKey: string, locale: ReturnType<typeof getDateLocale>): string {
   const d = new Date(dateKey + 'T00:00:00');
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  return format(d, 'MMM d', { locale });
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function CalendarScreen() {
   const { colors } = useTheme();
+  const { t } = useTranslation();
+  const locale = getDateLocale();
   const rawHabits = useHabitStore(s => s.habits);
   const entries   = useHabitStore(s => s.entries);
   const weekStartsOn = useSettingsStore(s => s.weekStartsOn);
@@ -82,7 +86,7 @@ export default function CalendarScreen() {
     return cells;
   }, [currentMonth, weekStartsOn]);
 
-  const monthLabel = currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  const monthLabel = format(currentMonth, 'MMMM yyyy', { locale });
 
   const monthStats = useMemo(() => {
     const y = currentMonth.getFullYear();
@@ -109,7 +113,7 @@ export default function CalendarScreen() {
   const weekStartStr = toLocalDateString(weekStart);
 
   const weekChartBars = useMemo((): ChartBar[] => {
-    const labels = getShortDayLabels(weekStartsOn);
+    const labels = getShortDayLabels(weekStartsOn, locale);
     const dates = Array.from({ length: 7 }, (_, i) => addDays(weekStartStr, i));
     return dates.map((dateStr, i) => {
       const pct = dateStr <= todayStr ? getDaySummary(rawHabits, entries, dateStr, weekStartsOn).completionPct : 0;
@@ -122,10 +126,10 @@ export default function CalendarScreen() {
         target: total,
       };
     });
-  }, [weekStartStr, rawHabits, entries, todayStr, weekStartsOn]);
+  }, [weekStartStr, rawHabits, entries, todayStr, weekStartsOn, locale]);
 
   const weekDays = useMemo(() => {
-    const labels = getShortDayLabels(weekStartsOn);
+    const labels = getShortDayLabels(weekStartsOn, locale);
     return Array.from({ length: 7 }, (_, i) => {
       const d = new Date(weekStart);
       d.setDate(d.getDate() + i);
@@ -138,7 +142,7 @@ export default function CalendarScreen() {
         isToday:    dateStr === todayStr,
       };
     });
-  }, [weekStart, rawHabits, entries, todayStr, weekStartsOn]);
+  }, [weekStart, rawHabits, entries, todayStr, weekStartsOn, locale]);
 
   const weekStats = useMemo(() => {
     const past = weekDays.filter(d => !d.isFuture);
@@ -152,10 +156,10 @@ export default function CalendarScreen() {
     const s = weekStart;
     const e = weekEnd;
     if (s.getMonth() === e.getMonth()) {
-      return `${s.toLocaleDateString('en-US', { month: 'short' })} ${s.getDate()} – ${e.getDate()}, ${s.getFullYear()}`;
+      return `${format(s, 'MMM', { locale })} ${s.getDate()} – ${e.getDate()}, ${s.getFullYear()}`;
     }
-    return `${s.toLocaleDateString('en-US', { month: 'short' })} ${s.getDate()} – ${e.toLocaleDateString('en-US', { month: 'short' })} ${e.getDate()}, ${s.getFullYear()}`;
-  }, [weekStart, weekEnd]);
+    return `${format(s, 'MMM', { locale })} ${s.getDate()} – ${format(e, 'MMM', { locale })} ${e.getDate()}, ${s.getFullYear()}`;
+  }, [weekStart, weekEnd, locale]);
 
   // ── Streak (consecutive fully-completed days ending today/yesterday) ───────
 
@@ -217,7 +221,7 @@ export default function CalendarScreen() {
     <SafeAreaView style={[s.safe, { backgroundColor: colors.bgSecondary }]} edges={['top']}>
       {/* ── Header ────────────────────────────────────────────────────── */}
       <View style={s.header}>
-        <Text style={[s.headerTitle, { color: colors.text1 }]}>Calendar</Text>
+        <Text style={[s.headerTitle, { color: colors.text1 }]}>{t('calendar.title')}</Text>
 
         {/* Segmented control */}
         <View style={[s.seg, { backgroundColor: colors.separatorLight }]}>
@@ -228,7 +232,7 @@ export default function CalendarScreen() {
               style={[s.segBtn, view === v && [s.segBtnActive, { backgroundColor: colors.bgCard }]]}
             >
               <Text style={[s.segBtnText, { color: colors.text3 }, view === v && { color: colors.teal }]}>
-                {v.charAt(0).toUpperCase() + v.slice(1)}
+                {v === 'weekly' ? t('calendar.weekly') : t('calendar.monthly')}
               </Text>
             </Pressable>
           ))}
@@ -300,7 +304,7 @@ export default function CalendarScreen() {
             {/* ── Monthly calendar grid ──────────────────────────────── */}
             <View style={[s.calCard, { backgroundColor: colors.bgCard }]}>
               <View style={s.dayHeaders}>
-                {getShortDayLabels(weekStartsOn).map(d => (
+                {getShortDayLabels(weekStartsOn, locale).map(d => (
                   <Text key={d} style={[s.dayHeader, { color: colors.text4 }]}>{d}</Text>
                 ))}
               </View>
@@ -357,12 +361,12 @@ export default function CalendarScreen() {
             </View>
 
             <CompletionRingCard
-              title="Monthly completion"
-              subtitle={`${monthStats.completed} of ${monthStats.total} days\ncompleted`}
+              title={t('calendar.monthlyCompletion')}
+              subtitle={t('calendar.daysCompleted', { completed: monthStats.completed, total: monthStats.total })}
               pct={monthStats.pct}
               animationSlot="calendar-monthly"
             />
-            <StreakCard streak={currentStreak} daysCompleted={monthStats.completed} />
+            <StreakCard streak={currentStreak} daysCompleted={monthStats.completed} streakLabel={t('calendar.currentStreak')} daysCompletedLabel={t('calendar.daysCompletedLabel')} />
           </>
         ) : (
           <>
@@ -371,30 +375,30 @@ export default function CalendarScreen() {
               <BarChartWithTooltip
                 bars={weekChartBars}
                 chartAreaHeight={220}
-                getTooltipDateLabel={(bar) => formatMonthDay(bar.key)}
+                getTooltipDateLabel={(bar) => formatMonthDay(bar.key, locale)}
                 todayIndex={weekChartBars.findIndex(b => b.key === todayStr)}
-                emptyMessage="No data for this week"
+                emptyMessage={t('calendar.noDataForWeek')}
               />
             </View>
 
             <CompletionRingCard
-              title="Weekly completion"
-              subtitle={`${weekStats.completed} of ${weekStats.total} days\ncompleted`}
+              title={t('calendar.weeklyCompletion')}
+              subtitle={t('calendar.daysCompleted', { completed: weekStats.completed, total: weekStats.total })}
               pct={weekStats.pct}
               animationSlot="calendar-weekly"
             />
-            <StreakCard streak={currentStreak} daysCompleted={weekStats.completed} />
+            <StreakCard streak={currentStreak} daysCompleted={weekStats.completed} streakLabel={t('calendar.currentStreak')} daysCompletedLabel={t('calendar.daysCompletedLabel')} />
           </>
         )}
 
         {/* ── Habit breakdown ───────────────────────────────────────── */}
         <Text style={[s.breakdownTitle, { color: colors.text1 }]}>
-          {view === 'monthly' ? 'This Month' : 'This Week'}
+          {view === 'monthly' ? t('calendar.thisMonth') : t('calendar.thisWeek')}
         </Text>
 
         {habitBreakdown.length === 0 ? (
           <View style={[s.emptyCard, { backgroundColor: colors.bgCard }]}>
-            <Text style={[s.emptyText, { color: colors.text2 }]}>No habits yet. Add one on the Home tab.</Text>
+            <Text style={[s.emptyText, { color: colors.text2 }]}>{t('calendar.noHabitsAddOnHome')}</Text>
           </View>
         ) : (
           <View style={[s.breakdownCard, { backgroundColor: colors.bgCard }]}>
@@ -450,7 +454,7 @@ function CompletionRingCard({
   );
 }
 
-function StreakCard({ streak, daysCompleted }: { streak: number; daysCompleted: number }) {
+function StreakCard({ streak, daysCompleted, streakLabel, daysCompletedLabel }: { streak: number; daysCompleted: number; streakLabel: string; daysCompletedLabel: string }) {
   const { colors } = useTheme();
   return (
     <View style={[s.streakCard, { backgroundColor: colors.bgCard }]}>
@@ -459,14 +463,14 @@ function StreakCard({ streak, daysCompleted }: { streak: number; daysCompleted: 
           <Flame size={24} color={colors.warning} strokeWidth={2} />
         </View>
         <Text style={[s.streakNum, { color: colors.text1 }]}>{streak}</Text>
-        <Text style={[s.streakLabel, { color: colors.text2 }]}>Current streak</Text>
+        <Text style={[s.streakLabel, { color: colors.text2 }]}>{streakLabel}</Text>
       </View>
       <View style={s.streakItem}>
         <View style={[s.streakIconWrapGreen, { backgroundColor: colors.successSoft }]}>
           <CalendarCheck size={24} color={colors.success} strokeWidth={2} />
         </View>
         <Text style={[s.streakNum, { color: colors.text1 }]}>{daysCompleted}</Text>
-        <Text style={[s.streakLabel, { color: colors.text2 }]}>Days completed</Text>
+        <Text style={[s.streakLabel, { color: colors.text2 }]}>{daysCompletedLabel}</Text>
       </View>
     </View>
   );

@@ -7,6 +7,9 @@ import { appStorage } from './storage';
 /** 0 = Sunday, 1 = Monday (matches date-fns weekStartsOn) */
 export type WeekStartDay = 0 | 1;
 
+/** App UI language; persisted and synced with i18n. */
+export type Language = 'en' | 'es';
+
 interface SettingsState {
   /** Haptic feedback on habit completion / swipe actions */
   hapticFeedback: boolean;
@@ -41,6 +44,9 @@ interface SettingsState {
   /** Dark mode (app-wide appearance). */
   darkMode: boolean;
 
+  /** UI language: 'en' | 'es'. undefined = use device locale (set on first app load). */
+  language: Language | undefined;
+
   // ── Actions ────────────────────────────────────────────────────────────────
   setHapticFeedback: (enabled: boolean) => void;
   setWeekStartsOn: (day: WeekStartDay) => void;
@@ -50,6 +56,7 @@ interface SettingsState {
   setDailyReminderNotificationId: (id: string | null) => void;
   setCompactHomeView: (enabled: boolean) => void;
   setDarkMode: (enabled: boolean) => void;
+  setLanguage: (lang: Language) => void;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -80,6 +87,7 @@ export const useSettingsStore = create<SettingsState>()(
       dailyReminderNotificationId: null,
       compactHomeView: false,
       darkMode: false,
+      language: undefined,
 
       setHapticFeedback: (enabled) => set({ hapticFeedback: enabled }),
       setWeekStartsOn: (day) => set({ weekStartsOn: day }),
@@ -89,6 +97,7 @@ export const useSettingsStore = create<SettingsState>()(
       setDailyReminderNotificationId: (id) => set({ dailyReminderNotificationId: id }),
       setCompactHomeView: (enabled) => set({ compactHomeView: enabled }),
       setDarkMode: (enabled) => set({ darkMode: enabled }),
+      setLanguage: (lang) => set({ language: lang }),
     }),
     {
       name: 'fovere-settings',
@@ -103,7 +112,6 @@ export const useSettingsStore = create<SettingsState>()(
         state.hapticFeedback      = toBoolean(state.hapticFeedback,      true);
         state.notificationsEnabled = toBoolean(state.notificationsEnabled, false);
         state.dailyReminderEnabled = toBoolean(
-          // @ts-expect-error defensive for older persisted shapes
           (state as any).dailyReminderEnabled,
           false,
         );
@@ -116,6 +124,10 @@ export const useSettingsStore = create<SettingsState>()(
         state.weekStartsOn = (ws === 0 || ws === 1 ? ws : 1) as WeekStartDay;
         state.compactHomeView = toBoolean(state.compactHomeView, false);
         state.darkMode = toBoolean(state.darkMode, false);
+        const lang = (state as any).language;
+        if (lang !== 'en' && lang !== 'es') {
+          (state as any).language = undefined;
+        }
 
         if (__DEV__) {
           console.log('[settingsStore] rehydrated →', {

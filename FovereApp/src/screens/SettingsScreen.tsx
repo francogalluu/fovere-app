@@ -6,55 +6,74 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronRight } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NavigationProp } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import type { RootStackParamList } from '@/navigation/types';
 import { useSettingsStore } from '@/store/settingsStore';
 import { useTheme } from '@/context/ThemeContext';
 import type { Palette } from '@/lib/theme';
+import { i18n } from '@/i18n';
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function SettingsScreen() {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const { colors } = useTheme();
+  const { t } = useTranslation();
 
   const {
     hapticFeedback,     setHapticFeedback,
     weekStartsOn,       setWeekStartsOn,
     darkMode,           setDarkMode,
+    language,
+    setLanguage,
     dailyReminderEnabled,
     dailyReminderTime,
   } = useSettingsStore();
 
   const handleWeekStartPress = () => {
     Alert.alert(
-      'Week Starts On',
+      t('alerts.weekStartsOn'),
       undefined,
       [
-        { text: 'Sunday',  onPress: () => setWeekStartsOn(0), style: 'default' },
-        { text: 'Monday',  onPress: () => setWeekStartsOn(1), style: 'default' },
-        { text: 'Cancel',  style: 'cancel' },
+        { text: t('settings.sunday'),  onPress: () => setWeekStartsOn(0), style: 'default' },
+        { text: t('settings.monday'),  onPress: () => setWeekStartsOn(1), style: 'default' },
+        { text: t('common.cancel'),  style: 'cancel' },
+      ],
+    );
+  };
+
+  const handleLanguagePress = () => {
+    Alert.alert(
+      t('settings.language'),
+      undefined,
+      [
+        { text: t('settings.english'), onPress: () => { setLanguage('en'); i18n.changeLanguage('en'); }, style: 'default' },
+        { text: t('settings.spanish'), onPress: () => { setLanguage('es'); i18n.changeLanguage('es'); }, style: 'default' },
+        { text: t('common.cancel'), style: 'cancel' },
       ],
     );
   };
 
   const handleComingSoon = (feature: string) => {
-    Alert.alert(feature, 'Coming soon!', [{ text: 'OK' }]);
+    Alert.alert(feature, t('settings.comingSoon'), [{ text: t('common.ok') }]);
   };
 
   const reminderSummary = dailyReminderEnabled
     ? formatTimeSummary(dailyReminderTime)
-    : 'Off';
+    : t('settings.off');
+
+  const languageDisplay = (language === 'es' ? t('settings.spanish') : t('settings.english'));
 
   return (
     <SafeAreaView style={[s.safe, { backgroundColor: colors.bgSecondary }]} edges={['top']}>
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
         {/* ── Header ──────────────────────────────────────────────────── */}
-        <Text style={[s.title, { color: colors.text1 }]}>Settings</Text>
+        <Text style={[s.title, { color: colors.text1 }]}>{t('settings.title')}</Text>
 
         {/* ── Preferences ─────────────────────────────────────────────── */}
-        <Section title="Preferences" colors={colors}>
+        <Section title={t('settings.preferences')} colors={colors}>
           <SettingRow
-            label="Dark mode"
+            label={t('settings.darkMode')}
             right={
               <Switch
                 value={darkMode}
@@ -66,14 +85,21 @@ export default function SettingsScreen() {
             colors={colors}
           />
           <SettingRow
-            label="Notifications"
+            label={t('settings.language')}
+            value={languageDisplay}
+            onPress={handleLanguagePress}
+            showChevron
+            colors={colors}
+          />
+          <SettingRow
+            label={t('settings.notifications')}
             value={reminderSummary}
             onPress={() => navigation.navigate('Notifications')}
             showChevron
             colors={colors}
           />
           <SettingRow
-            label="Haptic Feedback"
+            label={t('settings.hapticFeedback')}
             right={
               <Switch
                 value={hapticFeedback}
@@ -85,8 +111,8 @@ export default function SettingsScreen() {
             colors={colors}
           />
           <SettingRow
-            label="Week Starts On"
-            value={weekStartsOn === 0 ? 'Sunday' : 'Monday'}
+            label={t('settings.weekStartsOn')}
+            value={weekStartsOn === 0 ? t('settings.sunday') : t('settings.monday')}
             onPress={handleWeekStartPress}
             showChevron
             last
@@ -95,9 +121,9 @@ export default function SettingsScreen() {
         </Section>
 
         {/* ── Data ────────────────────────────────────────────────────── */}
-        <Section title="Data" colors={colors}>
+        <Section title={t('settings.data')} colors={colors}>
           <SettingRow
-            label="Deleted Habits"
+            label={t('settings.deletedHabits')}
             onPress={() => navigation.navigate('DeletedHabits')}
             showChevron
             last
@@ -106,16 +132,16 @@ export default function SettingsScreen() {
         </Section>
 
         {/* ── About ───────────────────────────────────────────────────── */}
-        <Section title="About" colors={colors}>
-          <SettingRow label="Version" value="1.0.0" colors={colors} />
+        <Section title={t('settings.about')} colors={colors}>
+          <SettingRow label={t('settings.version')} value="1.0.0" colors={colors} />
           <SettingRow
-            label="Privacy Policy"
+            label={t('settings.privacyPolicy')}
             onPress={() => navigation.navigate('PrivacyPolicy')}
             showChevron
             colors={colors}
           />
           <SettingRow
-            label="Terms of Service"
+            label={t('settings.termsOfService')}
             onPress={() => navigation.navigate('TermsOfService')}
             showChevron
             last

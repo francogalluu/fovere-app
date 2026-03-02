@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import { Check, ChevronRight, TriangleAlert } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { getProgressColor, PROGRESS_COLORS } from '@/lib/progressColors';
 import { useTheme } from '@/context/ThemeContext';
 import { ScoreRing } from '@/components/ScoreRing';
@@ -74,6 +75,7 @@ export function HabitCard({
   compact = false,
 }: HabitCardProps) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const isBreak       = habit.goalType === 'break';
   const isOverLimit   = isBreak && currentValue > habit.target;
   const pct           = Math.min(100, Math.round((currentValue / habit.target) * 100));
@@ -131,7 +133,7 @@ export function HabitCard({
         {habit.kind === 'numeric' && (
           <Text style={[progressStyle, isOverLimit && { color: colors.danger }]}>
             {currentValue} / {habit.target}{habit.unit ? ` ${habit.unit}` : ''}
-            {isOverLimit ? '  Over limit' : ''}
+            {isOverLimit ? `  ${t('habitCard.overLimit')}` : ''}
           </Text>
         )}
       </View>

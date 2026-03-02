@@ -2,6 +2,7 @@ import React, { useRef } from 'react';
 import { View, Text, StyleSheet, Pressable, Alert } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
 import { Trash2 } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/context/ThemeContext';
 import { HabitCard } from './HabitCard';
 import type { Habit } from '@/types/habit';
@@ -22,25 +23,25 @@ interface SwipeableHabitCardProps {
   compact?: boolean;
 }
 
-function RightActions({ isCompleted, colors }: { isCompleted: boolean; colors: { teal: string; danger: string; white: string } }) {
+function RightActions({ isCompleted, colors, t }: { isCompleted: boolean; colors: { teal: string; danger: string; white: string }; t: (key: string) => string }) {
   return (
     <View style={[s.rightAction, { backgroundColor: colors.teal }, isCompleted && [s.rightActionUndo, { backgroundColor: colors.danger }]]}>
-      <Text style={[s.actionText, { color: colors.white }]}>{isCompleted ? 'Undo' : 'Done'}</Text>
+      <Text style={[s.actionText, { color: colors.white }]}>{isCompleted ? t('common.undo') : t('common.done')}</Text>
     </View>
   );
 }
 
-function LeftActions({ onDelete, colors }: { onDelete: () => void; colors: { danger: string; white: string } }) {
+function LeftActions({ onDelete, colors, t }: { onDelete: () => void; colors: { danger: string; white: string }; t: (key: string) => string }) {
   return (
     <View style={[s.leftAction, { backgroundColor: colors.danger }]}>
       <Pressable
         onPress={onDelete}
         style={({ pressed }) => [s.deleteBtn, pressed && { opacity: 0.8 }]}
         accessibilityRole="button"
-        accessibilityLabel="Delete habit"
+        accessibilityLabel={t('alerts.deleteHabitTitle')}
       >
         <Trash2 size={22} color={colors.white} strokeWidth={2} />
-        <Text style={[s.actionText, { color: colors.white }]}>Delete</Text>
+        <Text style={[s.actionText, { color: colors.white }]}>{t('common.delete')}</Text>
       </Pressable>
     </View>
   );
@@ -72,19 +73,20 @@ export function SwipeableHabitCard({
     onComplete();
   };
 
+  const { t } = useTranslation();
   const showDeleteAlert = () => {
     swipeRef.current?.close();
     const buttons: Array<{ text: string; style?: 'cancel' | 'destructive' | 'default'; onPress?: () => void }> = [
-      { text: 'Cancel', style: 'cancel' },
+      { text: t('common.cancel'), style: 'cancel' },
     ];
     if (onPause) {
-      buttons.push({ text: 'Pause', onPress: () => onPause() });
+      buttons.push({ text: t('common.pause'), onPress: () => onPause() });
     }
     // "Delete" is a soft-delete: hide from Home from today onward, keep history.
-    buttons.push({ text: 'Delete', style: 'destructive', onPress: () => onDelete?.() });
+    buttons.push({ text: t('common.delete'), style: 'destructive', onPress: () => onDelete?.() });
     Alert.alert(
-      'Delete habit',
-      `Are you sure you want to delete "${habit.name}"? It will be removed from your Home screen from today onward, but its past history will stay in Calendar and Analytics.${onPause ? ' You can also pause it to hide it and resume later.' : ''}`,
+      t('alerts.deleteHabitTitle'),
+      t('alerts.deleteHabitMessage', { name: habit.name }) + (onPause ? t('alerts.deleteHabitMessageWithPause') : ''),
       buttons
     );
   };
@@ -96,8 +98,8 @@ export function SwipeableHabitCard({
   return (
     <Swipeable
       ref={swipeRef}
-      renderRightActions={() => <RightActions isCompleted={isCompleted} colors={colors} />}
-      renderLeftActions={onDelete ? () => <LeftActions onDelete={showDeleteAlert} colors={colors} /> : undefined}
+      renderRightActions={() => <RightActions isCompleted={isCompleted} colors={colors} t={t} />}
+      renderLeftActions={onDelete ? () => <LeftActions onDelete={showDeleteAlert} colors={colors} t={t} /> : undefined}
       onSwipeableLeftOpen={onDelete ? handleLeftOpen : undefined}
       onSwipeableRightOpen={handleRightOpen}
       onSwipeableClose={handleSwipeClose}

@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { formatDateTitle, isToday } from '@/lib/dates';
 import { useTheme } from '@/context/ThemeContext';
 import { ScoreRing } from '@/components/ScoreRing';
@@ -23,8 +24,9 @@ export function ProgressHero({
   compact = false,
 }: ProgressHeroProps) {
   const { colors } = useTheme();
+  const { t } = useTranslation();
   const targetPercentage = total > 0 ? Math.round((completed / total) * 100) : 0;
-  const title = isToday(selectedDate) ? 'Completed Today' : formatDateTitle(selectedDate);
+  const title = isToday(selectedDate) ? t('home.completedToday') : formatDateTitle(selectedDate);
   const cardShadow = {
     shadowColor: colors.shadowColorHero,
     shadowOpacity: colors.shadowOpacityHero,
@@ -45,14 +47,17 @@ export function ProgressHero({
         <Text style={titleStyle}>{title}</Text>
         {total > 0 ? (
           <Text style={subStyle}>
-            {completed} of {total} habits{'\n'}completed
+            {t('home.ofHabitsCompleted', { completed, total })}
           </Text>
         ) : (
-          <Text style={subStyle}>No habits yet.{'\n'}Add one below!</Text>
+          <Text style={subStyle}>{t('home.noHabitsYet')}</Text>
         )}
         {overLimit > 0 && (
           <Text style={[styles.overLimitWarn, { color: colors.danger }, compact && styles.overLimitWarnCompact]}>
-            {overLimit} break {overLimit === 1 ? 'habit' : 'habits'} over limit
+            {t('progressHero.overLimit', {
+              count: overLimit,
+              habitWord: overLimit === 1 ? t('home.breakHabit') : t('home.breakHabitsCount'),
+            })}
           </Text>
         )}
       </View>

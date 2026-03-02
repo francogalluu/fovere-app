@@ -2,7 +2,20 @@
  * All dates in this app are YYYY-MM-DD strings in the user's local timezone.
  * Never parse bare ISO strings directly — always append T00:00:00 to force
  * local-time parsing and avoid UTC-offset day shifts.
+ *
+ * Display formatting (month/day names) uses date-fns locale from i18n (en/es).
  */
+
+import { format } from 'date-fns';
+import { enUS, es } from 'date-fns/locale';
+import { i18n } from '@/i18n';
+
+export type DateFnsLocale = typeof enUS;
+
+/** Current app locale for date formatting (from i18n language). */
+export function getDateLocale(): DateFnsLocale {
+  return i18n.language === 'es' ? es : enUS;
+}
 
 export const toLocalDateString = (date: Date): string => {
   const y = date.getFullYear();
@@ -55,7 +68,7 @@ export const getLastNMonthRanges = (
     const startStr = toLocalDateString(start);
     const endStr = toLocalDateString(end);
     const monthKey = `${y}-${String(m + 1).padStart(2, '0')}`;
-    const label = start.toLocaleDateString('en-US', { month: 'short' });
+    const label = format(start, 'MMM', { locale: getDateLocale() });
     result.unshift({ start: startStr, end: endStr, label, monthKey });
     d.setMonth(d.getMonth() - 1);
   }
@@ -66,12 +79,13 @@ export const isToday = (dateStr: string): boolean => dateStr === today();
 export const isFuture = (dateStr: string): boolean => dateStr > today();
 export const isPast = (dateStr: string): boolean => dateStr < today();
 
-export const formatDateTitle = (dateStr: string): string => {
-  if (isToday(dateStr)) return 'Today';
-  if (dateStr === addDays(today(), -1)) return 'Yesterday';
+/** Locale-aware date title (Today/Yesterday or "d MMMM"). Uses i18n for Today/Yesterday. */
+export function formatDateTitle(dateStr: string): string {
+  if (isToday(dateStr)) return i18n.t('common.today');
+  if (dateStr === addDays(today(), -1)) return i18n.t('common.yesterday');
   const d = new Date(dateStr + 'T00:00:00');
-  return d.toLocaleDateString('en-US', { day: 'numeric', month: 'long' });
-};
+  return format(d, 'd MMMM', { locale: getDateLocale() });
+}
 
 /** 0 = Sunday, 1 = Monday (matches settingsStore WeekStartDay) */
 export type WeekStartDay = 0 | 1;
@@ -124,11 +138,14 @@ export const getDayOfWeekColumnIndex = (dateStr: string, weekStartsOn: WeekStart
   return weekStartsOn === 0 ? dayOfWeek : (dayOfWeek + 6) % 7;
 };
 
-/** Short day labels in display order: first element is the first day of the week. */
-export const getShortDayLabels = (weekStartsOn: WeekStartDay): string[] =>
-  weekStartsOn === 0
-    ? [...SHORT_DAY_LABELS]
-    : ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
+/** Short day labels in display order (locale-aware). First element = first day of the week. */
+export function getShortDayLabels(weekStartsOn: WeekStartDay, locale?: DateFnsLocale): string[] {
+  const loc = locale ?? getDateLocale();
+  const days = weekStartsOn === 0 ? [0, 1, 2, 3, 4, 5, 6] : [1, 2, 3, 4, 5, 6, 0];
+  return days.map(dayIndex =>
+    loc.localize?.day(dayIndex as 0 | 1 | 2 | 3 | 4 | 5 | 6, { width: 'abbreviated' }) ?? SHORT_DAY_LABELS[dayIndex],
+  );
+}
 
 /** Build an inclusive array of YYYY-MM-DD strings from `from` to `to` */
 export const datesInRange = (from: string, to: string): string[] => {
@@ -191,7 +208,7 @@ export const getMonthWeekSegments = (
 ): { start: string; end: string; label: string }[] => {
   const [y, m] = monthStart.split('-').map(Number);
   const lastDay = new Date(y, m, 0).getDate();
-  const monthName = new Date(monthStart + 'T00:00:00').toLocaleDateString('en-US', { month: 'short' });
+  const monthName = format(new Date(monthStart + 'T00:00:00'), 'MMM', { locale: getDateLocale() });
   const segments: { start: string; end: string; label: string }[] = [];
   for (let a = 1; a <= lastDay; a += 7) {
     const b = Math.min(a + 6, lastDay);

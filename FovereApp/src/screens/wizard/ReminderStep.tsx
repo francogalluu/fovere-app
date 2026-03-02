@@ -5,6 +5,7 @@
 import React, { useLayoutEffect } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { ChevronUp, ChevronDown } from 'lucide-react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { WizardStackParamList } from '@/navigation/types';
@@ -27,6 +28,7 @@ function formatDisplay(h: number): { h12: string; ampm: string } {
 }
 
 export default function ReminderStep({ navigation }: Props) {
+  const { t } = useTranslation();
   const { colors } = useTheme();
   const reminderTime    = useWizardStore(s => s.reminderTime);
   const setReminderTime = useWizardStore(s => s.setReminderTime);
@@ -44,18 +46,18 @@ export default function ReminderStep({ navigation }: Props) {
 
   useLayoutEffect(() => {
     navigation.setOptions({
-      title: 'Reminder Time',
+      title: t('wizard.reminderTime'),
       headerRight: () => (
         <Pressable onPress={() => navigation.goBack()} hitSlop={8}>
-          <Text style={[s.doneBtn, { color: colors.teal }]}>Done</Text>
+          <Text style={[s.doneBtn, { color: colors.teal }]}>{t('common.done')}</Text>
         </Pressable>
       ),
     });
-  }, [navigation, colors.teal]);
+  }, [navigation, colors.teal, t]);
 
   return (
     <SafeAreaView style={[s.safe, { backgroundColor: colors.bgSecondary }]} edges={['bottom']}>
-      <Text style={[s.helper, { color: colors.text2 }]}>Choose when you want to be reminded.</Text>
+      <Text style={[s.helper, { color: colors.text2 }]}>{t('wizard.reminderHelper')}</Text>
 
       <View style={[s.card, { backgroundColor: colors.bgCard }]}>
         <TimeColumn value={h12} onInc={incH} onDec={decH} />
