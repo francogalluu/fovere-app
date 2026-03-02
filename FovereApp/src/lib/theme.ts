@@ -40,6 +40,10 @@ export type Palette = {
   // Shadows (for cards / elevated surfaces)
   shadowColor: string;
   shadowColorHero: string;
+  shadowOpacity: number;
+  shadowRadius: number;
+  shadowOpacityHero: number;
+  shadowRadiusHero: number;
 
   // Heatmap / charts
   heatmapEmpty: string;
@@ -59,41 +63,45 @@ export type Palette = {
 
 const LIGHT: Palette = {
   teal: '#008080',
-  tealSoft: 'rgba(0, 128, 128, 0.12)',
+  tealSoft: 'rgba(0, 128, 128, 0.14)',
 
-  bgHome: '#FFFFFF',
-  bgSecondary: '#F2F2F7',
-  bgAnalytics: '#F9F9F9',
+  bgHome: '#F2F2F7',
+  bgSecondary: '#EBEBF0',
+  bgAnalytics: '#F2F2F7',
   bgCard: '#FFFFFF',
 
   text1: '#1A1A1A',
-  text2: '#8E8E93',
-  text3: '#666666',
-  text4: '#999999',
+  text2: '#5C5C5E',
+  text3: '#434344',
+  text4: '#6E6E73',
 
-  separator: 'rgba(0, 0, 0, 0.08)',
-  separatorLight: '#E5E5EA',
+  separator: 'rgba(0, 0, 0, 0.14)',
+  separatorLight: '#D1D1D6',
 
   success: '#34C759',
-  successSoft: 'rgba(52, 199, 89, 0.08)',
+  successSoft: 'rgba(52, 199, 89, 0.12)',
   warning: '#FF9F0A',
-  warningSoft: 'rgba(255, 159, 10, 0.08)',
+  warningSoft: 'rgba(255, 159, 10, 0.12)',
   danger: '#FF3B30',
-  dangerSoft: 'rgba(255, 59, 48, 0.12)',
+  dangerSoft: 'rgba(255, 59, 48, 0.14)',
 
-  chevron: '#C7C7CC',
-  ring: '#E5E5E5',
-  ringAlt: '#E5E5E7',
+  chevron: '#8E8E93',
+  ring: '#D1D1D6',
+  ringAlt: '#C7C7CC',
 
   shadowColor: '#000',
   shadowColorHero: '#000',
+  shadowOpacity: 0.1,
+  shadowRadius: 14,
+  shadowOpacityHero: 0.12,
+  shadowRadiusHero: 24,
 
-  heatmapEmpty: '#E5E5E7',
-  heatmapFuture: '#F2F2F7',
+  heatmapEmpty: '#D1D1D6',
+  heatmapFuture: '#EBEBF0',
   heatmapSuccess: '#34C759',
   heatmapWarning: '#FF9F0A',
   heatmapWarningLight: '#FFD60A',
-  heatmapLow: '#E5E5E7',
+  heatmapLow: '#D1D1D6',
 
   white: '#FFFFFF',
   black: '#000000',
@@ -130,6 +138,10 @@ const DARK: Palette = {
 
   shadowColor: '#000',
   shadowColorHero: '#000',
+  shadowOpacity: 0.2,
+  shadowRadius: 16,
+  shadowOpacityHero: 0.25,
+  shadowRadiusHero: 28,
 
   heatmapEmpty: '#38383A',
   heatmapFuture: '#2C2C2E',

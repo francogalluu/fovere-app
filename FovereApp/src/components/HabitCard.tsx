@@ -82,7 +82,15 @@ export function HabitCard({
     ? (pct >= 100 ? PROGRESS_COLORS.LOW : pct >= 50 ? PROGRESS_COLORS.MID : PROGRESS_COLORS.MID_LOW)
     : getProgressColor(pct);
 
-  const cardStyle = compact ? [s.card, s.cardCompact, { backgroundColor: colors.bgCard }] : [s.card, { backgroundColor: colors.bgCard }];
+  const cardShadow = {
+    shadowColor: colors.shadowColor,
+    shadowOpacity: colors.shadowOpacity,
+    shadowRadius: colors.shadowRadius,
+    elevation: 4,
+  };
+  const cardStyle = compact
+    ? [s.card, s.cardCompact, { backgroundColor: colors.bgCard }, cardShadow]
+    : [s.card, { backgroundColor: colors.bgCard }, cardShadow];
   const iconWrapStyle = compact ? [s.iconWrapper, s.iconWrapperCompact] : s.iconWrapper;
   const iconCircleStyle = compact ? [s.iconCircle, s.iconCircleCompact, { backgroundColor: colors.bgSecondary }] : [s.iconCircle, { backgroundColor: colors.bgSecondary }];
   const nameStyle = compact ? [s.habitName, s.habitNameCompact, { color: colors.text1 }] : [s.habitName, { color: colors.text1 }];

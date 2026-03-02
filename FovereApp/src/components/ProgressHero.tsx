@@ -25,7 +25,15 @@ export function ProgressHero({
   const { colors } = useTheme();
   const targetPercentage = total > 0 ? Math.round((completed / total) * 100) : 0;
   const title = isToday(selectedDate) ? 'Completed Today' : formatDateTitle(selectedDate);
-  const cardStyle = compact ? [styles.card, styles.cardCompact, { backgroundColor: colors.bgCard }] : [styles.card, { backgroundColor: colors.bgCard }];
+  const cardShadow = {
+    shadowColor: colors.shadowColorHero,
+    shadowOpacity: colors.shadowOpacityHero,
+    shadowRadius: colors.shadowRadiusHero,
+    elevation: 5,
+  };
+  const cardStyle = compact
+    ? [styles.card, styles.cardCompact, { backgroundColor: colors.bgCard }, cardShadow]
+    : [styles.card, { backgroundColor: colors.bgCard }, cardShadow];
   const leftStyle = compact ? [styles.leftContent, styles.leftContentCompact] : styles.leftContent;
   const titleStyle = compact ? [styles.title, styles.titleCompact, { color: colors.text1 }] : [styles.title, { color: colors.text1 }];
   const subStyle = compact ? [styles.subtitle, styles.subtitleCompact, { color: colors.text2 }] : [styles.subtitle, { color: colors.text2 }];

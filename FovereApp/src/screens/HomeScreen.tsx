@@ -575,19 +575,22 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      <WeekCalendar
-        weeks={scrollableWeeks}
-        selectedDate={selectedDate}
-        completionByDate={completionByDate}
-        onDateSelect={handleDateSelect}
-        weekStartsOn={weekStartsOn}
-      />
+      <View style={[s.calendarWrap, { backgroundColor: colors.bgHome }]}>
+        <WeekCalendar
+          weeks={scrollableWeeks}
+          selectedDate={selectedDate}
+          completionByDate={completionByDate}
+          onDateSelect={handleDateSelect}
+          weekStartsOn={weekStartsOn}
+        />
+      </View>
 
       <FlatList
         ref={listRef}
         data={dates}
         keyExtractor={(d) => d}
         style={[s.dayList, { backgroundColor: colors.bgHome }]}
+        contentContainerStyle={{ backgroundColor: colors.bgHome }}
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
@@ -665,7 +668,11 @@ const s = StyleSheet.create({
   scrollContent: {
     // Extra padding so card shadows (shadowRadius ~12, offset 4) aren’t cropped
     paddingHorizontal: 28,
+    paddingTop: 16,
     paddingBottom: 52,
+  },
+  calendarWrap: {
+    width: '100%',
   },
 
   // Header (horizontal padding matches scrollContent so title aligns with sections)
