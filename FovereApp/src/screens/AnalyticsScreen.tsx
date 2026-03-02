@@ -3,6 +3,7 @@ import {
   View, Text, ScrollView, Pressable, StyleSheet,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import Svg, { Line } from 'react-native-svg';
 import { Flame, CalendarCheck } from 'lucide-react-native';
 import {
@@ -15,7 +16,9 @@ import {
   getLastNMonthRanges,
   getShortDayLabels,
   getDayOfWeekColumnIndex,
+  getDateLocale,
 } from '@/lib/dates';
+import { format } from 'date-fns';
 import {
   dailyCompletion,
   entryValue,
@@ -40,13 +43,16 @@ export type { ChartBar };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function getBuckets(range: TimeRange, endDate: string, weekStartsOn: 0 | 1): ChartBucket[] {
+type TFunction = (key: string, opts?: { [k: string]: string | number }) => string;
+
+/** Build buckets for chart. For 'week', use only YYYY-MM-DD (key/start/end); labels are for display only and must not be used for aggregation. */
+function getBuckets(range: TimeRange, endDate: string, weekStartsOn: 0 | 1, t: TFunction): ChartBucket[] {
   switch (range) {
     case 'day':
-      return [{ key: endDate, label: 'Today', start: endDate, end: endDate }];
+      return [{ key: endDate, label: t('common.today'), start: endDate, end: endDate }];
     case 'week': {
-      const dayLabels = getShortDayLabels(weekStartsOn);
       const weekDates = getWeekDates(endDate, weekStartsOn);
+      const dayLabels = getShortDayLabels(weekStartsOn);
       return weekDates.map((d, i) => ({
         key: d,
         label: dayLabels[i],
@@ -121,10 +127,10 @@ function safePercent(percent: number | null | undefined): number {
   return Math.max(0, Math.min(100, n));
 }
 
-function buildChartBars(habits: Habit[], entries: HabitEntry[], range: TimeRange, endDate: string, habitFilter: Habit | null, weekStartsOn: 0 | 1): ChartBar[] {
-  const buckets = getBuckets(range, endDate, weekStartsOn);
+function buildChartBars(habits: Habit[], entries: HabitEntry[], range: TimeRange, endDate: string, habitFilter: Habit | null, weekStartsOn: 0 | 1, t: TFunction): ChartBar[] {
+  const buckets = getBuckets(range, endDate, weekStartsOn, t);
   const agg = aggregateCompletions(habits, entries, buckets, habitFilter, weekStartsOn);
-  return buckets.map((b, i) => {
+  const bars = buckets.map((b, i) => {
     const raw =
       agg[i].averagePercent != null
         ? agg[i].averagePercent
@@ -137,6 +143,12 @@ function buildChartBars(habits: Habit[], entries: HabitEntry[], range: TimeRange
       target: agg[i].target,
     };
   });
+  if (__DEV__ && range === 'week' && bars.length > 0) {
+    const lines = bars.map(b => `${b.key} completed=${b.completed} target=${b.target} → ${b.percent}%`).join('\n');
+    // eslint-disable-next-line no-console
+    console.log('[Analytics weekly chart] per-day:\n' + lines);
+  }
+  return bars;
 }
 
 function getPeriodDates(range: TimeRange, todayStr: string, weekStartsOn: 0 | 1): string[] {
@@ -157,8 +169,14 @@ function getPeriodDates(range: TimeRange, todayStr: string, weekStartsOn: 0 | 1)
   }
 }
 
-function getPeriodLabel(range: TimeRange): string {
-  return { day: 'Today', week: 'Last 7 days', month: 'Last 30 days', '6month': 'Last 6 months', year: 'Last year' }[range];
+function getPeriodLabel(range: TimeRange, t: TFunction): string {
+  return {
+    day: t('analytics.periodLabelDay'),
+    week: t('analytics.periodLabelWeek'),
+    month: t('analytics.periodLabelMonth'),
+    '6month': t('analytics.periodLabel6Month'),
+    year: t('analytics.periodLabelYear'),
+  }[range];
 }
 
 /** Per-weekday average completion (0–6 = first day of week .. last). For month/6M/year only. */
@@ -244,6 +262,7 @@ function computeHabitStreak(habit: Habit, entries: HabitEntry[], todayStr: strin
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function AnalyticsScreen() {
+  const { t } = useTranslation();
   const { habits, entries, focusKey } = useHabitLogs();
   const allHabits = useHabitStore(s => s.habits);
   const weekStartsOn = useSettingsStore(s => s.weekStartsOn);
@@ -269,11 +288,11 @@ export default function AnalyticsScreen() {
       const completed = periodDates.filter(d => isHabitCompleted(selectedHabit, entries, d, weekStartsOn)).length;
       return {
         completionPct:   periodDates.length > 0 ? Math.round((completed / periodDates.length) * 100) : 0,
-        completionText:  `${completed} of ${periodDates.length} sessions`,
-        completionTitle: `${selectedHabit.name} completion`,
+        completionText:  t('analytics.sessionsCompletion', { completed: String(completed), total: String(periodDates.length) }),
+        completionTitle: t('analytics.habitCompletion', { name: selectedHabit.name }),
       };
     }
-    if (allHabits.length === 0) return { completionPct: 0, completionText: '0 of 0 habits', completionTitle: getPeriodLabel(timeRange) };
+    if (allHabits.length === 0) return { completionPct: 0, completionText: t('analytics.zeroHabits'), completionTitle: getPeriodLabel(timeRange, t) };
     const scores   = periodDates.map(d => dailyCompletion(allHabits, entries, d, weekStartsOn));
     const pct      = Math.round(scores.reduce((a, b) => a + b, 0) / (scores.length || 1));
     let totalPossible = 0;
@@ -287,21 +306,21 @@ export default function AnalyticsScreen() {
     }
     return {
       completionPct:   pct,
-      completionText:  `${totalCompleted} of ${totalPossible} habits`,
-      completionTitle: getPeriodLabel(timeRange) + ' completion',
+      completionText:  t('analytics.habitsCompletion', { completed: String(totalCompleted), total: String(totalPossible) }),
+      completionTitle: getPeriodLabel(timeRange, t) + ' ' + t('analytics.completionSuffix'),
     };
-  }, [selectedHabit, allHabits, entries, periodDates, timeRange, weekStartsOn, focusKey]);
+  }, [selectedHabit, allHabits, entries, periodDates, timeRange, weekStartsOn, focusKey, t]);
 
   const chartBars = useMemo(
-    () => buildChartBars(allHabits, entries, timeRange, todayStr, selectedHabit ?? null, weekStartsOn),
-    [allHabits, entries, timeRange, todayStr, selectedHabit, weekStartsOn, focusKey],
+    () => buildChartBars(allHabits, entries, timeRange, todayStr, selectedHabit ?? null, weekStartsOn, t),
+    [allHabits, entries, timeRange, todayStr, selectedHabit, weekStartsOn, focusKey, t],
   );
 
   const totalCompleted = useMemo(
     () => chartBars.reduce((s, b) => s + b.completed, 0),
     [chartBars],
   );
-  const barSectionTitle = selectedHabit ? `${selectedHabit.name} completion` : 'Habits completed';
+  const barSectionTitle = selectedHabit ? t('analytics.habitCompletion', { name: selectedHabit.name }) : t('analytics.habitsCompleted');
   const hasChartData = chartBars.some(b => b.target > 0);
 
   const xAxisTickIndices = useMemo(() => new Set(getXAxisTicks(timeRange, chartBars)), [timeRange, chartBars]);
@@ -438,13 +457,13 @@ export default function AnalyticsScreen() {
     return rows;
   }, [todayStr, selectedHabit, habits, entries, weekStartsOn, focusKey, colors]);
 
-  const heatmapMonthLabel = new Date(todayStr + 'T00:00:00').toLocaleDateString('en-US', { month: 'short' });
+  const heatmapMonthLabel = format(new Date(todayStr + 'T00:00:00'), 'MMM', { locale: getDateLocale() });
 
   return (
     <SafeAreaView style={[s.safe, { backgroundColor: colors.bgAnalytics }]} edges={['top']}>
       {/* ── Header ────────────────────────────────────────────────────── */}
       <View style={s.header}>
-        <Text style={[s.headerTitle, { color: colors.text1 }]}>Analytics</Text>
+        <Text style={[s.headerTitle, { color: colors.text1 }]}>{t('analytics.title')}</Text>
 
         {/* Habit pills */}
         <ScrollView
@@ -453,7 +472,7 @@ export default function AnalyticsScreen() {
           contentContainerStyle={s.pillsRow}
         >
           <Pill
-            label="All habits"
+            label={t('analytics.allHabits')}
             active={selectedHabitId === 'all'}
             onPress={() => setSelectedHabitId('all')}
             colors={colors}
@@ -479,7 +498,7 @@ export default function AnalyticsScreen() {
               style={[s.timeRangeSeg, timeRange === r && [s.timeRangeSegActive, { backgroundColor: colors.bgCard }]]}
             >
               <Text style={[s.timeRangeSegText, { color: colors.text2 }, timeRange === r && { color: colors.text1 }]}>
-                {r === 'week' ? '7D' : r === 'month' ? '30D' : r === '6month' ? '6M' : 'Y'}
+                {r === 'week' ? t('analytics.timeRange7D') : r === 'month' ? t('analytics.timeRange30D') : r === '6month' ? t('analytics.timeRange6M') : t('analytics.timeRangeY')}
               </Text>
             </Pressable>
           ))}
@@ -492,7 +511,7 @@ export default function AnalyticsScreen() {
         <View style={[s.completionCard, { backgroundColor: colors.bgCard }]}>
           <View style={{ flex: 1 }}>
             <Text style={[s.completionTitle, { color: colors.text1 }]}>{completionTitle}</Text>
-            <Text style={[s.completionSub, { color: colors.text2 }]}>{completionText}{'\n'}completed</Text>
+            <Text style={[s.completionSub, { color: colors.text2 }]}>{completionText}{'\n'}{t('analytics.completedWord')}</Text>
           </View>
           <View style={s.completionRingWrap}>
             <ScoreRing
@@ -511,10 +530,10 @@ export default function AnalyticsScreen() {
         <Text style={[s.sectionTitle, { color: colors.text1 }]}>{barSectionTitle}</Text>
         <View style={[s.barCard, { backgroundColor: colors.bgCard }]}>
           <Text style={[s.barTotal, { color: colors.text1 }]}>{totalCompleted}</Text>
-          <Text style={[s.barTotalLabel, { color: colors.text2 }]}>Total completed habits</Text>
+          <Text style={[s.barTotalLabel, { color: colors.text2 }]}>{t('analytics.totalCompletedHabits')}</Text>
           {!hasChartData ? (
             <View style={s.barEmpty}>
-              <Text style={[s.barEmptyText, { color: colors.text2 }]}>No data for this period</Text>
+              <Text style={[s.barEmptyText, { color: colors.text2 }]}>{t('analytics.noDataForPeriod')}</Text>
             </View>
           ) : (
             <>
@@ -523,14 +542,11 @@ export default function AnalyticsScreen() {
                 chartAreaHeight={timeRange === 'month' ? 240 : 220}
                 getTooltipDateLabel={(bar) =>
                   timeRange === 'month' || timeRange === 'week'
-                    ? (() => {
-                        const d = new Date(bar.key + 'T00:00:00');
-                        return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-                      })()
+                    ? format(new Date(bar.key + 'T00:00:00'), 'EEE, MMM d', { locale: getDateLocale() })
                     : bar.label
                 }
                 todayIndex={timeRange === 'week' ? chartBars.length - 1 : null}
-                emptyMessage="No data for this period"
+                emptyMessage={t('analytics.noDataForPeriod')}
                 renderTopContent={
                   timeRange === 'month' || timeRange === 'year'
                     ? layout => (
@@ -555,7 +571,7 @@ export default function AnalyticsScreen() {
               {timeRange === 'month' && chartBars.length >= 2 && (() => {
                 const start = chartBars[0].key;
                 const end = chartBars[chartBars.length - 1].key;
-                const fmt = (d: string) => new Date(d + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                const fmt = (d: string) => format(new Date(d + 'T00:00:00'), 'MMM d', { locale: getDateLocale() });
                 return (
                   <Text style={[s.barChartRangeCaption, { color: colors.text2 }]}>{fmt(start)} – {fmt(end)}</Text>
                 );
@@ -567,11 +583,11 @@ export default function AnalyticsScreen() {
         {/* ── By habit (when "All habits" selected) ───────────────────────────── */}
         {!selectedHabit && (byHabitStats.build.length > 0 || byHabitStats.break.length > 0) && (
           <>
-            <Text style={[s.sectionTitle, { color: colors.text1 }]}>By habit</Text>
+            <Text style={[s.sectionTitle, { color: colors.text1 }]}>{t('analytics.byHabit')}</Text>
             <View style={[s.byHabitCard, { backgroundColor: colors.bgCard }]}>
               {byHabitStats.build.length > 0 && (
                 <>
-                  <Text style={[s.byHabitSubtitle, { color: colors.text2 }]}>Build habits</Text>
+                  <Text style={[s.byHabitSubtitle, { color: colors.text2 }]}>{t('analytics.buildHabits')}</Text>
                   {byHabitStats.build.slice(0, 12).map(({ habit, pct, label }) => (
                     <View key={habit.id} style={s.byHabitRow}>
                       <Text style={s.byHabitIcon}>{habit.icon}</Text>
@@ -591,7 +607,7 @@ export default function AnalyticsScreen() {
               )}
               {byHabitStats.break.length > 0 && (
                 <>
-                  <Text style={[s.byHabitSubtitle, { color: colors.text2 }, byHabitStats.build.length > 0 && s.byHabitSubtitleSpaced]}>Break habits</Text>
+                  <Text style={[s.byHabitSubtitle, { color: colors.text2 }, byHabitStats.build.length > 0 && s.byHabitSubtitleSpaced]}>{t('analytics.breakHabits')}</Text>
                   {byHabitStats.break.slice(0, 12).map(({ habit, pct, label }) => (
                     <View key={habit.id} style={s.byHabitRow}>
                       <Text style={s.byHabitIcon}>{habit.icon}</Text>
@@ -616,7 +632,7 @@ export default function AnalyticsScreen() {
         {/* ── Completion by weekday (Month / 6M / Year) ──────────────────────── */}
         {completionByWeekday !== null && (
           <>
-            <Text style={[s.sectionTitle, { color: colors.text1 }]}>Completion by weekday</Text>
+            <Text style={[s.sectionTitle, { color: colors.text1 }]}>{t('analytics.completionByWeekday')}</Text>
             <View style={[s.weekdayCard, { backgroundColor: colors.bgCard }]}>
               {getShortDayLabels(weekStartsOn).map((label, i) => {
                 const pct = completionByWeekday[i] ?? 0;
@@ -636,9 +652,9 @@ export default function AnalyticsScreen() {
 
         {/* ── Break habits summary ───────────────────────────────────────────── */}
         {breakHabitsSummary !== null && (
-          <View style={[s.breakSummaryCard, { backgroundColor: colors.successSoft }]}>
+            <View style={[s.breakSummaryCard, { backgroundColor: colors.successSoft }]}>
             <Text style={[s.breakSummaryText, { color: colors.text1 }]}>
-              Stayed under limit: {breakHabitsSummary.daysUnderLimit} of {breakHabitsSummary.daysWithBreak} days
+              {t('analytics.stayedUnderLimit', { under: String(breakHabitsSummary.daysUnderLimit), total: String(breakHabitsSummary.daysWithBreak) })}
             </Text>
           </View>
         )}
@@ -651,14 +667,14 @@ export default function AnalyticsScreen() {
                 <Flame size={24} color={colors.warning} strokeWidth={2} />
               </View>
               <Text style={[s.streakNum, { color: colors.text1 }]}>{habitStreak}</Text>
-              <Text style={[s.streakLabel, { color: colors.text2 }]}>Current streak</Text>
+              <Text style={[s.streakLabel, { color: colors.text2 }]}>{t('analytics.currentStreak')}</Text>
             </View>
             <View style={s.streakItem}>
               <View style={[s.streakIconGreen, { backgroundColor: colors.successSoft }]}>
                 <CalendarCheck size={24} color={colors.success} strokeWidth={2} />
               </View>
               <Text style={[s.streakNum, { color: colors.text1 }]}>{habitDaysCompleted}</Text>
-              <Text style={[s.streakLabel, { color: colors.text2 }]}>Days completed</Text>
+              <Text style={[s.streakLabel, { color: colors.text2 }]}>{t('analytics.daysCompleted')}</Text>
             </View>
           </View>
         )}
@@ -667,7 +683,7 @@ export default function AnalyticsScreen() {
         {timeRange === 'month' && (
           <>
             <View style={s.heatmapHeader}>
-              <Text style={[s.sectionTitle, { color: colors.text1 }]}>Habit heatmap</Text>
+              <Text style={[s.sectionTitle, { color: colors.text1 }]}>{t('analytics.habitHeatmap')}</Text>
               <View style={[s.heatmapMonthPill, { backgroundColor: colors.separatorLight }]}>
                 <Text style={[s.heatmapMonthText, { color: colors.text2 }]}>{heatmapMonthLabel}</Text>
               </View>
