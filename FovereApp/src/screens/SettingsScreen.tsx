@@ -19,15 +19,11 @@ export default function SettingsScreen() {
 
   const {
     hapticFeedback,     setHapticFeedback,
-    notificationsEnabled, setNotificationsEnabled,
     weekStartsOn,       setWeekStartsOn,
     darkMode,           setDarkMode,
+    dailyReminderEnabled,
+    dailyReminderTime,
   } = useSettingsStore();
-
-  const handleNotificationsToggle = (value: boolean) => {
-    // Notifications permission wiring lives in M10; for now just persist the preference.
-    setNotificationsEnabled(value);
-  };
 
   const handleWeekStartPress = () => {
     Alert.alert(
@@ -44,6 +40,10 @@ export default function SettingsScreen() {
   const handleComingSoon = (feature: string) => {
     Alert.alert(feature, 'Coming soon!', [{ text: 'OK' }]);
   };
+
+  const reminderSummary = dailyReminderEnabled
+    ? formatTimeSummary(dailyReminderTime)
+    : 'Off';
 
   return (
     <SafeAreaView style={[s.safe, { backgroundColor: colors.bgSecondary }]} edges={['top']}>
@@ -67,14 +67,9 @@ export default function SettingsScreen() {
           />
           <SettingRow
             label="Notifications"
-            right={
-              <Switch
-                value={notificationsEnabled}
-                onValueChange={handleNotificationsToggle}
-                trackColor={{ false: colors.separatorLight, true: colors.teal }}
-                thumbColor={colors.white}
-              />
-            }
+            value={reminderSummary}
+            onPress={() => navigation.navigate('Notifications')}
+            showChevron
             colors={colors}
           />
           <SettingRow
@@ -230,3 +225,14 @@ const s = StyleSheet.create({
   rowRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   rowValue: { fontSize: 17 },
 });
+
+function formatTimeSummary(hhmm: string): string {
+  const [hStr, mStr] = hhmm.split(':');
+  const h = Number.parseInt(hStr, 10);
+  const m = Number.parseInt(mStr, 10);
+  if (Number.isNaN(h) || Number.isNaN(m)) return '';
+  const ampm = h < 12 ? 'AM' : 'PM';
+  const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+  const mm = String(m).padStart(2, '0');
+  return `${h12}:${mm} ${ampm}`;
+}

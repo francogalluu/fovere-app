@@ -7,6 +7,7 @@ import TabNavigator from './TabNavigator';
 import WizardNavigator from './WizardNavigator';
 import HabitDetailScreen from '@/screens/HabitDetailScreen';
 import DeletedHabitsScreen from '@/screens/DeletedHabitsScreen';
+import NotificationSettingsScreen from '@/screens/NotificationSettingsScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -48,6 +49,20 @@ export default function RootNavigator() {
         name="EditHabit"
         component={WizardNavigator}
         options={{ presentation: 'modal' }}
+      />
+
+      {/* Global notification / reminder settings */}
+      <Stack.Screen
+        name="Notifications"
+        component={NotificationSettingsScreen}
+        options={{
+          headerShown: true,
+          headerBackTitle: 'Back',
+          headerTintColor: colors.teal,
+          headerStyle: { backgroundColor: colors.bgSecondary },
+          headerShadowVisible: false,
+          headerTitle: 'Notifications',
+        }}
       />
 
       {/* Deleted habits list */}

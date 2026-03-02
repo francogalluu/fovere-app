@@ -19,9 +19,21 @@ interface SettingsState {
 
   /**
    * Whether the user has granted notification permissions and enabled reminders.
-   * Flipped to true after the first permission grant in M10.
+   * Flipped to true after the first successful permission grant.
    */
   notificationsEnabled: boolean;
+
+  /**
+   * Global daily reminder setting used to nudge the user to log for the day.
+   * When true, we schedule a single local notification at `dailyReminderTime`.
+   */
+  dailyReminderEnabled: boolean;
+
+  /** Local time for the global reminder, stored as "HH:MM" (24‑hour). */
+  dailyReminderTime: string;
+
+  /** ID of the scheduled notification for the daily reminder (if any). */
+  dailyReminderNotificationId: string | null;
 
   /** Compact home screen layout (smaller hero and habit cards for faster scanning). */
   compactHomeView: boolean;
@@ -33,6 +45,9 @@ interface SettingsState {
   setHapticFeedback: (enabled: boolean) => void;
   setWeekStartsOn: (day: WeekStartDay) => void;
   setNotificationsEnabled: (enabled: boolean) => void;
+  setDailyReminderEnabled: (enabled: boolean) => void;
+  setDailyReminderTime: (hhmm: string) => void;
+  setDailyReminderNotificationId: (id: string | null) => void;
   setCompactHomeView: (enabled: boolean) => void;
   setDarkMode: (enabled: boolean) => void;
 }
@@ -60,12 +75,18 @@ export const useSettingsStore = create<SettingsState>()(
       hapticFeedback: true,
       weekStartsOn: 1,          // Monday by default (matches legacy Settings screen)
       notificationsEnabled: false,
+      dailyReminderEnabled: false,
+      dailyReminderTime: '20:00',          // 8:00 PM local time
+      dailyReminderNotificationId: null,
       compactHomeView: false,
       darkMode: false,
 
       setHapticFeedback: (enabled) => set({ hapticFeedback: enabled }),
       setWeekStartsOn: (day) => set({ weekStartsOn: day }),
       setNotificationsEnabled: (enabled) => set({ notificationsEnabled: enabled }),
+      setDailyReminderEnabled: (enabled) => set({ dailyReminderEnabled: enabled }),
+      setDailyReminderTime: (hhmm) => set({ dailyReminderTime: hhmm }),
+      setDailyReminderNotificationId: (id) => set({ dailyReminderNotificationId: id }),
       setCompactHomeView: (enabled) => set({ compactHomeView: enabled }),
       setDarkMode: (enabled) => set({ darkMode: enabled }),
     }),
@@ -81,6 +102,15 @@ export const useSettingsStore = create<SettingsState>()(
         if (!state) return;
         state.hapticFeedback      = toBoolean(state.hapticFeedback,      true);
         state.notificationsEnabled = toBoolean(state.notificationsEnabled, false);
+        state.dailyReminderEnabled = toBoolean(
+          // @ts-expect-error defensive for older persisted shapes
+          (state as any).dailyReminderEnabled,
+          false,
+        );
+        // If no time was ever set, keep the default defined above.
+        if (!state.dailyReminderTime) {
+          state.dailyReminderTime = '20:00';
+        }
         // weekStartsOn must be 0 or 1 — clamp just in case
         const ws = Number(state.weekStartsOn);
         state.weekStartsOn = (ws === 0 || ws === 1 ? ws : 1) as WeekStartDay;
