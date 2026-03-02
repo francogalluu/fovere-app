@@ -46,7 +46,9 @@
     "upcoming": "Upcoming",
     "overLimitHabits": "{{count}} break {{habitWord}} over limit",
     "breakHabit": "habit",
-    "breakHabitsCount": "habits"
+    "breakHabitsCount": "habits",
+    "percentThisWeek": "{{pct}}% This Week",
+    "percentThisMonth": "{{pct}}% This Month"
   },
   "settings": {
     "title": "Settings",
@@ -219,7 +221,18 @@
     "searchHabitsPlaceholder": "Search habits",
     "targetHelper": "Set the quantity you want to reach each time.",
     "reminderHelper": "Choose when you want to be reminded.",
-    "descriptionHelper": "Add an optional note about this habit. It will appear on the habit detail screen."
+    "descriptionHelper": "Add an optional note about this habit. It will appear on the habit detail screen.",
+    "measureByHelper": "How will you measure progress?",
+    "completionOption": "Completion",
+    "completionDesc": "Done / not done — simple toggle",
+    "quantityOption": "Quantity",
+    "quantityDesc": "Count toward a numeric goal",
+    "timeOption": "Time",
+    "timeDesc": "Track duration (e.g. 30 min meditation)",
+    "editHabit": "Edit Habit",
+    "tapToSet": "Tap to set",
+    "tapToAddOptional": "Tap to add (optional)",
+    "timeLabel": "Time"
   },
   "alerts": {
     "weekStartsOn": "Week Starts On",

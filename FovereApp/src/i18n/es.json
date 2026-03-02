@@ -46,7 +46,9 @@
     "upcoming": "Próximo",
     "overLimitHabits": "{{count}} {{habitWord}} por encima del límite",
     "breakHabit": "hábito a romper",
-    "breakHabitsCount": "hábitos a romper"
+    "breakHabitsCount": "hábitos a romper",
+    "percentThisWeek": "{{pct}}% Esta semana",
+    "percentThisMonth": "{{pct}}% Este mes"
   },
   "settings": {
     "title": "Ajustes",
@@ -219,7 +221,18 @@
     "reminderTime": "Hora del recordatorio",
     "targetHelper": "Indica la cantidad que quieres alcanzar cada vez.",
     "reminderHelper": "Elige cuándo quieres que te recuerde.",
-    "descriptionHelper": "Añade una nota opcional sobre este hábito. Aparecerá en la pantalla de detalle del hábito."
+    "descriptionHelper": "Añade una nota opcional sobre este hábito. Aparecerá en la pantalla de detalle del hábito.",
+    "measureByHelper": "¿Cómo quieres medir el progreso?",
+    "completionOption": "Completado",
+    "completionDesc": "Hecho / no hecho — un solo toque",
+    "quantityOption": "Cantidad",
+    "quantityDesc": "Contar hacia un objetivo numérico",
+    "timeOption": "Tiempo",
+    "timeDesc": "Registrar duración (ej. 30 min de meditación)",
+    "editHabit": "Editar hábito",
+    "tapToSet": "Toca para configurar",
+    "tapToAddOptional": "Toca para añadir (opcional)",
+    "timeLabel": "Hora"
   },
   "alerts": {
     "weekStartsOn": "La semana empieza el",

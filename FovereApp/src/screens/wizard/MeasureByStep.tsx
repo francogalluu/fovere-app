@@ -166,7 +166,7 @@ export default function MeasureByStep({ navigation }: Props) {
         style={{ flex: 1 }}
       >
         <ScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled">
-          <Text style={[s.helper, { color: colors.text2 }]}>How will you measure progress?</Text>
+          <Text style={[s.helper, { color: colors.text2 }]}>{t('wizard.measureByHelper')}</Text>
 
           {/* ── Kind selector ──────────────────────────────────────────── */}
           <View style={[s.card, { backgroundColor: colors.bgCard }]}>
@@ -176,8 +176,8 @@ export default function MeasureByStep({ navigation }: Props) {
               style={({ pressed }) => [s.row, s.rowBorder, { borderBottomColor: colors.separator }, pressed && { backgroundColor: colors.bgAnalytics }]}
             >
               <View style={s.rowText}>
-                <Text style={[s.label, { color: colors.text1 }]}>Completion</Text>
-                <Text style={[s.desc, { color: colors.text2 }]}>Done / not done — simple toggle</Text>
+                <Text style={[s.label, { color: colors.text1 }]}>{t('wizard.completionOption')}</Text>
+                <Text style={[s.desc, { color: colors.text2 }]}>{t('wizard.completionDesc')}</Text>
               </View>
               {kind === 'boolean' && (
                 <View style={[s.checkCircle, { backgroundColor: colors.teal }]}>
@@ -192,8 +192,8 @@ export default function MeasureByStep({ navigation }: Props) {
               style={({ pressed }) => [s.row, s.rowBorder, { borderBottomColor: colors.separator }, pressed && { backgroundColor: colors.bgAnalytics }]}
             >
               <View style={s.rowText}>
-                <Text style={[s.label, { color: colors.text1 }]}>Quantity</Text>
-                <Text style={[s.desc, { color: colors.text2 }]}>Count toward a numeric goal</Text>
+                <Text style={[s.label, { color: colors.text1 }]}>{t('wizard.quantityOption')}</Text>
+                <Text style={[s.desc, { color: colors.text2 }]}>{t('wizard.quantityDesc')}</Text>
               </View>
               {kind === 'numeric' && !timeMode && (
                 <View style={[s.checkCircle, { backgroundColor: colors.teal }]}>
@@ -208,8 +208,8 @@ export default function MeasureByStep({ navigation }: Props) {
               style={({ pressed }) => [s.row, pressed && { backgroundColor: colors.bgAnalytics }]}
             >
               <View style={s.rowText}>
-                <Text style={[s.label, { color: colors.text1 }]}>Time</Text>
-                <Text style={[s.desc, { color: colors.text2 }]}>Track duration (e.g. 30 min meditation)</Text>
+                <Text style={[s.label, { color: colors.text1 }]}>{t('wizard.timeOption')}</Text>
+                <Text style={[s.desc, { color: colors.text2 }]}>{t('wizard.timeDesc')}</Text>
               </View>
               {timeMode && (
                 <View style={[s.checkCircle, { backgroundColor: colors.teal }]}>

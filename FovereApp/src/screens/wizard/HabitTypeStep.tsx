@@ -129,7 +129,7 @@ export default function HabitTypeStep({ navigation }: Props) {
   // ── Header buttons ─────────────────────────────────────────────────────────
   useLayoutEffect(() => {
     navigation.setOptions({
-      title: isEdit ? 'Edit Habit' : 'New Habit',
+      title: isEdit ? t('wizard.editHabit') : t('wizard.newHabit'),
       headerLeft: () => (
         <Pressable onPress={handleCancel} hitSlop={8}>
           <Text style={[s.headerBtn, { color: colors.teal }]}>{t('wizard.cancel')}</Text>
@@ -141,7 +141,7 @@ export default function HabitTypeStep({ navigation }: Props) {
         </Pressable>
       ),
     });
-  }, [isEdit, navigation, handleSave, handleCancel, colors.teal]);
+  }, [isEdit, navigation, handleSave, handleCancel, colors.teal, t]);
 
   // ── Derived display values ─────────────────────────────────────────────────
   const freqLabel    = frequency.charAt(0).toUpperCase() + frequency.slice(1);
@@ -157,7 +157,7 @@ export default function HabitTypeStep({ navigation }: Props) {
         <View style={[s.section, { backgroundColor: colors.bgCard }]}>
           <Row
             label={t('wizard.habitName')}
-            value={name.trim() || 'Tap to set'}
+            value={name.trim() || t('wizard.tapToSet')}
             valueFaded={!name.trim()}
             onPress={() => navigation.navigate('HabitName')}
           />
@@ -168,7 +168,7 @@ export default function HabitTypeStep({ navigation }: Props) {
           />
           <Row
             label={t('wizard.description')}
-            value={description.trim() || 'Tap to add (optional)'}
+            value={description.trim() || t('wizard.tapToAddOptional')}
             valueFaded={!description.trim()}
             onPress={() => navigation.navigate('Description')}
             last
@@ -203,7 +203,7 @@ export default function HabitTypeStep({ navigation }: Props) {
           </View>
           {reminderEnabled && (
             <Row
-              label="Time"
+              label={t('wizard.timeLabel')}
               value={formatReminderTime(reminderTime)}
               onPress={() => navigation.navigate('Reminder')}
               last

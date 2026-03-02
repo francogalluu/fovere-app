@@ -294,7 +294,7 @@ function HomeDayContent({
             <Text style={[s.sectionTitleText, compact && s.sectionTitleCompact, { color: colors.text1 }]}>{t('home.weeklyHabits')}</Text>
             {weeklyBuildTotal > 0 && (
               <Text style={[s.sectionMeta, { color: colors.text2 }]}>
-                {Math.round((weeklyBuildCompleted / weeklyBuildTotal) * 100)}% this week
+                {t('home.percentThisWeek', { pct: String(Math.round((weeklyBuildCompleted / weeklyBuildTotal) * 100)) })}
               </Text>
             )}
           </View>
@@ -310,7 +310,7 @@ function HomeDayContent({
             <Text style={[s.sectionTitleText, compact && s.sectionTitleCompact, { color: colors.text1 }]}>{t('home.monthlyHabits')}</Text>
             {monthlyBuildTotal > 0 && (
               <Text style={[s.sectionMeta, { color: colors.text2 }]}>
-                {Math.round((monthlyBuildCompleted / monthlyBuildTotal) * 100)}% this month
+                {t('home.percentThisMonth', { pct: String(Math.round((monthlyBuildCompleted / monthlyBuildTotal) * 100)) })}
               </Text>
             )}
           </View>
