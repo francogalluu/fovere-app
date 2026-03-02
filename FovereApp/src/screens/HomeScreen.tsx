@@ -36,7 +36,6 @@ import { WeekCalendar } from '@/components/WeekCalendar';
 import { ProgressHero } from '@/components/ProgressHero';
 import { SwipeableHabitCard } from '@/components/SwipeableHabitCard';
 import { DaySummaryModal, type DaySummaryHabit, type DaySummarySection } from '@/components/DaySummaryModal';
-import { ConfettiBurst } from '@/components/ConfettiBurst';
 
 const DAYS_BACK = 90;
 const DAYS_FORWARD = 30;
@@ -179,7 +178,6 @@ function HomeDayContent({
   );
 
   const [summaryVisible, setSummaryVisible] = useState(false);
-  const [showMiniConfetti, setShowMiniConfetti] = useState(false);
 
   const toSummaryHabit = useCallback(
     (habit: Habit): DaySummaryHabit => {
@@ -210,7 +208,6 @@ function HomeDayContent({
       } else {
         if (haptic) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         logEntry(habit.id, date, habit.target);
-        if (habit.goalType !== 'break') setShowMiniConfetti(true);
       }
     },
     [isReadOnly, getCardData, haptic, deleteEntry, logEntry, date],
@@ -260,10 +257,10 @@ function HomeDayContent({
       {dailyBuildHabitsOnDate.length > 0 && (
         <View style={[s.section, compact && s.sectionCompact]}>
           <View style={s.sectionTitleRow}>
-            <Text style={[s.sectionTitle, compact && s.sectionTitleCompact, { color: colors.text1 }]}>{dailySectionLabel}</Text>
+            <Text style={[s.sectionTitleText, compact && s.sectionTitleCompact, { color: colors.text1 }]}>{dailySectionLabel}</Text>
             {!isTodayDate && (
-              <View style={[s.badge, { backgroundColor: colors.bgSecondary }]}>
-                <Text style={[s.badgeText, { color: colors.text2 }]}>{isReadOnly ? 'Upcoming' : 'Past'}</Text>
+              <View style={[s.sectionBadge, { backgroundColor: colors.bgSecondary }]}>
+                <Text style={[s.sectionBadgeText, { color: colors.text2 }]}>{isReadOnly ? 'Upcoming' : 'Past'}</Text>
               </View>
             )}
           </View>
@@ -276,10 +273,10 @@ function HomeDayContent({
       {allBreakHabitsOnDate.length > 0 && (
         <View style={[s.section, compact && s.sectionCompact]}>
           <View style={s.sectionTitleRow}>
-            <Text style={[s.sectionTitle, compact && s.sectionTitleCompact, { color: colors.text1 }]}>Break Habits</Text>
+            <Text style={[s.sectionTitleText, compact && s.sectionTitleCompact, { color: colors.text1 }]}>Break Habits</Text>
             {!isTodayDate && (
-              <View style={[s.badge, { backgroundColor: colors.bgSecondary }]}>
-                <Text style={[s.badgeText, { color: colors.text2 }]}>{isReadOnly ? 'Upcoming' : 'Past'}</Text>
+              <View style={[s.sectionBadge, { backgroundColor: colors.bgSecondary }]}>
+                <Text style={[s.sectionBadgeText, { color: colors.text2 }]}>{isReadOnly ? 'Upcoming' : 'Past'}</Text>
               </View>
             )}
           </View>
@@ -292,9 +289,9 @@ function HomeDayContent({
       {weeklyBuildHabitsOnDate.length > 0 && (
         <View style={[s.section, compact && s.sectionCompact]}>
           <View style={s.sectionTitleRow}>
-            <Text style={[s.sectionTitle, compact && s.sectionTitleCompact, { color: colors.text1 }]}>Weekly Habits</Text>
+            <Text style={[s.sectionTitleText, compact && s.sectionTitleCompact, { color: colors.text1 }]}>Weekly Habits</Text>
             {weeklyBuildTotal > 0 && (
-              <Text style={[s.weeklyPct, { color: colors.text2 }]}>
+              <Text style={[s.sectionMeta, { color: colors.text2 }]}>
                 {Math.round((weeklyBuildCompleted / weeklyBuildTotal) * 100)}% this week
               </Text>
             )}
@@ -308,9 +305,9 @@ function HomeDayContent({
       {monthlyBuildHabitsOnDate.length > 0 && (
         <View style={[s.section, compact && s.sectionCompact]}>
           <View style={s.sectionTitleRow}>
-            <Text style={[s.sectionTitle, compact && s.sectionTitleCompact, { color: colors.text1 }]}>Monthly Habits</Text>
+            <Text style={[s.sectionTitleText, compact && s.sectionTitleCompact, { color: colors.text1 }]}>Monthly Habits</Text>
             {monthlyBuildTotal > 0 && (
-              <Text style={[s.weeklyPct, { color: colors.text2 }]}>
+              <Text style={[s.sectionMeta, { color: colors.text2 }]}>
                 {Math.round((monthlyBuildCompleted / monthlyBuildTotal) * 100)}% this month
               </Text>
             )}
@@ -331,7 +328,14 @@ function HomeDayContent({
       )}
 
       {!isTodayDate && (
-        <Pressable onPress={onJumpToToday} style={[s.todayPill, { backgroundColor: colors.bgHome, borderColor: colors.tealSoft }]}>
+        <Pressable
+          onPress={onJumpToToday}
+          style={({ pressed }) => [
+            s.todayPill,
+            { backgroundColor: colors.bgHome, borderColor: colors.tealSoft },
+            pressed && { opacity: 0.85 },
+          ]}
+        >
           <Text style={[s.todayPillText, { color: colors.teal }]}>Jump to Today</Text>
         </Pressable>
       )}
@@ -339,7 +343,7 @@ function HomeDayContent({
       {isTodayDate && pausedHabits.length > 0 && (
         <View style={[s.section, compact && s.sectionCompact]}>
           <View style={s.sectionTitleRow}>
-            <Text style={[s.sectionTitle, compact && s.sectionTitleCompact, { color: colors.text1 }]}>Paused</Text>
+            <Text style={[s.sectionTitleText, compact && s.sectionTitleCompact, { color: colors.text1 }]}>Paused</Text>
           </View>
           <View style={s.pausedList}>
             {pausedHabits.map(h => (
@@ -371,9 +375,6 @@ function HomeDayContent({
       overLimit={overLimitCount}
       sections={summarySections}
     />
-    {showMiniConfetti && (
-      <ConfettiBurst onComplete={() => setShowMiniConfetti(false)} />
-    )}
     </>
   );
 }
@@ -556,21 +557,21 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={[s.safe, { backgroundColor: colors.bgHome }]}>
       <View style={[s.header, { backgroundColor: colors.bgHome }]}>
-        <Text style={[s.appTitle, { color: colors.text1 }]}>Fovere</Text>
+        <Text style={[s.titleApp, { color: colors.text1 }]}>Fovere</Text>
         <View style={s.headerActions}>
           <Pressable
             onPress={handleToggleCompact}
-            style={[s.compactToggle, compactHomeView && [s.compactToggleActive, { backgroundColor: colors.teal, borderColor: colors.teal }], !compactHomeView && { borderColor: colors.teal }]}
+            style={[s.headerBtn, compactHomeView && [s.headerBtnActive, { backgroundColor: colors.teal, borderColor: colors.teal }], !compactHomeView && { borderColor: colors.teal }]}
             accessibilityLabel={compactHomeView ? 'Switch to full view' : 'Switch to compact view'}
           >
-            <LayoutGrid size={20} color={compactHomeView ? colors.white : colors.teal} strokeWidth={2.5} />
+            <LayoutGrid size={22} color={compactHomeView ? colors.white : colors.teal} strokeWidth={2.5} />
           </Pressable>
           <Pressable
             onPress={openAddSheet}
-            style={[s.addButton, { backgroundColor: colors.teal }]}
+            style={[s.addBtn, { backgroundColor: colors.teal }]}
             accessibilityLabel="Add new habit"
           >
-            <Plus size={20} color={colors.white} strokeWidth={2.5} />
+            <Plus size={22} color={colors.white} strokeWidth={2.5} />
           </Pressable>
         </View>
       </View>
@@ -650,6 +651,18 @@ export default function HomeScreen() {
   );
 }
 
+// ─── Layout & design tokens (8pt grid, shadows) ─────────────────────────────────
+
+const space = { space8: 8, space12: 12, space16: 16, space24: 24, space32: 32, space40: 40, space48: 48 } as const;
+const LAYOUT_PADDING_H = 24;
+const shadowCard = {
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.08,
+  shadowRadius: 8,
+  elevation: 3,
+};
+
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
@@ -667,146 +680,139 @@ const s = StyleSheet.create({
   },
   scrollContent: {
     // Extra padding so card shadows (shadowRadius ~12, offset 4) aren’t cropped
-    paddingHorizontal: 28,
-    paddingTop: 16,
-    paddingBottom: 52,
+    paddingHorizontal: LAYOUT_PADDING_H,
+    paddingTop: space.space16,
+    paddingBottom: space.space48,
   },
   calendarWrap: {
     width: '100%',
   },
 
-  // Header (horizontal padding matches scrollContent so title aligns with sections)
+  // Header
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: 16,
-    paddingBottom: 8,
-    paddingHorizontal: 28,
+    paddingTop: space.space16,
+    paddingBottom: space.space8,
+    paddingHorizontal: LAYOUT_PADDING_H,
   },
-  appTitle: {
-    fontSize: 34,
+  titleApp: {
+    fontSize: 28,
     fontWeight: '700',
     letterSpacing: -0.5,
+    lineHeight: 34,
   },
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: space.space8,
   },
-  compactToggle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+  headerBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1.5,
   },
-  compactToggleActive: {},
-  addButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+  headerBtnActive: {},
+  addBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
   },
 
-  heroWrap: { marginTop: 8 },
-  heroWrapCompact: { marginTop: 4 },
-  // Sections (no extra horizontal padding; scrollContent provides it for shadow room)
+  heroWrap: { marginTop: space.space16 },
+  heroWrapCompact: { marginTop: space.space8 },
   section: {
-    marginTop: 24,
+    marginTop: space.space24,
   },
   sectionCompact: {
-    marginTop: 12,
+    marginTop: space.space16,
   },
   sectionTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    marginBottom: 16,
+    justifyContent: 'space-between',
+    minHeight: 32,
+    marginBottom: space.space12,
   },
-  sectionTitle: {
-    fontSize: 22,
+  sectionTitleText: {
+    fontSize: 20,
     fontWeight: '600',
-    marginLeft: 4,
+    lineHeight: 25,
   },
   sectionTitleCompact: {
     fontSize: 17,
+    lineHeight: 22,
   },
-
-  // Weekly percentage label (right side of Weekly Habits title)
-  weeklyPct: {
+  sectionMeta: {
     marginLeft: 'auto',
     fontSize: 13,
-    fontWeight: '400',
+    fontWeight: '500',
+    lineHeight: 18,
   },
-
-  // Past/Upcoming badge
-  badge: {
-    paddingHorizontal: 10,
+  sectionBadge: {
+    paddingHorizontal: space.space8,
     paddingVertical: 4,
-    borderRadius: 12,
+    borderRadius: 8,
   },
-  badgeText: {
+  sectionBadgeText: {
     fontSize: 13,
     fontWeight: '500',
+    lineHeight: 18,
   },
 
-  // Empty state
   emptyState: {
     alignItems: 'center',
-    paddingHorizontal: 32,
-    paddingTop: 40,
-    paddingBottom: 20,
+    paddingHorizontal: space.space32,
+    paddingTop: space.space40,
+    paddingBottom: space.space24,
   },
   emptyTitle: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '700',
-    marginBottom: 10,
+    lineHeight: 25,
+    marginBottom: space.space8,
   },
   emptyBody: {
     fontSize: 16,
-    textAlign: 'center',
+    fontWeight: '400',
     lineHeight: 22,
-    marginBottom: 28,
+    textAlign: 'center',
   },
-  // Jump to today pill
   todayPill: {
     alignSelf: 'center',
-    marginTop: 12,
-    paddingVertical: 8,
-    paddingHorizontal: 20,
-    borderRadius: 20,
+    marginTop: space.space16,
+    minHeight: 44,
+    paddingVertical: space.space12,
+    paddingHorizontal: space.space24,
+    borderRadius: 22,
     borderWidth: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    justifyContent: 'center',
+    ...shadowCard,
   },
   todayPillText: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '600',
+    lineHeight: 22,
   },
 
-  // Paused habits
   pausedList: {
-    gap: 10,
+    gap: space.space8,
   },
   pausedRow: {
     flexDirection: 'row',
     alignItems: 'center',
     borderRadius: 14,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    gap: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
+    paddingVertical: space.space12,
+    paddingHorizontal: space.space16,
+    gap: space.space12,
+    ...shadowCard,
   },
   pausedIcon: {
     fontSize: 24,
@@ -815,21 +821,24 @@ const s = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     fontWeight: '500',
+    lineHeight: 22,
   },
   resumeBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
+    paddingVertical: space.space8,
+    paddingHorizontal: space.space16,
     borderRadius: 10,
+    minHeight: 44,
+    justifyContent: 'center',
   },
   resumeBtnText: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
+    lineHeight: 20,
   },
 
-  // Add-habit bottom sheet (Build / Break choice)
   addSheetBackdrop: {
     flex: 1,
     backgroundColor: 'transparent',
@@ -837,33 +846,28 @@ const s = StyleSheet.create({
   },
   addSheetCard: {
     borderRadius: 20,
-    marginHorizontal: 16,
-    marginBottom: 34,
-    paddingTop: 14,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
+    marginHorizontal: space.space16,
+    marginBottom: space.space32,
+    paddingTop: space.space16,
+    paddingBottom: space.space24,
+    paddingHorizontal: space.space24,
     borderWidth: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.18,
-    shadowRadius: 16,
-    elevation: 12,
+    ...shadowCard,
   },
   addSheetTitle: {
     fontSize: 15,
     fontWeight: '600',
-    marginBottom: 4,
-    paddingHorizontal: 4,
+    lineHeight: 20,
+    marginBottom: space.space8,
   },
   addSheetOption: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 16,
+    paddingVertical: space.space16,
     paddingHorizontal: 4,
-    gap: 16,
-  },
-  addSheetOptionPressed: {
-    opacity: 0.7,
+    gap: space.space16,
+    minHeight: 44,
+    justifyContent: 'flex-start',
   },
   addSheetIconWrapBuild: {
     width: 44,
@@ -884,5 +888,6 @@ const s = StyleSheet.create({
   addSheetOptionText: {
     fontSize: 17,
     fontWeight: '600',
+    lineHeight: 22,
   },
 });

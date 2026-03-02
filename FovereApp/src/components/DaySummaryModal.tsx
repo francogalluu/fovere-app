@@ -379,7 +379,7 @@ const s = StyleSheet.create({
   },
   habitName: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '500',
   },
   rowMeta: {
     fontSize: 13,

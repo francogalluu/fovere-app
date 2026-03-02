@@ -230,11 +230,12 @@ const s = StyleSheet.create({
   infoCol: { flex: 1, minWidth: 0 },
   habitName: {
     fontSize: 17,
-    fontWeight: '600',
+    fontWeight: '500',
     marginBottom: 2,
   },
   habitNameCompact: {
     fontSize: 15,
+    fontWeight: '500',
     marginBottom: 0,
   },
   progressText: {
