@@ -17,6 +17,7 @@ import {
   getShortDayLabels,
   getDayOfWeekColumnIndex,
   getDateLocale,
+  getLast7Days,
 } from '@/lib/dates';
 import { format } from 'date-fns';
 import {
@@ -51,11 +52,11 @@ function getBuckets(range: TimeRange, endDate: string, weekStartsOn: 0 | 1, t: T
     case 'day':
       return [{ key: endDate, label: t('common.today'), start: endDate, end: endDate }];
     case 'week': {
-      const weekDates = getWeekDates(endDate, weekStartsOn);
+      const weekDates = getLast7Days(endDate);
       const dayLabels = getShortDayLabels(weekStartsOn);
-      return weekDates.map((d, i) => ({
+      return weekDates.map(d => ({
         key: d,
-        label: dayLabels[i],
+        label: dayLabels[getDayOfWeekColumnIndex(d, weekStartsOn)],
         start: d,
         end: d,
       }));
@@ -154,7 +155,7 @@ function buildChartBars(habits: Habit[], entries: HabitEntry[], range: TimeRange
 function getPeriodDates(range: TimeRange, todayStr: string, weekStartsOn: 0 | 1): string[] {
   switch (range) {
     case 'day': return [todayStr];
-    case 'week': return getWeekDates(todayStr, weekStartsOn);
+    case 'week': return getLast7Days(todayStr);
     case 'month': return datesInRange(addDays(todayStr, -29), todayStr);
     case '6month': {
       const start = addMonths(todayStr, -5);
@@ -280,6 +281,15 @@ export default function AnalyticsScreen() {
     () => getPeriodDates(timeRange, todayStr, weekStartsOn),
     [timeRange, todayStr, weekStartsOn],
   );
+
+  React.useEffect(() => {
+    if (__DEV__ && timeRange === 'week' && periodDates.length > 0) {
+      const start = periodDates[0];
+      const end = periodDates[periodDates.length - 1];
+      // eslint-disable-next-line no-console
+      console.log('[Analytics last 7 days]', { today: todayStr, start, end, days: periodDates, weekStartsOn });
+    }
+  }, [timeRange, periodDates, todayStr, weekStartsOn]);
 
   // ── Completion ring ───────────────────────────────────────────────────────
 

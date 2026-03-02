@@ -90,6 +90,9 @@ export function formatDateTitle(dateStr: string): string {
 /** 0 = Sunday, 1 = Monday (matches settingsStore WeekStartDay) */
 export type WeekStartDay = 0 | 1;
 
+/** Default first day of week: Monday. Use this constant everywhere week logic depends on "week starts Monday". */
+export const WEEK_STARTS_ON_MONDAY: WeekStartDay = 1;
+
 /**
  * Returns 7 YYYY-MM-DD strings for the week containing anchorDate.
  * weekStartsOn: 0 = Sun–Sat, 1 = Mon–Sun.
@@ -157,6 +160,13 @@ export const datesInRange = (from: string, to: string): string[] => {
   }
   return result;
 };
+
+/**
+ * Last 7 calendar days including today (today − 6 through today).
+ * Independent of week start; use for "Last 7 days" range.
+ */
+export const getLast7Days = (todayStr: string): string[] =>
+  datesInRange(addDays(todayStr, -6), todayStr);
 
 /** Dates in range grouped by day-of-week (0=Sun .. 6=Sat). For "Last 30 Days" by-weekday charts. */
 export const datesInRangeGroupedByWeekday = (from: string, to: string): string[][] => {
