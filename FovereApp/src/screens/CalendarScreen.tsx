@@ -67,13 +67,20 @@ export default function CalendarScreen() {
   const monthDays = useMemo(() => {
     const y = currentMonth.getFullYear();
     const m = currentMonth.getMonth();
-    const firstDow = new Date(y, m, 1).getDay(); // 0 = Sun
-    const total    = new Date(y, m + 1, 0).getDate();
+    const nativeFirstDow = new Date(y, m, 1).getDay(); // 0 = Sun
+    const total          = new Date(y, m + 1, 0).getDate();
+
+    // Align the first day of the month with the user's preferred week start.
+    const leadingEmpty =
+      weekStartsOn === 0
+        ? nativeFirstDow
+        : (nativeFirstDow - 1 + 7) % 7; // 0 when Monday, 6 when Sunday
+
     const cells: (string | null)[] = [];
-    for (let i = 0; i < firstDow; i++) cells.push(null);
+    for (let i = 0; i < leadingEmpty; i++) cells.push(null);
     for (let d = 1; d <= total; d++) cells.push(isoDate(y, m, d));
     return cells;
-  }, [currentMonth]);
+  }, [currentMonth, weekStartsOn]);
 
   const monthLabel = currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
@@ -293,7 +300,7 @@ export default function CalendarScreen() {
             {/* ── Monthly calendar grid ──────────────────────────────── */}
             <View style={[s.calCard, { backgroundColor: colors.bgCard }]}>
               <View style={s.dayHeaders}>
-                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
+                {getShortDayLabels(weekStartsOn).map(d => (
                   <Text key={d} style={[s.dayHeader, { color: colors.text4 }]}>{d}</Text>
                 ))}
               </View>
