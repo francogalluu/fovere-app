@@ -186,12 +186,22 @@ function getCompletionByWeekday(
   habits: Habit[],
   entries: HabitEntry[],
   weekStartsOn: 0 | 1,
+  habitFilter: Habit | null,
 ): number[] {
   const byDow: number[][] = [[], [], [], [], [], [], []];
-  for (const d of periodDates) {
-    const col = getDayOfWeekColumnIndex(d, weekStartsOn);
-    const pct = dailyCompletion(habits, entries, d, weekStartsOn);
-    byDow[col].push(pct);
+  if (habitFilter) {
+    for (const d of periodDates) {
+      if (habitFilter.createdAt > d) continue;
+      const col = getDayOfWeekColumnIndex(d, weekStartsOn);
+      const pct = isHabitCompleted(habitFilter, entries, d, weekStartsOn) ? 100 : 0;
+      byDow[col].push(pct);
+    }
+  } else {
+    for (const d of periodDates) {
+      const col = getDayOfWeekColumnIndex(d, weekStartsOn);
+      const pct = dailyCompletion(habits, entries, d, weekStartsOn);
+      byDow[col].push(pct);
+    }
   }
   return byDow.map(arr =>
     arr.length === 0 ? 0 : Math.round(arr.reduce((a, b) => a + b, 0) / arr.length),
@@ -345,7 +355,10 @@ export default function AnalyticsScreen() {
 
   const habitDaysCompleted = useMemo(() => {
     if (!selectedHabit) return null;
-    return periodDates.filter(d => isHabitCompleted(selectedHabit, entries, d, weekStartsOn)).length;
+    // Only count days when habit was 100% complete (target met)
+    return periodDates.filter(
+      d => selectedHabit.createdAt <= d && isHabitCompleted(selectedHabit, entries, d, weekStartsOn),
+    ).length;
   }, [selectedHabit, entries, periodDates, weekStartsOn, focusKey]);
 
   // ── By-habit completion (when "All habits" selected) ──────────────────────
@@ -411,8 +424,8 @@ export default function AnalyticsScreen() {
   // ── Completion by weekday (month / 6M / year only) ─────────────────────────
   const completionByWeekday = useMemo(() => {
     if (timeRange !== 'month' && timeRange !== '6month' && timeRange !== 'year') return null;
-    return getCompletionByWeekday(periodDates, allHabits, entries, weekStartsOn);
-  }, [timeRange, periodDates, allHabits, entries, weekStartsOn, focusKey]);
+    return getCompletionByWeekday(periodDates, allHabits, entries, weekStartsOn, selectedHabit);
+  }, [timeRange, periodDates, allHabits, entries, weekStartsOn, selectedHabit, focusKey]);
 
   // ── Break habits summary ───────────────────────────────────────────────────
   const breakHabitsSummary = useMemo(() => {
@@ -652,7 +665,7 @@ export default function AnalyticsScreen() {
                     <View style={[s.weekdayBarBg, { backgroundColor: colors.ring }]}>
                       <View style={[s.weekdayBarFill, { width: `${pct}%`, backgroundColor: colors.success }]} />
                     </View>
-                    <Text style={[s.weekdayPct, { color: colors.text1 }]}>{pct}%</Text>
+                    <Text style={[s.weekdayPct, { color: colors.text1 }]} numberOfLines={1}>{`${pct}%`}</Text>
                   </View>
                 );
               })}
@@ -890,7 +903,7 @@ const s = StyleSheet.create({
   weekdayLabel: { fontSize: 13, color: '#8E8E93', width: 36 },
   weekdayBarBg: { flex: 1, height: 8, backgroundColor: '#E5E5E7', borderRadius: 4, overflow: 'hidden', marginHorizontal: 12 },
   weekdayBarFill: { height: '100%', backgroundColor: '#34C759', borderRadius: 4 },
-  weekdayPct: { fontSize: 13, fontWeight: '600', color: '#1A1A1A', width: 36, textAlign: 'right' },
+  weekdayPct: { fontSize: 13, fontWeight: '600', color: '#1A1A1A', minWidth: 40, textAlign: 'right' },
 
   // Break habits summary
   breakSummaryCard: {
