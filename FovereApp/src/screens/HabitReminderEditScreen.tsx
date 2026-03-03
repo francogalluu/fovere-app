@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Platform, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
@@ -12,6 +12,8 @@ import { useHabitStore } from '@/store';
 
 type Route = RouteProp<RootStackParamList, 'HabitReminderEdit'>;
 type Nav = NativeStackNavigationProp<RootStackParamList, 'HabitReminderEdit'>;
+
+const WEEKDAY_KEYS = ['weekdaySun', 'weekdayMon', 'weekdayTue', 'weekdayWed', 'weekdayThu', 'weekdayFri', 'weekdaySat'] as const;
 
 function pad(n: number): string {
   return String(n).padStart(2, '0');
@@ -37,6 +39,9 @@ export default function HabitReminderEditScreen() {
 
   const habit = habits.find(h => h.id === habitId);
   const reminderTime = habit?.reminderTime ?? '08:00';
+  const reminderWeekdays = habit?.reminderWeekdays?.length ? habit.reminderWeekdays : [1];
+  const reminderDayOfMonth = habit?.reminderDayOfMonth ?? 1;
+  const frequency = habit?.frequency ?? 'daily';
 
   const { h, m } = useMemo(() => parseTime(reminderTime), [reminderTime]);
   const formattedTime = `${h === 0 ? 12 : h > 12 ? h - 12 : h}:${pad(m)} ${h < 12 ? 'AM' : 'PM'}`;
@@ -51,8 +56,19 @@ export default function HabitReminderEditScreen() {
   };
 
   const handleRemoveReminder = () => {
-    updateHabit(habitId, { reminderTime: undefined });
+    updateHabit(habitId, { reminderTime: undefined, reminderWeekdays: undefined, reminderDayOfMonth: undefined });
     navigation.goBack();
+  };
+
+  const toggleWeekday = (weekday: number) => {
+    const has = reminderWeekdays.includes(weekday);
+    if (has && reminderWeekdays.length <= 1) return;
+    const next = has ? reminderWeekdays.filter(w => w !== weekday) : [...reminderWeekdays, weekday].sort((a, b) => a - b);
+    updateHabit(habitId, { reminderWeekdays: next });
+  };
+
+  const setDayOfMonth = (day: number) => {
+    updateHabit(habitId, { reminderDayOfMonth: Math.min(31, Math.max(1, day)) });
   };
 
   const handleTimePickerChange = (_event: unknown, date?: Date) => {
@@ -79,7 +95,7 @@ export default function HabitReminderEditScreen() {
 
   return (
     <SafeAreaView style={[s.safe, { backgroundColor: colors.bgSecondary }]} edges={['bottom']}>
-      <View style={s.content}>
+      <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
         <Text style={[s.title, { color: colors.text1 }]}>{habit.name}</Text>
         <Text style={[s.subtitle, { color: colors.text2 }]}>{t('notifications.remindMeAt')}</Text>
 
@@ -114,13 +130,71 @@ export default function HabitReminderEditScreen() {
           )}
         </View>
 
+        {frequency === 'weekly' && (
+          <View style={s.weekdaySection}>
+            <Text style={[s.weekdayLabel, { color: colors.text2 }]}>{t('wizard.reminderDaysLabel')}</Text>
+            <View style={[s.weekdayCard, { backgroundColor: colors.bgCard }]}>
+              <View style={s.weekdayRow}>
+                {WEEKDAY_KEYS.map((key, i) => {
+                  const weekday = i + 1;
+                  const selected = reminderWeekdays.includes(weekday);
+                  return (
+                    <Pressable
+                      key={weekday}
+                      onPress={() => toggleWeekday(weekday)}
+                      style={({ pressed }) => [
+                        s.weekdayChip,
+                        {
+                          backgroundColor: selected ? colors.teal : colors.bgSecondary,
+                          borderColor: selected ? colors.teal : colors.separator,
+                          opacity: pressed ? 0.85 : 1,
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          s.weekdayChipText,
+                          { color: selected ? colors.white : colors.text2 },
+                        ]}
+                      >
+                        {t(`wizard.${key}`)}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+          </View>
+        )}
+
+        {frequency === 'monthly' && (
+          <View style={[s.monthDaySection, { borderColor: colors.separator }]}>
+            <Text style={[s.monthDayLabel, { color: colors.text1 }]}>{t('wizard.reminderDayOfMonthLabel')}</Text>
+            <View style={s.monthDayRow}>
+              <Pressable
+                onPress={() => setDayOfMonth(reminderDayOfMonth - 1)}
+                style={[s.monthDayBtn, { backgroundColor: colors.bgCard }]}
+              >
+                <Text style={[s.monthDayBtnText, { color: colors.teal }]}>−</Text>
+              </Pressable>
+              <Text style={[s.monthDayValue, { color: colors.text1 }]}>{reminderDayOfMonth}</Text>
+              <Pressable
+                onPress={() => setDayOfMonth(reminderDayOfMonth + 1)}
+                style={[s.monthDayBtn, { backgroundColor: colors.bgCard }]}
+              >
+                <Text style={[s.monthDayBtnText, { color: colors.teal }]}>+</Text>
+              </Pressable>
+            </View>
+          </View>
+        )}
+
         <Pressable
           onPress={handleRemoveReminder}
           style={({ pressed }) => [s.removeBtn, { borderColor: colors.danger }, pressed && { opacity: 0.7 }]}
         >
           <Text style={[s.removeBtnText, { color: colors.danger }]}>{t('habitReminders.removeReminder')}</Text>
         </Pressable>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -153,6 +227,45 @@ const s = StyleSheet.create({
     alignItems: 'center',
   },
   iosPicker: { width: '100%', height: 180 },
+  weekdaySection: { marginTop: 24 },
+  weekdayLabel: {
+    fontSize: 13,
+    fontWeight: '500',
+    marginBottom: 10,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  weekdayCard: {
+    borderRadius: 16,
+    padding: 12,
+    overflow: 'hidden',
+  },
+  weekdayRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 6,
+  },
+  weekdayChip: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 0,
+  },
+  weekdayChipText: { fontSize: 12, fontWeight: '600' },
+  monthDaySection: {
+    marginTop: 24,
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  monthDayLabel: { fontSize: 16, fontWeight: '600', marginBottom: 12 },
+  monthDayRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 20 },
+  monthDayBtn: { paddingVertical: 12, paddingHorizontal: 24, borderRadius: 12 },
+  monthDayBtnText: { fontSize: 22, fontWeight: '700' },
+  monthDayValue: { fontSize: 28, fontWeight: '700', minWidth: 48, textAlign: 'center' },
   removeBtn: {
     marginTop: 24,
     paddingVertical: 12,

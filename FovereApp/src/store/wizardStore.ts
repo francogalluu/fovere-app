@@ -19,6 +19,10 @@ interface WizardState {
   unit: string;
   reminderEnabled: boolean;
   reminderTime: string; // "HH:MM" 24-hour
+  /** For weekly: weekdays to remind (1=Sun … 7=Sat). Default [1]. */
+  reminderWeekdays: number[];
+  /** For monthly: day of month 1–31. Default 1. */
+  reminderDayOfMonth: number;
 
   // ── Setters ────────────────────────────────────────────────────────────────
   reset: () => void;
@@ -43,24 +47,28 @@ interface WizardState {
   setUnit: (v: string) => void;
   setReminderEnabled: (v: boolean) => void;
   setReminderTime: (v: string) => void;
+  setReminderWeekdays: (v: number[]) => void;
+  setReminderDayOfMonth: (v: number) => void;
 }
 
 const DEFAULTS: Omit<WizardState, keyof Pick<WizardState,
   'reset' | 'loadHabit' | 'loadPredetermined' | 'setGoalType' | 'setName' | 'setIcon' | 'setDescription' |
   'setKind' | 'setFrequency' | 'setTarget' | 'setUnit' |
-  'setReminderEnabled' | 'setReminderTime'
+  'setReminderEnabled' | 'setReminderTime' | 'setReminderWeekdays' | 'setReminderDayOfMonth'
 >> = {
-  habitId:         null,
-  goalType:        'build',
-  name:            '',
-  icon:            '⭐',
-  description:     '',
-  kind:            'boolean',
-  frequency:       'daily',
-  target:          1,
-  unit:            '',
-  reminderEnabled: false,
-  reminderTime:    '08:00',
+  habitId:            null,
+  goalType:           'build',
+  name:               '',
+  icon:               '⭐',
+  description:        '',
+  kind:               'boolean',
+  frequency:          'daily',
+  target:             1,
+  unit:               '',
+  reminderEnabled:    false,
+  reminderTime:       '08:00',
+  reminderWeekdays:   [1],
+  reminderDayOfMonth: 1,
 };
 
 export const useWizardStore = create<WizardState>()((set) => ({
@@ -69,31 +77,35 @@ export const useWizardStore = create<WizardState>()((set) => ({
   reset: () => set(DEFAULTS),
 
   loadHabit: (habit) => set({
-    habitId:         habit.id,
-    goalType:        habit.goalType ?? 'build',
-    name:            habit.name,
-    icon:            habit.icon,
-    description:     habit.description ?? '',
-    kind:            habit.kind,
-    frequency:       habit.frequency,
-    target:          habit.target,
-    unit:            habit.unit ?? '',
-    reminderEnabled: !!habit.reminderTime,
-    reminderTime:    habit.reminderTime ?? '08:00',
+    habitId:            habit.id,
+    goalType:           habit.goalType ?? 'build',
+    name:               habit.name,
+    icon:               habit.icon,
+    description:        habit.description ?? '',
+    kind:               habit.kind,
+    frequency:          habit.frequency,
+    target:             habit.target,
+    unit:               habit.unit ?? '',
+    reminderEnabled:    !!habit.reminderTime,
+    reminderTime:       habit.reminderTime ?? '08:00',
+    reminderWeekdays:   habit.reminderWeekdays?.length ? habit.reminderWeekdays : [1],
+    reminderDayOfMonth: habit.reminderDayOfMonth ?? 1,
   }),
 
   loadPredetermined: (draft) => set({
-    habitId:         null,
-    goalType:        draft.goalType,
-    name:            draft.name,
-    icon:            draft.icon,
-    description:     '',
-    kind:            draft.kind,
-    frequency:       draft.frequency,
-    target:          draft.target,
-    unit:            draft.unit ?? '',
-    reminderEnabled: false,
-    reminderTime:    DEFAULTS.reminderTime,
+    habitId:            null,
+    goalType:           draft.goalType,
+    name:               draft.name,
+    icon:               draft.icon,
+    description:        '',
+    kind:               draft.kind,
+    frequency:          draft.frequency,
+    target:             draft.target,
+    unit:               draft.unit ?? '',
+    reminderEnabled:    false,
+    reminderTime:       DEFAULTS.reminderTime,
+    reminderWeekdays:   DEFAULTS.reminderWeekdays,
+    reminderDayOfMonth: DEFAULTS.reminderDayOfMonth,
   }),
 
   setGoalType:        (goalType)        => set({ goalType }),
@@ -104,6 +116,8 @@ export const useWizardStore = create<WizardState>()((set) => ({
   setFrequency:       (frequency)       => set({ frequency }),
   setTarget:          (target)          => set({ target }),
   setUnit:            (unit)            => set({ unit }),
-  setReminderEnabled: (reminderEnabled) => set({ reminderEnabled }),
-  setReminderTime:    (reminderTime)    => set({ reminderTime }),
+  setReminderEnabled:    (reminderEnabled)    => set({ reminderEnabled }),
+  setReminderTime:       (reminderTime)       => set({ reminderTime }),
+  setReminderWeekdays:   (reminderWeekdays)   => set({ reminderWeekdays }),
+  setReminderDayOfMonth: (reminderDayOfMonth) => set({ reminderDayOfMonth }),
 }));

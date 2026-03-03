@@ -48,7 +48,7 @@ export default function HabitTypeStep({ navigation }: Props) {
   // ── Wizard store ───────────────────────────────────────────────────────────
   const {
     habitId, goalType, name, icon, description, kind, frequency,
-    target, unit, reminderEnabled, reminderTime,
+    target, unit, reminderEnabled, reminderTime, reminderWeekdays, reminderDayOfMonth,
     reset, loadHabit,
     setReminderEnabled,
   } = useWizardStore();
@@ -94,8 +94,16 @@ export default function HabitTypeStep({ navigation }: Props) {
     const resolvedTarget = kind === 'boolean' ? 1 : Math.max(1, target);
     const resolvedUnit   = kind === 'boolean' ? undefined : (unit.trim() || undefined);
     const resolvedReminder = reminderEnabled ? reminderTime : undefined;
+    const resolvedWeekdays = reminderEnabled && frequency === 'weekly' ? reminderWeekdays : undefined;
+    const resolvedDayOfMonth = reminderEnabled && frequency === 'monthly' ? reminderDayOfMonth : undefined;
 
     const resolvedDescription = description.trim() || undefined;
+
+    const reminderPatch = {
+      reminderTime: resolvedReminder,
+      reminderWeekdays: resolvedWeekdays,
+      reminderDayOfMonth: resolvedDayOfMonth,
+    };
 
     if (isEdit && habitId) {
       updateHabit(habitId, {
@@ -107,7 +115,7 @@ export default function HabitTypeStep({ navigation }: Props) {
         frequency,
         target: resolvedTarget,
         unit:   resolvedUnit,
-        reminderTime: resolvedReminder,
+        ...reminderPatch,
       });
     } else {
       addHabit({
@@ -119,12 +127,12 @@ export default function HabitTypeStep({ navigation }: Props) {
         frequency,
         target: resolvedTarget,
         unit:   resolvedUnit,
-        reminderTime: resolvedReminder,
+        ...reminderPatch,
       });
     }
     reset();
     navigation.getParent()?.goBack();
-  }, [name, icon, description, kind, frequency, target, unit, reminderEnabled, reminderTime, isEdit, habitId, addHabit, updateHabit, reset, navigation]);
+  }, [name, icon, description, kind, frequency, target, unit, reminderEnabled, reminderTime, reminderWeekdays, reminderDayOfMonth, isEdit, habitId, addHabit, updateHabit, reset, navigation]);
 
   // ── Header buttons ─────────────────────────────────────────────────────────
   useLayoutEffect(() => {
@@ -136,10 +144,13 @@ export default function HabitTypeStep({ navigation }: Props) {
         </Pressable>
       ),
       headerRight: () => (
-        <Pressable onPress={handleSave} hitSlop={8}>
-          <Text style={[s.headerBtn, s.headerBtnSave, { color: colors.teal }]}>{t('wizard.save')}</Text>
-        </Pressable>
+        <View style={s.headerRightWrap}>
+          <Pressable onPress={handleSave} hitSlop={8}>
+            <Text style={[s.headerBtn, s.headerBtnSave, { color: colors.teal }]}>{t('wizard.save')}</Text>
+          </Pressable>
+        </View>
       ),
+      headerRightContainerStyle: s.headerRightContainer,
     });
   }, [isEdit, navigation, handleSave, handleCancel, colors.teal, t]);
 
@@ -255,7 +266,14 @@ const s = StyleSheet.create({
   safe:   { flex: 1 },
   scroll: { paddingTop: 24, paddingBottom: 40 },
 
-  // Header buttons
+  // Header buttons — container gets flex so Save aligns to the right edge
+  headerRightContainer: { flex: 1, justifyContent: 'center' },
+  headerRightWrap: {
+    flexDirection: 'row',
+    marginLeft: 'auto',
+    alignItems: 'center',
+    paddingRight: 4,
+  },
   headerBtn:     { fontSize: 17 },
   headerBtnSave: { fontWeight: '600' },
 

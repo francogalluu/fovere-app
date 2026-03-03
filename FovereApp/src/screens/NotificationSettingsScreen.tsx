@@ -15,6 +15,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 
 import { useTheme } from '@/context/ThemeContext';
 import { useSettingsStore } from '@/store/settingsStore';
+import { scheduleAllNotifications } from '@/lib/notificationScheduler';
 
 function pad(n: number): string {
   return String(n).padStart(2, '0');
@@ -91,34 +92,10 @@ export default function NotificationSettingsScreen() {
     }
   };
 
-  const scheduleDailyReminder = async (hhmm: string) => {
-    const { h: hour, m: minute } = parseTime(hhmm);
-    try {
-      await Notifications.cancelAllScheduledNotificationsAsync();
-      await Notifications.scheduleNotificationAsync({
-        content: {
-          title: t('notifications.dailyReminder'),
-          body: t('notifications.reminderBody'),
-        },
-        trigger: {
-          type: Notifications.SchedulableTriggerInputTypes.DAILY,
-          hour,
-          minute,
-        },
-      });
-    } catch (error) {
-      console.warn('[notifications] schedule error', error);
-    }
-  };
-
   const handleToggleDaily = async (value: boolean) => {
     if (!value) {
       setDailyReminderEnabled(false);
-      try {
-        await Notifications.cancelAllScheduledNotificationsAsync();
-      } catch (error) {
-        console.warn('[notifications] cancelAll error', error);
-      }
+      await scheduleAllNotifications();
       return;
     }
 
@@ -130,7 +107,7 @@ export default function NotificationSettingsScreen() {
     if (!ok) return;
     if (!notificationsEnabled) setNotificationsEnabled(true);
     setDailyReminderEnabled(true);
-    await scheduleDailyReminder(dailyReminderTime);
+    await scheduleAllNotifications();
   };
 
   const changeTimeByMinutes = async (deltaMinutes: number) => {
@@ -140,7 +117,7 @@ export default function NotificationSettingsScreen() {
     const nextM = total % 60;
     const next = `${pad(nextH)}:${pad(nextM)}`;
     setDailyReminderTime(next);
-    await scheduleDailyReminder(next);
+    await scheduleAllNotifications();
   };
 
   const handleTimePickerChange = async (_event: unknown, date?: Date) => {
@@ -149,7 +126,7 @@ export default function NotificationSettingsScreen() {
     const nextM = date.getMinutes();
     const next = `${pad(nextH)}:${pad(nextM)}`;
     setDailyReminderTime(next);
-    await scheduleDailyReminder(next);
+    await scheduleAllNotifications();
   };
 
   const decrementTime = () => changeTimeByMinutes(-15);
@@ -222,49 +199,6 @@ export default function NotificationSettingsScreen() {
             </View>
           )}
         </View>
-
-        <Pressable
-          style={[s.testButton, { borderColor: colors.teal }]}
-          onPress={async () => {
-            try {
-              const status = await Notifications.getPermissionsAsync();
-              if (status.status !== 'granted') {
-                const requested = await Notifications.requestPermissionsAsync();
-                if (requested.status !== 'granted') {
-                  Alert.alert(
-                    t('notifications.disabledTitle'),
-                    t('notifications.enableForTest'),
-                  );
-                  return;
-                }
-              }
-
-              await Notifications.scheduleNotificationAsync({
-                content: {
-                  title: t('notifications.testNotificationTitle'),
-                  body: t('notifications.testNotificationBody'),
-                },
-                trigger: {
-                  type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
-                  seconds: 5,
-                  repeats: false,
-                },
-              });
-
-              Alert.alert(t('notifications.scheduled'), t('notifications.testScheduledMessage'));
-            } catch (error) {
-              console.warn('[notifications] test schedule error', error);
-              const message =
-                (error as any)?.message ??
-                (typeof error === 'string' ? error : t('notifications.couldNotScheduleTest'));
-              Alert.alert(t('notifications.error'), String(message));
-            }
-          }}
-        >
-          <Text style={[s.testButtonText, { color: colors.teal }]}>
-            {t('notifications.sendTestNotification')}
-          </Text>
-        </Pressable>
       </View>
     </SafeAreaView>
   );
@@ -286,18 +220,6 @@ const s = StyleSheet.create({
   subtitle: {
     fontSize: 15,
     marginBottom: 24,
-  },
-  testButton: {
-    marginTop: 16,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 999,
-    borderWidth: StyleSheet.hairlineWidth,
-    alignSelf: 'flex-start',
-  },
-  testButtonText: {
-    fontSize: 14,
-    fontWeight: '500',
   },
   card: {
     borderRadius: 20,

@@ -89,6 +89,11 @@
     "couldNotScheduleTest": "Could not schedule a test notification.",
     "enableForTest": "Enable notifications for Fovere in your system settings to receive test alerts.",
     "reminderBody": "Remember to record your habits for today.",
+    "habitReminderTitle": "Habit reminder",
+    "habitReminderBody": "Time to log {{habitName}}",
+    "breakHabitReminderTitle": "Limit reminder",
+    "breakHabitReminderBody": "Don't exceed your limit for {{habitName}}",
+    "habitReminderFallbackName": "Your habit",
     "testNotificationTitle": "Fovere test notification",
     "testNotificationBody": "If you see this, notifications are working!"
   },
@@ -242,7 +247,18 @@
     "namePlaceholder": "Name",
     "descriptionPlaceholderShort": "Optional",
     "reminderAt": "Reminder at {{time}}",
-    "timeLabel": "Time"
+    "timeLabel": "Time",
+    "reminderDaysLabel": "Reminder days",
+    "reminderDayOfMonthLabel": "Day of month",
+    "weekdaySun": "Sun",
+    "weekdayMon": "Mon",
+    "weekdayTue": "Tue",
+    "weekdayWed": "Wed",
+    "weekdayThu": "Thu",
+    "weekdayFri": "Fri",
+    "weekdaySat": "Sat",
+    "reminderWeeklyPreview": "{{days}} at {{time}}",
+    "reminderMonthlyPreview": "On the {{day}} at {{time}}"
   },
   "alerts": {
     "weekStartsOn": "Week Starts On",

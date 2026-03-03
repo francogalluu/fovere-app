@@ -1,9 +1,11 @@
 /**
  * ReminderStep — set the reminder time (HH:MM).
+ * For weekly habits: also pick which weekdays to remind (1=Sun … 7=Sat).
+ * For monthly habits: also pick day of month (1–31).
  * UI matches NotificationSettingsScreen: iOS uses DateTimePicker spinner, Android uses +/- steppers.
  */
 import React, { useLayoutEffect, useMemo } from 'react';
-import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Platform, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -14,6 +16,9 @@ import { useTheme } from '@/context/ThemeContext';
 import { useWizardStore } from '@/store/wizardStore';
 
 type Props = NativeStackScreenProps<WizardStackParamList, 'Reminder'>;
+
+/** Expo: 1=Sunday … 7=Saturday */
+const WEEKDAY_KEYS = ['weekdaySun', 'weekdayMon', 'weekdayTue', 'weekdayWed', 'weekdayThu', 'weekdayFri', 'weekdaySat'] as const;
 
 function pad(n: number) { return String(n).padStart(2, '0'); }
 
@@ -31,8 +36,13 @@ function formatDisplay(h: number): { h12: string; ampm: string } {
 export default function ReminderStep({ navigation }: Props) {
   const { t } = useTranslation();
   const { colors, isDark } = useTheme();
-  const reminderTime    = useWizardStore(s => s.reminderTime);
-  const setReminderTime = useWizardStore(s => s.setReminderTime);
+  const frequency          = useWizardStore(s => s.frequency);
+  const reminderTime      = useWizardStore(s => s.reminderTime);
+  const reminderWeekdays  = useWizardStore(s => s.reminderWeekdays);
+  const reminderDayOfMonth = useWizardStore(s => s.reminderDayOfMonth);
+  const setReminderTime   = useWizardStore(s => s.setReminderTime);
+  const setReminderWeekdays = useWizardStore(s => s.setReminderWeekdays);
+  const setReminderDayOfMonth = useWizardStore(s => s.setReminderDayOfMonth);
 
   const { h, m } = parseTime(reminderTime);
   const { h12, ampm } = formatDisplay(h);
@@ -65,6 +75,26 @@ export default function ReminderStep({ navigation }: Props) {
     setReminderTime(`${pad(nextH)}:${pad(nextM)}`);
   };
 
+  const toggleWeekday = (weekday: number) => {
+    const has = reminderWeekdays.includes(weekday);
+    if (has && reminderWeekdays.length <= 1) return;
+    setReminderWeekdays(
+      has ? reminderWeekdays.filter(w => w !== weekday) : [...reminderWeekdays, weekday].sort((a, b) => a - b),
+    );
+  };
+
+  const previewText = useMemo(() => {
+    if (frequency === 'weekly' && reminderWeekdays.length > 0) {
+      const dayLabels = reminderWeekdays.map(w => t(`wizard.${WEEKDAY_KEYS[w - 1]}`)).join(', ');
+      return t('wizard.reminderWeeklyPreview', { days: dayLabels, time: formattedTime });
+    }
+    if (frequency === 'monthly') {
+      const day = reminderDayOfMonth;
+      return t('wizard.reminderMonthlyPreview', { day: String(day), time: formattedTime });
+    }
+    return t('wizard.reminderAt', { time: formattedTime });
+  }, [frequency, reminderWeekdays, reminderDayOfMonth, formattedTime, t]);
+
   useLayoutEffect(() => {
     navigation.setOptions({
       title: t('wizard.reminderTime'),
@@ -78,7 +108,7 @@ export default function ReminderStep({ navigation }: Props) {
 
   return (
     <SafeAreaView style={[s.safe, { backgroundColor: colors.bgSecondary }]} edges={['bottom']}>
-      <View style={s.content}>
+      <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
         <Text style={[s.helper, { color: colors.text2 }]}>{t('wizard.reminderHelper')}</Text>
 
         <View style={[s.card, { backgroundColor: colors.bgCard }]}>
@@ -139,10 +169,66 @@ export default function ReminderStep({ navigation }: Props) {
           )}
         </View>
 
-        <Text style={[s.preview, { color: colors.text2 }]}>
-          {t('wizard.reminderAt', { time: formattedTime })}
-        </Text>
-      </View>
+        {frequency === 'weekly' && (
+          <View style={s.weekdaySection}>
+            <Text style={[s.weekdayLabel, { color: colors.text2 }]}>{t('wizard.reminderDaysLabel')}</Text>
+            <View style={[s.weekdayCard, { backgroundColor: colors.bgCard }]}>
+              <View style={s.weekdayRow}>
+                {(WEEKDAY_KEYS as readonly string[]).map((key, i) => {
+                  const weekday = i + 1;
+                  const selected = reminderWeekdays.includes(weekday);
+                  return (
+                    <Pressable
+                      key={weekday}
+                      onPress={() => toggleWeekday(weekday)}
+                      style={({ pressed }) => [
+                        s.weekdayChip,
+                        {
+                          backgroundColor: selected ? colors.teal : colors.bgSecondary,
+                          borderColor: selected ? colors.teal : colors.separator,
+                          opacity: pressed ? 0.85 : 1,
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          s.weekdayChipText,
+                          { color: selected ? colors.white : colors.text2 },
+                        ]}
+                      >
+                        {t(`wizard.${key}`)}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+          </View>
+        )}
+
+        {frequency === 'monthly' && (
+          <View style={[s.monthDaySection, { borderColor: colors.separator }]}>
+            <Text style={[s.monthDayLabel, { color: colors.text1 }]}>{t('wizard.reminderDayOfMonthLabel')}</Text>
+            <View style={s.monthDayRow}>
+              <Pressable
+                onPress={() => setReminderDayOfMonth(Math.max(1, reminderDayOfMonth - 1))}
+                style={[s.monthDayBtn, { backgroundColor: colors.bgCard }]}
+              >
+                <Text style={[s.monthDayBtnText, { color: colors.teal }]}>−</Text>
+              </Pressable>
+              <Text style={[s.monthDayValue, { color: colors.text1 }]}>{reminderDayOfMonth}</Text>
+              <Pressable
+                onPress={() => setReminderDayOfMonth(Math.min(31, reminderDayOfMonth + 1))}
+                style={[s.monthDayBtn, { backgroundColor: colors.bgCard }]}
+              >
+                <Text style={[s.monthDayBtnText, { color: colors.teal }]}>+</Text>
+              </Pressable>
+            </View>
+          </View>
+        )}
+
+        <Text style={[s.preview, { color: colors.text2 }]}>{previewText}</Text>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -229,6 +315,45 @@ const s = StyleSheet.create({
   ampmBtn: { paddingVertical: 8, paddingHorizontal: 16, borderRadius: 10 },
   ampmBtnActive: {},
   ampmText: { fontSize: 15, fontWeight: '600' },
+  weekdaySection: { marginTop: 24 },
+  weekdayLabel: {
+    fontSize: 13,
+    fontWeight: '500',
+    marginBottom: 10,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  weekdayCard: {
+    borderRadius: 16,
+    padding: 12,
+    overflow: 'hidden',
+  },
+  weekdayRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 6,
+  },
+  weekdayChip: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 0,
+  },
+  weekdayChipText: { fontSize: 12, fontWeight: '600' },
+  monthDaySection: {
+    marginTop: 24,
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  monthDayLabel: { fontSize: 16, fontWeight: '600', marginBottom: 12 },
+  monthDayRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 20 },
+  monthDayBtn: { paddingVertical: 12, paddingHorizontal: 24, borderRadius: 12 },
+  monthDayBtnText: { fontSize: 22, fontWeight: '700' },
+  monthDayValue: { fontSize: 28, fontWeight: '700', minWidth: 48, textAlign: 'center' },
   preview: {
     textAlign: 'center',
     marginTop: 24,

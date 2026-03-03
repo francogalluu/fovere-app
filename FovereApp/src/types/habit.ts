@@ -55,6 +55,18 @@ export interface Habit {
   /** Local notification time, stored as "HH:MM" (24-hour). undefined = no reminder. */
   reminderTime?: string;
 
+  /**
+   * For weekly habits: which weekdays to remind (1 = Sunday … 7 = Saturday, Expo convention).
+   * If empty/undefined, defaults to [1] when scheduling.
+   */
+  reminderWeekdays?: number[];
+
+  /**
+   * For monthly habits: day of month (1–31) to remind.
+   * If undefined, defaults to 1 when scheduling.
+   */
+  reminderDayOfMonth?: number;
+
   /** ISO date string YYYY-MM-DD — when the habit was created */
   createdAt: string;
 

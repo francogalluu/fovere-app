@@ -89,6 +89,11 @@
     "couldNotScheduleTest": "No se pudo programar la notificación de prueba.",
     "enableForTest": "Activa las notificaciones de Fovere en la configuración del sistema para recibir la prueba.",
     "reminderBody": "Recuerda registrar tus hábitos de hoy.",
+    "habitReminderTitle": "Recordatorio de hábito",
+    "habitReminderBody": "Hora de registrar {{habitName}}",
+    "breakHabitReminderTitle": "Recordatorio de límite",
+    "breakHabitReminderBody": "No superes tu límite de {{habitName}}",
+    "habitReminderFallbackName": "Tu hábito",
     "testNotificationTitle": "Notificación de prueba de Fovere",
     "testNotificationBody": "Si ves esto, las notificaciones funcionan."
   },
@@ -242,7 +247,18 @@
     "namePlaceholder": "Nombre",
     "descriptionPlaceholderShort": "Opcional",
     "reminderAt": "Recordatorio a las {{time}}",
-    "timeLabel": "Hora"
+    "timeLabel": "Hora",
+    "reminderDaysLabel": "Días de recordatorio",
+    "reminderDayOfMonthLabel": "Día del mes",
+    "weekdaySun": "Dom",
+    "weekdayMon": "Lun",
+    "weekdayTue": "Mar",
+    "weekdayWed": "Mié",
+    "weekdayThu": "Jue",
+    "weekdayFri": "Vie",
+    "weekdaySat": "Sáb",
+    "reminderWeeklyPreview": "{{days}} a las {{time}}",
+    "reminderMonthlyPreview": "El día {{day}} a las {{time}}"
   },
   "alerts": {
     "weekStartsOn": "La semana empieza el",
