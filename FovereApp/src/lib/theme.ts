@@ -143,12 +143,13 @@ const DARK: Palette = {
   shadowOpacityHero: 0.25,
   shadowRadiusHero: 28,
 
-  heatmapEmpty: '#38383A',
-  heatmapFuture: '#2C2C2E',
+  // Incomplete/future cells: lighter than bgCard (#2C2C2E) so they’re visible in dark mode
+  heatmapEmpty: '#48484A',
+  heatmapFuture: '#3A3A3C',
   heatmapSuccess: '#34C759',
   heatmapWarning: '#FF9F0A',
   heatmapWarningLight: '#FFD60A',
-  heatmapLow: '#38383A',
+  heatmapLow: '#48484A',
 
   white: '#FFFFFF',
   black: '#000000',

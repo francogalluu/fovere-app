@@ -97,6 +97,9 @@ function aggregateCompletions(
         if (habitFilter.createdAt > d) continue;
         target += 1;
         if (isHabitCompleted(habitFilter, entries, d, weekStartsOn)) completed += 1;
+        const value = getHabitCurrentValue(habitFilter, entries, d, weekStartsOn);
+        const t = habitFilter.target || 1;
+        dailyPcts.push(Math.min(100, Math.round((value / t) * 100)));
       } else {
         const active = habits.filter(h => isHabitActiveOnDate(h, d) && h.createdAt <= d);
         const n = active.length;
@@ -108,7 +111,7 @@ function aggregateCompletions(
     }
 
     const avgPct =
-      bucket.dates && dailyPcts.length > 0
+      dailyPcts.length > 0
         ? dailyPcts.reduce((a, b) => a + b, 0) / dailyPcts.length
         : undefined;
 
@@ -190,10 +193,12 @@ function getCompletionByWeekday(
 ): number[] {
   const byDow: number[][] = [[], [], [], [], [], [], []];
   if (habitFilter) {
+    const t = habitFilter.target || 1;
     for (const d of periodDates) {
       if (habitFilter.createdAt > d) continue;
       const col = getDayOfWeekColumnIndex(d, weekStartsOn);
-      const pct = isHabitCompleted(habitFilter, entries, d, weekStartsOn) ? 100 : 0;
+      const value = getHabitCurrentValue(habitFilter, entries, d, weekStartsOn);
+      const pct = Math.min(100, Math.round((value / t) * 100));
       byDow[col].push(pct);
     }
   } else {
