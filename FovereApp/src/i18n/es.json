@@ -65,6 +65,8 @@
     "sunday": "Domingo",
     "monday": "Lunes",
     "deletedHabits": "Hábitos eliminados",
+    "exportToCsv": "Exportar a CSV",
+    "exportError": "Error al exportar",
     "habitReminders": "Recordatorios por hábito",
     "version": "Versión",
     "privacyPolicy": "Política de privacidad",

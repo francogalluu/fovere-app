@@ -1,12 +1,14 @@
 import React from 'react';
 import {
-  View, Text, Switch, Pressable, ScrollView, StyleSheet, Alert,
+  View, Text, Switch, Pressable, ScrollView, StyleSheet, Alert, Share,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   ChevronRight,
   SlidersHorizontal,
   Trash2,
+  Database,
+  Download,
   HelpCircle,
   Moon,
   Languages,
@@ -23,9 +25,36 @@ import type { NavigationProp } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import type { RootStackParamList } from '@/navigation/types';
 import { useSettingsStore } from '@/store/settingsStore';
+import { useHabitStore } from '@/store';
 import { useTheme } from '@/context/ThemeContext';
 import type { Palette } from '@/lib/theme';
 import { i18n } from '@/i18n';
+import type { Habit, HabitEntry } from '@/types/habit';
+
+// ─── CSV export ──────────────────────────────────────────────────────────────
+
+function escapeCsvCell(value: string): string {
+  if (/[",\n\r]/.test(value)) return `"${value.replace(/"/g, '""')}"`;
+  return value;
+}
+
+function buildHabitsCsv(habits: Habit[], entries: HabitEntry[]): string {
+  const habitMap = new Map(habits.map(h => [h.id, h]));
+  const header = 'Habit,Date,Value,Unit,Target';
+  const rows = entries
+    .filter(e => habitMap.has(e.habitId))
+    .map(e => {
+      const h = habitMap.get(e.habitId)!;
+      return [
+        escapeCsvCell(h.name),
+        e.date,
+        String(e.value),
+        escapeCsvCell(h.unit ?? ''),
+        String(h.target ?? 1),
+      ].join(',');
+    });
+  return [header, ...rows].join('\n');
+}
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -70,6 +99,20 @@ export default function SettingsScreen() {
 
   const handleComingSoon = (feature: string) => {
     Alert.alert(feature, t('settings.comingSoon'), [{ text: t('common.ok') }]);
+  };
+
+  const handleExportToCsv = async () => {
+    const { habits, entries } = useHabitStore.getState();
+    const csv = buildHabitsCsv(habits, entries);
+    try {
+      await Share.share({
+        message: csv,
+        title: t('settings.exportToCsv'),
+      });
+    } catch (err) {
+      if ((err as { message?: string })?.message?.includes('cancel') || (err as { code?: string })?.code === 'ECANCELLED') return;
+      Alert.alert(t('settings.exportToCsv'), (err as Error)?.message ?? t('settings.exportError'), [{ text: t('common.ok') }]);
+    }
   };
 
   const reminderSummary = dailyReminderEnabled
@@ -147,7 +190,14 @@ export default function SettingsScreen() {
         </Section>
 
         {/* ── Data ────────────────────────────────────────────────────── */}
-        <Section title={t('settings.data')} icon={Trash2} colors={colors}>
+        <Section title={t('settings.data')} icon={Database} colors={colors}>
+          <SettingRow
+            icon={Download}
+            label={t('settings.exportToCsv')}
+            onPress={handleExportToCsv}
+            showChevron
+            colors={colors}
+          />
           <SettingRow
             icon={Trash2}
             label={t('settings.deletedHabits')}
