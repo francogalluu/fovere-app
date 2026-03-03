@@ -12,6 +12,7 @@ import {
   addDays,
   addMonths,
   getWeekDates,
+  getWeeksRange,
   getMonthKey,
   getLastNMonthRanges,
   getShortDayLabels,
@@ -47,7 +48,51 @@ export type { ChartBar };
 type TFunction = (key: string, opts?: { [k: string]: string | number }) => string;
 
 /** Build buckets for chart. For 'week', use only YYYY-MM-DD (key/start/end); labels are for display only and must not be used for aggregation. */
-function getBuckets(range: TimeRange, endDate: string, weekStartsOn: 0 | 1, t: TFunction): ChartBucket[] {
+function getBuckets(range: TimeRange, endDate: string, weekStartsOn: 0 | 1, t: TFunction, useWeekBuckets = false): ChartBucket[] {
+  if (useWeekBuckets) {
+    const locale = getDateLocale();
+    const weekLabelFormat = 'd/M';
+    switch (range) {
+      case 'day':
+        return [{ key: endDate, label: t('common.today'), start: endDate, end: endDate }];
+      case 'week': {
+        const weeks = getWeeksRange(6, 0, weekStartsOn);
+        return weeks.map((weekDays) => {
+          const start = weekDays[0];
+          const end = weekDays[6];
+          const label = format(new Date(start + 'T00:00:00'), weekLabelFormat, { locale });
+          return { key: start, label, start, end, dates: weekDays };
+        });
+      }
+      case 'month': {
+        const weeks = getWeeksRange(3, 0, weekStartsOn);
+        return weeks.map((weekDays) => {
+          const start = weekDays[0];
+          const end = weekDays[6];
+          const label = format(new Date(start + 'T00:00:00'), weekLabelFormat, { locale });
+          return { key: start, label, start, end, dates: weekDays };
+        });
+      }
+      case '6month': {
+        const weeks = getWeeksRange(25, 0, weekStartsOn);
+        return weeks.map((weekDays) => {
+          const start = weekDays[0];
+          const end = weekDays[6];
+          const label = format(new Date(start + 'T00:00:00'), weekLabelFormat, { locale });
+          return { key: start, label, start, end, dates: weekDays };
+        });
+      }
+      case 'year': {
+        const weeks = getWeeksRange(51, 0, weekStartsOn);
+        return weeks.map((weekDays) => {
+          const start = weekDays[0];
+          const end = weekDays[6];
+          const label = format(new Date(start + 'T00:00:00'), weekLabelFormat, { locale });
+          return { key: start, label, start, end, dates: weekDays };
+        });
+      }
+    }
+  }
   switch (range) {
     case 'day':
       return [{ key: endDate, label: t('common.today'), start: endDate, end: endDate }];
@@ -132,7 +177,8 @@ function safePercent(percent: number | null | undefined): number {
 }
 
 function buildChartBars(habits: Habit[], entries: HabitEntry[], range: TimeRange, endDate: string, habitFilter: Habit | null, weekStartsOn: 0 | 1, t: TFunction): ChartBar[] {
-  const buckets = getBuckets(range, endDate, weekStartsOn, t);
+  const useWeekBuckets = habitFilter?.frequency === 'weekly';
+  const buckets = getBuckets(range, endDate, weekStartsOn, t, useWeekBuckets);
   const agg = aggregateCompletions(habits, entries, buckets, habitFilter, weekStartsOn);
   const bars = buckets.map((b, i) => {
     const raw =
@@ -173,7 +219,16 @@ function getPeriodDates(range: TimeRange, todayStr: string, weekStartsOn: 0 | 1)
   }
 }
 
-function getPeriodLabel(range: TimeRange, t: TFunction): string {
+function getPeriodLabel(range: TimeRange, t: TFunction, isWeeklyHabit = false): string {
+  if (isWeeklyHabit) {
+    return {
+      day: t('analytics.periodLabelDay'),
+      week: t('analytics.periodLabel7Weeks'),
+      month: t('analytics.periodLabel4Weeks'),
+      '6month': t('analytics.periodLabel26Weeks'),
+      year: t('analytics.periodLabel52Weeks'),
+    }[range];
+  }
   return {
     day: t('analytics.periodLabelDay'),
     week: t('analytics.periodLabelWeek'),
@@ -218,10 +273,11 @@ function getCompletionByWeekday(
 const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const;
 const MONTH_INITIALS = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'] as const;
 
-/** Indices of buckets that should show an x-axis label. Month: none (only range caption). */
-function getXAxisTicks(range: TimeRange, bars: ChartBar[]): number[] {
+/** Indices of buckets that should show an x-axis label. Month / 26W / 1Y (week buckets): none (only range caption). */
+function getXAxisTicks(range: TimeRange, bars: ChartBar[], useWeekBuckets = false): number[] {
   if (range === 'month') return [];
   if (range === 'week' || range === '6month' || range === 'year') {
+    if (useWeekBuckets && (range === '6month' || range === 'year')) return [];
     return bars.map((_, i) => i);
   }
   return [];
@@ -297,6 +353,16 @@ export default function AnalyticsScreen() {
     [timeRange, todayStr, weekStartsOn],
   );
 
+  /** When a weekly habit is selected, period as week-start dates for the ring and counts */
+  const periodWeekStarts = useMemo(() => {
+    if (!selectedHabit || selectedHabit.frequency !== 'weekly') return null;
+    const [nWeeks] =
+      timeRange === 'week' ? [7] : timeRange === 'month' ? [4] : timeRange === '6month' ? [26] : timeRange === 'year' ? [52] : [0];
+    if (nWeeks === 0) return null;
+    const weeks = getWeeksRange(nWeeks - 1, 0, weekStartsOn);
+    return weeks.map(w => w[0]);
+  }, [timeRange, weekStartsOn, selectedHabit]);
+
   React.useEffect(() => {
     if (__DEV__ && timeRange === 'week' && periodDates.length > 0) {
       const start = periodDates[0];
@@ -310,10 +376,14 @@ export default function AnalyticsScreen() {
 
   const { completionPct, completionText, completionTitle } = useMemo(() => {
     if (selectedHabit) {
-      const completed = periodDates.filter(d => isHabitCompleted(selectedHabit, entries, d, weekStartsOn)).length;
+      const useWeeks = selectedHabit.frequency === 'weekly' && periodWeekStarts != null;
+      const dates = useWeeks ? periodWeekStarts : periodDates;
+      const completed = dates.filter(d => isHabitCompleted(selectedHabit, entries, d, weekStartsOn)).length;
       return {
-        completionPct:   periodDates.length > 0 ? Math.round((completed / periodDates.length) * 100) : 0,
-        completionText:  t('analytics.sessionsCompletion', { completed: String(completed), total: String(periodDates.length) }),
+        completionPct:   dates.length > 0 ? Math.round((completed / dates.length) * 100) : 0,
+        completionText:  useWeeks
+          ? t('analytics.weeksCompletion', { completed: String(completed), total: String(dates.length) })
+          : t('analytics.sessionsCompletion', { completed: String(completed), total: String(dates.length) }),
         completionTitle: t('analytics.habitCompletion', { name: selectedHabit.name }),
       };
     }
@@ -334,7 +404,7 @@ export default function AnalyticsScreen() {
       completionText:  t('analytics.habitsCompletion', { completed: String(totalCompleted), total: String(totalPossible) }),
       completionTitle: getPeriodLabel(timeRange, t) + ' ' + t('analytics.completionSuffix'),
     };
-  }, [selectedHabit, allHabits, entries, periodDates, timeRange, weekStartsOn, focusKey, t]);
+  }, [selectedHabit, allHabits, entries, periodDates, periodWeekStarts, timeRange, weekStartsOn, focusKey, t]);
 
   const chartBars = useMemo(
     () => buildChartBars(allHabits, entries, timeRange, todayStr, selectedHabit ?? null, weekStartsOn, t),
@@ -348,7 +418,11 @@ export default function AnalyticsScreen() {
   const barSectionTitle = selectedHabit ? t('analytics.habitCompletion', { name: selectedHabit.name }) : t('analytics.habitsCompleted');
   const hasChartData = chartBars.some(b => b.target > 0);
 
-  const xAxisTickIndices = useMemo(() => new Set(getXAxisTicks(timeRange, chartBars)), [timeRange, chartBars]);
+  const useWeekBuckets = selectedHabit?.frequency === 'weekly';
+  const xAxisTickIndices = useMemo(
+    () => new Set(getXAxisTicks(timeRange, chartBars, useWeekBuckets)),
+    [timeRange, chartBars, useWeekBuckets],
+  );
   const verticalGridlineIndices = useMemo(() => new Set(getVerticalGridlineIndices(timeRange, chartBars)), [timeRange, chartBars]);
 
   // ── Single-habit streak ───────────────────────────────────────────────────
@@ -360,11 +434,13 @@ export default function AnalyticsScreen() {
 
   const habitDaysCompleted = useMemo(() => {
     if (!selectedHabit) return null;
-    // Only count days when habit was 100% complete (target met)
+    if (selectedHabit.frequency === 'weekly' && periodWeekStarts != null) {
+      return periodWeekStarts.filter(d => isHabitCompleted(selectedHabit, entries, d, weekStartsOn)).length;
+    }
     return periodDates.filter(
       d => selectedHabit.createdAt <= d && isHabitCompleted(selectedHabit, entries, d, weekStartsOn),
     ).length;
-  }, [selectedHabit, entries, periodDates, weekStartsOn, focusKey]);
+  }, [selectedHabit, entries, periodDates, periodWeekStarts, weekStartsOn, focusKey]);
 
   // ── By-habit completion (when "All habits" selected) ──────────────────────
   // Uses each habit's measure: period sum of value vs expected (target × periods). e.g. weekly = sum of minutes vs expected minutes so far.
@@ -526,7 +602,9 @@ export default function AnalyticsScreen() {
               style={[s.timeRangeSeg, timeRange === r && [s.timeRangeSegActive, { backgroundColor: colors.bgCard }]]}
             >
               <Text style={[s.timeRangeSegText, { color: colors.text2 }, timeRange === r && { color: colors.text1 }]}>
-                {r === 'week' ? t('analytics.timeRange7D') : r === 'month' ? t('analytics.timeRange30D') : r === '6month' ? t('analytics.timeRange6M') : t('analytics.timeRangeY')}
+                {selectedHabit?.frequency === 'weekly'
+                  ? (r === 'week' ? t('analytics.timeRange7W') : r === 'month' ? t('analytics.timeRange4W') : r === '6month' ? t('analytics.timeRange26W') : t('analytics.timeRange1Y'))
+                  : (r === 'week' ? t('analytics.timeRange7D') : r === 'month' ? t('analytics.timeRange30D') : r === '6month' ? t('analytics.timeRange6M') : t('analytics.timeRangeY'))}
               </Text>
             </Pressable>
           ))}
@@ -596,9 +674,10 @@ export default function AnalyticsScreen() {
                   return MONTH_INITIALS[m - 1] ?? bar.label;
                 } : undefined}
               />
-              {timeRange === 'month' && chartBars.length >= 2 && (() => {
+              {(timeRange === 'month' || (useWeekBuckets && (timeRange === '6month' || timeRange === 'year'))) && chartBars.length >= 2 && (() => {
                 const start = chartBars[0].key;
-                const end = chartBars[chartBars.length - 1].key;
+                const lastWeekStart = chartBars[chartBars.length - 1].key;
+                const end = useWeekBuckets ? addDays(lastWeekStart, 6) : lastWeekStart;
                 const fmt = (d: string) => format(new Date(d + 'T00:00:00'), 'MMM d', { locale: getDateLocale() });
                 return (
                   <Text style={[s.barChartRangeCaption, { color: colors.text2 }]}>{fmt(start)} – {fmt(end)}</Text>
@@ -702,7 +781,7 @@ export default function AnalyticsScreen() {
                 <CalendarCheck size={24} color={colors.success} strokeWidth={2} />
               </View>
               <Text style={[s.streakNum, { color: colors.text1 }]}>{habitDaysCompleted}</Text>
-              <Text style={[s.streakLabel, { color: colors.text2 }]}>{t('analytics.daysCompleted')}</Text>
+              <Text style={[s.streakLabel, { color: colors.text2 }]}>{selectedHabit.frequency === 'weekly' ? t('analytics.weeksCompleted') : t('analytics.daysCompleted')}</Text>
             </View>
           </View>
         )}
