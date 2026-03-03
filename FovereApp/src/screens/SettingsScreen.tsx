@@ -3,7 +3,21 @@ import {
   View, Text, Switch, Pressable, ScrollView, StyleSheet, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ChevronRight } from 'lucide-react-native';
+import {
+  ChevronRight,
+  SlidersHorizontal,
+  Trash2,
+  HelpCircle,
+  Moon,
+  Languages,
+  Bell,
+  Clock,
+  Smartphone,
+  Calendar,
+  Shield,
+  FileText,
+  Info,
+} from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NavigationProp } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
@@ -71,8 +85,9 @@ export default function SettingsScreen() {
         <Text style={[s.title, { color: colors.text1 }]}>{t('settings.title')}</Text>
 
         {/* ── Preferences ─────────────────────────────────────────────── */}
-        <Section title={t('settings.preferences')} colors={colors}>
+        <Section title={t('settings.preferences')} icon={SlidersHorizontal} colors={colors}>
           <SettingRow
+            icon={Moon}
             label={t('settings.darkMode')}
             right={
               <Switch
@@ -85,6 +100,7 @@ export default function SettingsScreen() {
             colors={colors}
           />
           <SettingRow
+            icon={Languages}
             label={t('settings.language')}
             value={languageDisplay}
             onPress={handleLanguagePress}
@@ -92,6 +108,7 @@ export default function SettingsScreen() {
             colors={colors}
           />
           <SettingRow
+            icon={Bell}
             label={t('settings.notifications')}
             value={reminderSummary}
             onPress={() => navigation.navigate('Notifications')}
@@ -99,12 +116,14 @@ export default function SettingsScreen() {
             colors={colors}
           />
           <SettingRow
+            icon={Clock}
             label={t('settings.habitReminders')}
             onPress={() => navigation.navigate('HabitReminders')}
             showChevron
             colors={colors}
           />
           <SettingRow
+            icon={Smartphone}
             label={t('settings.hapticFeedback')}
             right={
               <Switch
@@ -117,6 +136,7 @@ export default function SettingsScreen() {
             colors={colors}
           />
           <SettingRow
+            icon={Calendar}
             label={t('settings.weekStartsOn')}
             value={weekStartsOn === 0 ? t('settings.sunday') : t('settings.monday')}
             onPress={handleWeekStartPress}
@@ -127,8 +147,9 @@ export default function SettingsScreen() {
         </Section>
 
         {/* ── Data ────────────────────────────────────────────────────── */}
-        <Section title={t('settings.data')} colors={colors}>
+        <Section title={t('settings.data')} icon={Trash2} colors={colors}>
           <SettingRow
+            icon={Trash2}
             label={t('settings.deletedHabits')}
             onPress={() => navigation.navigate('DeletedHabits')}
             showChevron
@@ -138,15 +159,17 @@ export default function SettingsScreen() {
         </Section>
 
         {/* ── About ───────────────────────────────────────────────────── */}
-        <Section title={t('settings.about')} colors={colors}>
-          <SettingRow label={t('settings.version')} value="1.0.0" colors={colors} />
+        <Section title={t('settings.about')} icon={HelpCircle} colors={colors}>
+          <SettingRow icon={Info} label={t('settings.version')} value="1.0.0" colors={colors} />
           <SettingRow
+            icon={Shield}
             label={t('settings.privacyPolicy')}
             onPress={() => navigation.navigate('PrivacyPolicy')}
             showChevron
             colors={colors}
           />
           <SettingRow
+            icon={FileText}
             label={t('settings.termsOfService')}
             onPress={() => navigation.navigate('TermsOfService')}
             showChevron
@@ -163,16 +186,32 @@ export default function SettingsScreen() {
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-function Section({ title, children, colors }: { title: string; children: React.ReactNode; colors: Palette }) {
+type LucideIcon = typeof ChevronRight;
+
+function Section({
+  title,
+  icon: Icon,
+  children,
+  colors,
+}: {
+  title: string;
+  icon: LucideIcon;
+  children: React.ReactNode;
+  colors: Palette;
+}) {
   return (
     <View style={s.section}>
-      <Text style={[s.sectionTitle, { color: colors.text2 }]}>{title}</Text>
+      <View style={s.sectionTitleRow}>
+        <Icon size={16} color={colors.text2} strokeWidth={2} style={s.sectionIcon} />
+        <Text style={[s.sectionTitle, { color: colors.text2 }]}>{title}</Text>
+      </View>
       <View style={[s.sectionCard, { backgroundColor: colors.bgCard }]}>{children}</View>
     </View>
   );
 }
 
 function SettingRow({
+  icon: Icon,
   label,
   value,
   right,
@@ -181,6 +220,7 @@ function SettingRow({
   last = false,
   colors,
 }: {
+  icon?: LucideIcon;
   label: string;
   value?: string;
   right?: React.ReactNode;
@@ -200,7 +240,12 @@ function SettingRow({
         pressed && onPress && { backgroundColor: colors.bgSecondary },
       ]}
     >
-      <Text style={[s.rowLabel, { color: colors.text1 }]}>{label}</Text>
+      <View style={s.rowLeft}>
+        {Icon ? (
+          <Icon size={20} color={colors.text2} strokeWidth={2} style={s.rowIcon} />
+        ) : null}
+        <Text style={[s.rowLabel, { color: colors.text1 }]}>{label}</Text>
+      </View>
       <View style={s.rowRight}>
         {value ? <Text style={[s.rowValue, { color: colors.text4 }]}>{value}</Text> : null}
         {right ?? null}
@@ -224,24 +269,43 @@ const s = StyleSheet.create({
     paddingTop: 16, paddingBottom: 24,
   },
 
-  section:      { marginBottom: 32 },
+  section:        { marginBottom: 32 },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    marginBottom: 8,
+  },
+  sectionIcon:     { marginRight: 6 },
   sectionTitle: {
-    fontSize: 13, textTransform: 'uppercase',
-    letterSpacing: 0.4, paddingHorizontal: 16, marginBottom: 8,
+    fontSize: 13,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
   },
   sectionCard: {
     marginHorizontal: 16,
-    borderRadius: 16, overflow: 'hidden',
+    borderRadius: 16,
+    overflow: 'hidden',
   },
 
   row: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingVertical: 12, paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
   },
   rowBorder: {
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  rowLabel: { fontSize: 17 },
+  rowLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    minWidth: 0,
+  },
+  rowIcon: { marginRight: 12 },
+  rowLabel: { fontSize: 17, flex: 1 },
   rowRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   rowValue: { fontSize: 17 },
 });
