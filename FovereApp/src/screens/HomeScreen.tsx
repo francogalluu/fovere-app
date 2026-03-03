@@ -31,6 +31,7 @@ import {
 import { today, isFuture, getWeekDates, getWeeksRange, formatDateTitle, addDays } from '@/lib/dates';
 import { useTheme } from '@/context/ThemeContext';
 import type { RootStackParamList } from '@/navigation/types';
+import { homeScrollToTopRef } from '@/navigation/homeScrollToTopRef';
 import type { Habit } from '@/types/habit';
 
 import { WeekCalendar } from '@/components/WeekCalendar';
@@ -49,13 +50,18 @@ function HomeDayContent({
   compact = false,
   weekStartsOn,
   colors,
+  selectedDate,
+  registerScrollRef,
 }: {
   date: string;
   onJumpToToday: () => void;
   compact?: boolean;
   weekStartsOn: 0 | 1;
   colors: ReturnType<typeof useTheme>['colors'];
+  selectedDate: string;
+  registerScrollRef: (d: string, ref: ScrollView | null) => void;
 }) {
+  const scrollRef = useRef<ScrollView>(null);
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const { t } = useTranslation();
   const haptic = Boolean(useSettingsStore(s => s.hapticFeedback));
@@ -238,9 +244,17 @@ function HomeDayContent({
     );
   };
 
+  useEffect(() => {
+    if (date !== selectedDate) registerScrollRef(date, null);
+  }, [date, selectedDate, registerScrollRef]);
+
   return (
     <>
     <ScrollView
+      ref={(r) => {
+        (scrollRef as React.MutableRefObject<ScrollView | null>).current = r;
+        if (date === selectedDate && r) registerScrollRef(date, r);
+      }}
       style={[s.dayScroll, { backgroundColor: colors.bgHome }]}
       contentContainerStyle={s.scrollContent}
       showsVerticalScrollIndicator={false}
@@ -393,6 +407,8 @@ export default function HomeScreen() {
   const weekStartsOn = useSettingsStore(s => s.weekStartsOn);
   const { width: screenWidth } = useWindowDimensions();
   const listRef = useRef<FlatList<string>>(null);
+  const currentDayScrollRef = useRef<ScrollView | null>(null);
+  const selectedDateRef = useRef<string>('');
 
   const rawHabits = useHabitStore(s => s.habits);
   const entries = useHabitStore(s => s.entries);
@@ -519,6 +535,29 @@ export default function HomeScreen() {
     [],
   );
 
+  // When user taps Home tab while already on Home: if viewing today, scroll vertical to top; else scroll horizontal to today.
+  useEffect(() => {
+    const scrollToTop = () => {
+      const current = selectedDateRef.current;
+      if (current === todayStr) {
+        currentDayScrollRef.current?.scrollTo({ y: 0, animated: true });
+      } else {
+        calendarTapRef.current = true;
+        setSelectedDate(todayStr);
+        programmaticScrollRef.current = true;
+        listRef.current?.scrollToIndex({ index: todayIndex, animated: true });
+      }
+    };
+    homeScrollToTopRef.current = scrollToTop;
+    return () => {
+      homeScrollToTopRef.current = null;
+    };
+  }, [todayStr, todayIndex, setSelectedDate]);
+
+  useEffect(() => {
+    selectedDateRef.current = selectedDate;
+  }, [selectedDate]);
+
   const [addSheetVisible, setAddSheetVisible] = useState(false);
   const addSheetSlide = useRef(new Animated.Value(300)).current;
 
@@ -556,6 +595,10 @@ export default function HomeScreen() {
     if (haptic) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setCompactHomeView(!compactHomeView);
   }, [haptic, compactHomeView]);
+
+  const registerScrollRef = useCallback((d: string, ref: ScrollView | null) => {
+    if (d === selectedDate) currentDayScrollRef.current = ref;
+  }, [selectedDate]);
 
   return (
     <SafeAreaView style={[s.safe, { backgroundColor: colors.bgHome }]}>
@@ -614,6 +657,8 @@ export default function HomeScreen() {
               compact={compactHomeView}
               weekStartsOn={weekStartsOn}
               colors={colors}
+              selectedDate={selectedDate}
+              registerScrollRef={registerScrollRef}
             />
           </View>
         )}
@@ -696,9 +741,9 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    paddingHorizontal: LAYOUT_PADDING_H,
     paddingTop: space.space16,
     paddingBottom: space.space8,
-    paddingHorizontal: LAYOUT_PADDING_H,
   },
   titleApp: {
     fontSize: 28,

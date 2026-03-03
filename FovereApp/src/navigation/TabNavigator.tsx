@@ -1,10 +1,13 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Home, Calendar, BarChart3, Settings } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
+import * as Haptics from 'expo-haptics';
 import type { TabParamList } from './types';
+import { homeScrollToTopRef } from './homeScrollToTopRef';
 
 import { useTheme } from '@/context/ThemeContext';
+import { useSettingsStore } from '@/store/settingsStore';
 import HomeScreen from '@/screens/HomeScreen';
 import CalendarScreen from '@/screens/CalendarScreen';
 import AnalyticsScreen from '@/screens/AnalyticsScreen';
@@ -15,6 +18,14 @@ const Tab = createBottomTabNavigator<TabParamList>();
 export default function TabNavigator() {
   const { colors } = useTheme();
   const { t } = useTranslation();
+  const hapticFeedback = useSettingsStore(s => s.hapticFeedback);
+
+  const onTabPress = useCallback(() => {
+    if (hapticFeedback) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+  }, [hapticFeedback]);
+
   return (
     <Tab.Navigator
       screenOptions={{
@@ -30,6 +41,9 @@ export default function TabNavigator() {
           fontSize: 11,
           fontWeight: '500',
         },
+        tabBarItemStyle: {
+          flex: 1,
+        },
       }}
     >
       <Tab.Screen
@@ -41,6 +55,15 @@ export default function TabNavigator() {
             <Home color={color} size={size} strokeWidth={2} />
           ),
         }}
+        listeners={({ navigation }) => ({
+          tabPress: (e) => {
+            onTabPress();
+            if (navigation.isFocused()) {
+              e.preventDefault();
+              homeScrollToTopRef.current?.();
+            }
+          },
+        })}
       />
       <Tab.Screen
         name="Calendar"
@@ -51,6 +74,7 @@ export default function TabNavigator() {
             <Calendar color={color} size={size} strokeWidth={2} />
           ),
         }}
+        listeners={() => ({ tabPress: onTabPress })}
       />
       <Tab.Screen
         name="Analytics"
@@ -61,6 +85,7 @@ export default function TabNavigator() {
             <BarChart3 color={color} size={size} strokeWidth={2} />
           ),
         }}
+        listeners={() => ({ tabPress: onTabPress })}
       />
       <Tab.Screen
         name="Settings"
@@ -71,6 +96,7 @@ export default function TabNavigator() {
             <Settings color={color} size={size} strokeWidth={2} />
           ),
         }}
+        listeners={() => ({ tabPress: onTabPress })}
       />
     </Tab.Navigator>
   );

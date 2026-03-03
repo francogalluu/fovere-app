@@ -29,6 +29,7 @@
   },
   "home": {
     "title": "Fovere",
+    "scrollToTop": "Ir arriba",
     "completedToday": "Completado hoy",
     "ofHabitsCompleted": "{{completed}} de {{total}} hábitos\ncompletados",
     "noHabitsYet": "Aún no hay hábitos.\n¡Añade uno abajo!",
