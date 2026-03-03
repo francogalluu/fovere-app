@@ -23,6 +23,7 @@
   "nav": {
     "notifications": "Notificaciones",
     "deletedHabits": "Hábitos eliminados",
+    "habitReminders": "Recordatorios por hábito",
     "privacyPolicy": "Política de privacidad",
     "termsOfService": "Términos de servicio"
   },
@@ -63,6 +64,7 @@
     "sunday": "Domingo",
     "monday": "Lunes",
     "deletedHabits": "Hábitos eliminados",
+    "habitReminders": "Recordatorios por hábito",
     "version": "Versión",
     "privacyPolicy": "Política de privacidad",
     "termsOfService": "Términos de servicio",
@@ -89,6 +91,10 @@
     "reminderBody": "Recuerda registrar tus hábitos de hoy.",
     "testNotificationTitle": "Notificación de prueba de Fovere",
     "testNotificationBody": "Si ves esto, las notificaciones funcionan."
+  },
+  "habitReminders": {
+    "empty": "No hay hábitos con recordatorio. Configura uno al crear o editar un hábito.",
+    "removeReminder": "Quitar recordatorio"
   },
   "deletedHabits": {
     "title": "Hábitos eliminados",
@@ -166,7 +172,8 @@
     "measurement": "Medida",
     "target": "Objetivo",
     "limit": "Límite",
-    "description": "Descripción"
+    "description": "Descripción",
+    "reminder": "Recordatorio"
   },
   "daySummary": {
     "completion": "Completado",
@@ -232,6 +239,9 @@
     "editHabit": "Editar hábito",
     "tapToSet": "Toca para configurar",
     "tapToAddOptional": "Toca para añadir (opcional)",
+    "namePlaceholder": "Nombre",
+    "descriptionPlaceholderShort": "Opcional",
+    "reminderAt": "Recordatorio a las {{time}}",
     "timeLabel": "Hora"
   },
   "alerts": {

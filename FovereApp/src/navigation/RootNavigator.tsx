@@ -9,6 +9,8 @@ import WizardNavigator from './WizardNavigator';
 import HabitDetailScreen from '@/screens/HabitDetailScreen';
 import DeletedHabitsScreen from '@/screens/DeletedHabitsScreen';
 import NotificationSettingsScreen from '@/screens/NotificationSettingsScreen';
+import HabitRemindersScreen from '@/screens/HabitRemindersScreen';
+import HabitReminderEditScreen from '@/screens/HabitReminderEditScreen';
 import PrivacyPolicyScreen from '@/screens/PrivacyPolicyScreen';
 import TermsOfServiceScreen from '@/screens/TermsOfServiceScreen';
 
@@ -66,6 +68,32 @@ export default function RootNavigator() {
           headerStyle: { backgroundColor: colors.bgSecondary },
           headerShadowVisible: false,
           headerTitle: t('nav.notifications'),
+        }}
+      />
+
+      {/* Per-habit reminder times */}
+      <Stack.Screen
+        name="HabitReminders"
+        component={HabitRemindersScreen}
+        options={{
+          headerShown: true,
+          headerBackTitle: t('common.back'),
+          headerTintColor: colors.teal,
+          headerStyle: { backgroundColor: colors.bgSecondary },
+          headerShadowVisible: false,
+          headerTitle: t('nav.habitReminders'),
+        }}
+      />
+      <Stack.Screen
+        name="HabitReminderEdit"
+        component={HabitReminderEditScreen}
+        options={{
+          headerShown: true,
+          headerBackTitle: t('common.back'),
+          headerTintColor: colors.teal,
+          headerStyle: { backgroundColor: colors.bgSecondary },
+          headerShadowVisible: false,
+          headerTitle: t('wizard.reminderTime'),
         }}
       />
 

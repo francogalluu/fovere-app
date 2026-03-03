@@ -23,6 +23,7 @@
   "nav": {
     "notifications": "Notifications",
     "deletedHabits": "Deleted Habits",
+    "habitReminders": "Habit reminders",
     "privacyPolicy": "Privacy Policy",
     "termsOfService": "Terms of Service"
   },
@@ -63,6 +64,7 @@
     "sunday": "Sunday",
     "monday": "Monday",
     "deletedHabits": "Deleted Habits",
+    "habitReminders": "Habit reminders",
     "version": "Version",
     "privacyPolicy": "Privacy Policy",
     "termsOfService": "Terms of Service",
@@ -89,6 +91,10 @@
     "reminderBody": "Remember to record your habits for today.",
     "testNotificationTitle": "Fovere test notification",
     "testNotificationBody": "If you see this, notifications are working!"
+  },
+  "habitReminders": {
+    "empty": "No habits with reminders. Set a reminder when creating or editing a habit.",
+    "removeReminder": "Remove reminder"
   },
   "deletedHabits": {
     "title": "Deleted Habits",
@@ -166,7 +172,8 @@
     "measurement": "Measurement",
     "target": "Target",
     "limit": "Limit",
-    "description": "Description"
+    "description": "Description",
+    "reminder": "Reminder"
   },
   "daySummary": {
     "completion": "Completion",
@@ -232,6 +239,9 @@
     "editHabit": "Edit Habit",
     "tapToSet": "Tap to set",
     "tapToAddOptional": "Tap to add (optional)",
+    "namePlaceholder": "Name",
+    "descriptionPlaceholderShort": "Optional",
+    "reminderAt": "Reminder at {{time}}",
     "timeLabel": "Time"
   },
   "alerts": {

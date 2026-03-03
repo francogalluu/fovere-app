@@ -50,7 +50,7 @@ export default function DescriptionStep({ navigation }: Props) {
               style={[s.input, { color: colors.text1 }]}
               value={description}
               onChangeText={setDescription}
-              placeholder={t('wizard.descriptionPlaceholder')}
+              placeholder={t('wizard.descriptionPlaceholderShort')}
               placeholderTextColor={colors.text4}
               multiline
               numberOfLines={4}

@@ -20,6 +20,8 @@ export type RootStackParamList = {
   NewHabit: NavigatorScreenParams<WizardStackParamList>;
   EditHabit: { id: string } & NavigatorScreenParams<WizardStackParamList>;
   Notifications: undefined;
+  HabitReminders: undefined;
+  HabitReminderEdit: { habitId: string };
   DeletedHabits: undefined;
   PrivacyPolicy: undefined;
   TermsOfService: undefined;

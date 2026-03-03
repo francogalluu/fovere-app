@@ -26,6 +26,16 @@ import { ConfettiOverlay } from '@/components/ConfettiOverlay';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'HabitDetail'>;
 
+function formatReminderTime(hhmm: string): string {
+  const [hStr, mStr] = hhmm.split(':');
+  const h = Number.parseInt(hStr, 10);
+  const m = Number.parseInt(mStr, 10);
+  if (Number.isNaN(h) || Number.isNaN(m)) return hhmm;
+  const ampm = h < 12 ? 'AM' : 'PM';
+  const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+  return `${h12}:${String(m).padStart(2, '0')} ${ampm}`;
+}
+
 export default function HabitDetailScreen({ route, navigation }: Props) {
   const { colors } = useTheme();
   const { t } = useTranslation();
@@ -286,6 +296,12 @@ export default function HabitDetailScreen({ route, navigation }: Props) {
             <InfoRow
               label={isBreak ? t('habitDetail.limit') : t('habitDetail.target')}
               value={`${habit.target}${habit.unit ? ' ' + habit.unit : ''}`}
+              last={false}
+              colors={colors}
+            />
+            <InfoRow
+              label={t('habitDetail.reminder')}
+              value={habit.reminderTime ? formatReminderTime(habit.reminderTime) : t('settings.off')}
               last={true}
               colors={colors}
             />

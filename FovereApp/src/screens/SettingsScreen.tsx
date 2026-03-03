@@ -99,6 +99,12 @@ export default function SettingsScreen() {
             colors={colors}
           />
           <SettingRow
+            label={t('settings.habitReminders')}
+            onPress={() => navigation.navigate('HabitReminders')}
+            showChevron
+            colors={colors}
+          />
+          <SettingRow
             label={t('settings.hapticFeedback')}
             right={
               <Switch

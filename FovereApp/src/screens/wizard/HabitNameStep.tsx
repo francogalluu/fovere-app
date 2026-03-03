@@ -21,7 +21,7 @@ export default function HabitNameStep({ navigation }: Props) {
 
   useLayoutEffect(() => {
     navigation.setOptions({
-      title: t('wizard.habitName'),
+      title: t('wizard.name'),
       headerRight: () => (
         <Pressable onPress={() => navigation.goBack()} hitSlop={8}>
           <Text style={[s.doneBtn, { color: colors.teal }]}>{t('wizard.done')}</Text>
@@ -45,7 +45,7 @@ export default function HabitNameStep({ navigation }: Props) {
               style={[s.input, { color: colors.text1 }]}
               value={name}
               onChangeText={setName}
-              placeholder={t('wizard.habitNamePlaceholder')}
+              placeholder={t('wizard.namePlaceholder')}
               placeholderTextColor={colors.chevron}
               autoFocus
               returnKeyType="done"

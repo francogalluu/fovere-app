@@ -144,7 +144,7 @@ export default function HabitTypeStep({ navigation }: Props) {
   }, [isEdit, navigation, handleSave, handleCancel, colors.teal, t]);
 
   // ── Derived display values ─────────────────────────────────────────────────
-  const freqLabel    = frequency.charAt(0).toUpperCase() + frequency.slice(1);
+  const freqLabel    = frequency === 'daily' ? t('wizard.frequencyDaily') : frequency === 'weekly' ? t('wizard.frequencyWeekly') : t('wizard.frequencyMonthly');
   const measureLabel = measureByLabel(kind, target, unit, t);
 
   // ── UI ─────────────────────────────────────────────────────────────────────
@@ -156,8 +156,8 @@ export default function HabitTypeStep({ navigation }: Props) {
         {/* ── Section 1: Name & Icon ──────────────────────────────────── */}
         <View style={[s.section, { backgroundColor: colors.bgCard }]}>
           <Row
-            label={t('wizard.habitName')}
-            value={name.trim() || t('wizard.tapToSet')}
+            label={t('wizard.name')}
+            value={name.trim() || t('wizard.namePlaceholder')}
             valueFaded={!name.trim()}
             onPress={() => navigation.navigate('HabitName')}
           />
@@ -168,7 +168,7 @@ export default function HabitTypeStep({ navigation }: Props) {
           />
           <Row
             label={t('wizard.description')}
-            value={description.trim() || t('wizard.tapToAddOptional')}
+            value={description.trim() || t('wizard.descriptionPlaceholderShort')}
             valueFaded={!description.trim()}
             onPress={() => navigation.navigate('Description')}
             last
