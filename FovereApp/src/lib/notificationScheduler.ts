@@ -65,8 +65,8 @@ export async function scheduleAllNotifications(): Promise<void> {
       const { hour, minute } = parseTime(habit.reminderTime);
       const habitName = habit.name || i18n.t('notifications.habitReminderFallbackName');
       const title = isBreak(habit)
-        ? i18n.t('notifications.breakHabitReminderTitle')
-        : i18n.t('notifications.habitReminderTitle');
+        ? i18n.t('notifications.breakHabitReminderTitle', { habitName })
+        : i18n.t('notifications.habitReminderTitle', { habitName });
       const body = isBreak(habit)
         ? i18n.t('notifications.breakHabitReminderBody', { habitName })
         : i18n.t('notifications.habitReminderBody', { habitName });

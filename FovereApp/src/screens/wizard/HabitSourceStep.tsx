@@ -39,8 +39,8 @@ export default function HabitSourceStep({ navigation, route }: Props) {
   const goalType = route.params?.goalType;
 
   const categories = useMemo(
-    () => searchPredetermined(query, goalType),
-    [query, goalType],
+    () => searchPredetermined(query, goalType, t),
+    [query, goalType, t],
   );
 
   useEffect(() => {
@@ -71,7 +71,7 @@ export default function HabitSourceStep({ navigation, route }: Props) {
   const handleSelectPredetermined = useCallback(
     (habit: PredeterminedHabit) => {
       loadPredetermined({
-        name: habit.name,
+        name: t(habit.nameKey),
         icon: habit.icon,
         goalType: habit.goalType,
         kind: habit.kind,
@@ -81,7 +81,7 @@ export default function HabitSourceStep({ navigation, route }: Props) {
       });
       navigation.navigate('HabitType');
     },
-    [loadPredetermined, navigation],
+    [loadPredetermined, navigation, t],
   );
 
   return (
@@ -116,8 +116,8 @@ export default function HabitSourceStep({ navigation, route }: Props) {
           </View>
 
           {categories.map((cat) => (
-            <View key={cat.title} style={styles.category}>
-              <Text style={[styles.categoryTitle, { color: colors.text2 }]}>{cat.title}</Text>
+            <View key={cat.titleKey} style={styles.category}>
+              <Text style={[styles.categoryTitle, { color: colors.text2 }]}>{t(cat.titleKey)}</Text>
               <View style={[styles.card, { backgroundColor: colors.bgCard }]}>
                 {cat.habits.map((habit, index) => (
                   <Pressable
@@ -132,7 +132,7 @@ export default function HabitSourceStep({ navigation, route }: Props) {
                   >
                     <Text style={styles.habitIcon}>{habit.icon}</Text>
                     <Text style={[styles.habitName, { color: colors.text1 }]} numberOfLines={1}>
-                      {habit.name}
+                      {t(habit.nameKey)}
                     </Text>
                     <ChevronRight size={18} color={colors.chevron} />
                   </Pressable>
