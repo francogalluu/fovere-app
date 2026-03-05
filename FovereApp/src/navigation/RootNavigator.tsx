@@ -1,9 +1,26 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTranslation } from 'react-i18next';
 import type { RootStackParamList } from './types';
 
 import { useTheme } from '@/context/ThemeContext';
+
+function Onboarding1Screen() {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList, 'Onboarding1'>>();
+  return <Onboarding1 onContinue={() => navigation.navigate('Onboarding2')} />;
+}
+
+function Onboarding2Screen() {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList, 'Onboarding2'>>();
+  return <Onboarding2 onContinue={() => navigation.navigate('Onboarding3')} />;
+}
+
+function Onboarding3Screen() {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList, 'Onboarding3'>>();
+  return <Onboarding3 onContinue={() => navigation.goBack()} />;
+}
 import TabNavigator from './TabNavigator';
 import WizardNavigator from './WizardNavigator';
 import HabitDetailScreen from '@/screens/HabitDetailScreen';
@@ -13,6 +30,9 @@ import HabitRemindersScreen from '@/screens/HabitRemindersScreen';
 import HabitReminderEditScreen from '@/screens/HabitReminderEditScreen';
 import PrivacyPolicyScreen from '@/screens/PrivacyPolicyScreen';
 import TermsOfServiceScreen from '@/screens/TermsOfServiceScreen';
+import Onboarding1 from '@/screens/onboarding/Onboarding1';
+import Onboarding2 from '@/screens/onboarding/Onboarding2';
+import Onboarding3 from '@/screens/onboarding/Onboarding3';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -136,6 +156,10 @@ export default function RootNavigator() {
           headerTitle: t('nav.termsOfService'),
         }}
       />
+
+      <Stack.Screen name="Onboarding1" component={Onboarding1Screen} options={{ headerShown: false }} />
+      <Stack.Screen name="Onboarding2" component={Onboarding2Screen} options={{ headerShown: false }} />
+      <Stack.Screen name="Onboarding3" component={Onboarding3Screen} options={{ headerShown: false }} />
     </Stack.Navigator>
   );
 }

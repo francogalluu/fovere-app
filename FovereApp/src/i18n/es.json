@@ -74,7 +74,8 @@
     "english": "English",
     "spanish": "Español",
     "comingSoon": "¡Próximamente!",
-    "off": "Desactivado"
+    "off": "Desactivado",
+    "viewOnboarding": "Ver onboarding de nuevo"
   },
   "notifications": {
     "title": "Notificaciones",
