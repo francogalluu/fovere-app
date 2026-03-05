@@ -26,8 +26,6 @@ export type RootStackParamList = {
   PrivacyPolicy: undefined;
   TermsOfService: undefined;
   Onboarding1: undefined;
-  Onboarding2: undefined;
-  Onboarding3: undefined;
 };
 
 // ─── Bottom tab navigator ─────────────────────────────────────────────────────
