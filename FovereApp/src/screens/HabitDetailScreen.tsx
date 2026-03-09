@@ -57,17 +57,25 @@ export default function HabitDetailScreen({ route, navigation }: Props) {
   );
 
   const isBreak           = habit?.goalType === 'break';
+  const isBreakBoolean    = isBreak && habit?.kind === 'boolean';
+  const failed             = isBreakBoolean && currentValue >= 1; // bad-habit slip recorded
   const overLimit         = isBreak && currentValue > (habit?.target ?? 0);
   const progressPct       = habit ? Math.min((currentValue / habit.target) * 100, 100) : 0;
-  // Break: red at/over limit. Build: apple green when completed, else progress color.
-  const ringStrokeColor   = isBreak && (progressPct >= 100 || overLimit)
-    ? PROGRESS_COLORS.LOW
+  // Break boolean: red when failed, else neutral/success. Break numeric: red at/over limit. Build: green when completed.
+  const ringStrokeColor   = isBreakBoolean
+    ? (failed ? PROGRESS_COLORS.LOW : PROGRESS_COLORS.MID)
+    : isBreak && (progressPct >= 100 || overLimit)
+      ? PROGRESS_COLORS.LOW
+      : isBreak
+        ? PROGRESS_COLORS.MID
+        : completed
+          ? PROGRESS_COLORS.HIGH
+          : getProgressColor(progressPct);
+  const accentColor = isBreakBoolean
+    ? (failed ? PROGRESS_COLORS.LOW : '#008080')
     : isBreak
-      ? PROGRESS_COLORS.MID
-      : !isBreak && completed
-        ? PROGRESS_COLORS.HIGH
-        : getProgressColor(progressPct);
-  const accentColor = isBreak ? PROGRESS_COLORS.LOW : (completed ? PROGRESS_COLORS.HIGH : '#008080');
+      ? PROGRESS_COLORS.LOW
+      : (completed ? PROGRESS_COLORS.HIGH : '#008080');
 
   // Wire the navigation header title and Edit button
   useLayoutEffect(() => {
@@ -92,15 +100,25 @@ export default function HabitDetailScreen({ route, navigation }: Props) {
 
   const handleToggle = useCallback(() => {
     if (!habit || isViewingFuture) return;
-    if (completed) {
-      if (haptic) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      deleteEntry(habit.id, viewDate);
+    if (isBreakBoolean) {
+      if (failed) {
+        if (haptic) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        deleteEntry(habit.id, viewDate);
+      } else {
+        if (haptic) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        logEntry(habit.id, viewDate, 1);
+      }
     } else {
-      if (haptic) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      logEntry(habit.id, viewDate, 1);
-      if (!isBreak) setShowConfetti(true);
+      if (completed) {
+        if (haptic) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        deleteEntry(habit.id, viewDate);
+      } else {
+        if (haptic) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        logEntry(habit.id, viewDate, 1);
+        setShowConfetti(true);
+      }
     }
-  }, [habit, completed, deleteEntry, logEntry, viewDate, isViewingFuture, haptic]);
+  }, [habit, completed, failed, isBreakBoolean, deleteEntry, logEntry, viewDate, isViewingFuture, haptic]);
 
   const handleIncrement = useCallback(() => {
     if (!habit || isViewingFuture) return;
@@ -200,15 +218,15 @@ export default function HabitDetailScreen({ route, navigation }: Props) {
         <View style={s.ringSection}>
           {habit.kind === 'boolean' ? (
             <ScoreRing
-              value={progressPct}
+              value={isBreakBoolean ? (failed ? 100 : 0) : progressPct}
               size={220}
               strokeWidth={12}
               radius={80}
               strokeColor={ringStrokeColor}
               renderCenter={() => (
                 <View style={s.ringCenter}>
-                  <Text style={[s.ringBoolMark, { color: completed || (isBreak && progressPct >= 100) ? accentColor : colors.chevron }]}>
-                    {completed ? '✓' : '○'}
+                  <Text style={[s.ringBoolMark, { color: isBreakBoolean ? (failed ? accentColor : colors.chevron) : (completed ? accentColor : colors.chevron) }]}>
+                    {isBreakBoolean ? (failed ? '✗' : '○') : (completed ? '✓' : '○')}
                   </Text>
                 </View>
               )}
@@ -232,13 +250,15 @@ export default function HabitDetailScreen({ route, navigation }: Props) {
               style={({ pressed }) => [
                 s.boolBtn,
                 { borderColor: accentColor },
-                completed && [s.boolBtnDone, { backgroundColor: accentColor }],
+                (completed || failed) && [s.boolBtnDone, { backgroundColor: accentColor }],
                 !isViewingFuture && pressed && { opacity: 0.75 },
                 isViewingFuture && s.ctrlBtnDisabled,
               ]}
             >
-              <Text style={[s.boolBtnText, { color: accentColor }, completed && { color: colors.white }]}>
-                {completed ? t('habitDetail.done') : t('habitDetail.markDone')}
+              <Text style={[s.boolBtnText, { color: accentColor }, (completed || failed) && { color: colors.white }]}>
+                {isBreakBoolean
+                  ? (failed ? t('common.undo') : t('habitDetail.markFailed'))
+                  : (completed ? t('habitDetail.done') : t('habitDetail.markDone'))}
               </Text>
             </Pressable>
           </View>

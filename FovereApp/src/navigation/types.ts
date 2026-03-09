@@ -1,8 +1,17 @@
 import type { NavigatorScreenParams } from '@react-navigation/native';
 
+export type OnboardingCategory =
+  | 'health-fitness'
+  | 'mind-mood'
+  | 'career-study'
+  | 'home-organization'
+  | 'finances'
+  | 'relationships'
+  | 'creativity-hobbies';
+
 // ─── Wizard stack ─────────────────────────────────────────────────────────────
 export type WizardStackParamList = {
-  HabitSource: { goalType?: 'build' | 'break' };
+  HabitSource: { goalType?: 'build' | 'break'; onboardingCategory?: OnboardingCategory };
   HabitType: undefined;
   HabitName: undefined;
   HabitIcon: undefined;
@@ -26,6 +35,8 @@ export type RootStackParamList = {
   PrivacyPolicy: undefined;
   TermsOfService: undefined;
   Onboarding1: undefined;
+  Onboarding4: undefined;
+  Onboarding5: undefined;
 };
 
 // ─── Bottom tab navigator ─────────────────────────────────────────────────────

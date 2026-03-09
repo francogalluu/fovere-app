@@ -13,12 +13,14 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronRight } from 'lucide-react-native';
+import { CommonActions } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { WizardStackParamList } from '@/navigation/types';
 
 import { useTranslation } from 'react-i18next';
 import { useHabitStore } from '@/store';
 import { useWizardStore } from '@/store/wizardStore';
+import { useSettingsStore } from '@/store/settingsStore';
 import { useTheme } from '@/context/ThemeContext';
 
 type Props = NativeStackScreenProps<WizardStackParamList, 'HabitType'>;
@@ -91,6 +93,7 @@ export default function HabitTypeStep({ navigation }: Props) {
       Alert.alert(t('wizard.nameRequiredTitle'), t('wizard.nameRequiredMessage'));
       return;
     }
+    const fromOnboarding = useWizardStore.getState().fromOnboarding;
     const resolvedTarget = kind === 'boolean' ? 1 : Math.max(1, target);
     const resolvedUnit   = kind === 'boolean' ? undefined : (unit.trim() || undefined);
     const resolvedReminder = reminderEnabled ? reminderTime : undefined;
@@ -131,7 +134,18 @@ export default function HabitTypeStep({ navigation }: Props) {
       });
     }
     reset();
-    navigation.getParent()?.goBack();
+    const root = navigation.getParent();
+    if (fromOnboarding && root) {
+      useSettingsStore.getState().setHasCompletedOnboarding(true);
+      root.dispatch(
+        CommonActions.reset({
+          index: 0,
+          routes: [{ name: 'Tabs' }],
+        }),
+      );
+    } else {
+      root?.goBack();
+    }
   }, [name, icon, description, kind, frequency, target, unit, reminderEnabled, reminderTime, reminderWeekdays, reminderDayOfMonth, isEdit, habitId, addHabit, updateHabit, reset, navigation]);
 
   // ── Header buttons ─────────────────────────────────────────────────────────

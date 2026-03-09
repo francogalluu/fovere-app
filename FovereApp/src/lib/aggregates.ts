@@ -61,12 +61,13 @@ export const getHabitCurrentValue = (
 };
 
 /**
- * True if the habit is "done" for the given anchor date/period.
+ * True if the habit is "done" (goal met) for the given anchor date/period.
  *
  * Build habits: current value has reached or exceeded the target.
- * Break habits: current value is within the limit (≤ target).
- *   - Starts as true at 0, flips to false only if the user exceeds the limit.
- *   - This means exceeding the limit subtracts from the daily score.
+ * Break habits:
+ *   - Boolean (Yes/No): "completed" = user did not do the bad thing (value === 0).
+ *     Value 1 = failed (did the bad thing). No entry or 0 = okay/success.
+ *   - Numeric: current value is within the limit (≤ target).
  */
 export const isHabitCompleted = (
   habit: Habit,
@@ -75,7 +76,10 @@ export const isHabitCompleted = (
   weekStartsOn: WeekStartDay,
 ): boolean => {
   const value = getHabitCurrentValue(habit, entries, date, weekStartsOn);
-  if (habit.goalType === 'break') return value <= habit.target;
+  if (habit.goalType === 'break') {
+    if (habit.kind === 'boolean') return value === 0; // only "okay" (no slip) counts as completed
+    return value <= habit.target;
+  }
   return value >= habit.target;
 };
 

@@ -13,6 +13,8 @@ interface ProgressHeroProps {
   onPress?: () => void;
   /** Smaller layout for compact home view */
   compact?: boolean;
+  /** Optional trigger that restarts the score ring animation when it changes. */
+  animationTrigger?: number;
 }
 
 export function ProgressHero({
@@ -22,6 +24,7 @@ export function ProgressHero({
   overLimit = 0,
   onPress,
   compact = false,
+  animationTrigger,
 }: ProgressHeroProps) {
   const { colors } = useTheme();
   const { t } = useTranslation();
@@ -69,6 +72,7 @@ export function ProgressHero({
           strokeWidth={compact ? 10 : 14}
           radius={compact ? 34 : 50}
           animationSlot="home"
+          animationTrigger={animationTrigger}
           labelStyle={[compact ? styles.percentageTextCompact : styles.percentageText, { color: colors.text1 }]}
           labelStyleWhenFull={compact ? styles.percentageTextFullCompact : styles.percentageTextFull}
         />

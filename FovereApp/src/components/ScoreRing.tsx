@@ -33,6 +33,8 @@ export interface ScoreRingProps {
   animateOnSessionStart?: boolean;
   /** Animation slot key. Each slot animates once per app session (e.g. 'home', 'calendar'). Omit to use default (single shared animation). */
   animationSlot?: string;
+  /** Optional trigger key; when provided, changing this value restarts the animation regardless of session slot. */
+  animationTrigger?: number;
   /** Custom center content. Receives current display percent (integer) during animation. If omitted, shows "{displayPercent}%". */
   renderCenter?: (displayPercent: number) => React.ReactNode;
   /** Text style for default center "%" label (when renderCenter is not used). */
@@ -49,6 +51,7 @@ export function ScoreRing({
   strokeColor: strokeColorProp,
   animateOnSessionStart = true,
   animationSlot = DEFAULT_SLOT,
+  animationTrigger,
   renderCenter,
   labelStyle,
   labelStyleWhenFull,
@@ -69,8 +72,11 @@ export function ScoreRing({
   );
   const hasAnimatedThisMount = useRef(false);
 
+  const useManualTrigger = typeof animationTrigger === 'number';
+
   // Sync to target when not in “first mount animation” phase
   useEffect(() => {
+    if (useManualTrigger) return;
     const slotAlreadyUsed = hasAnimatedBySlot[animationSlot] === true;
     const shouldSync =
       !animateOnSessionStart ||
@@ -84,6 +90,7 @@ export function ScoreRing({
 
   // One-time session animation for this slot
   useEffect(() => {
+    if (useManualTrigger) return;
     if (!animateOnSessionStart || hasAnimatedBySlot[animationSlot] || hasAnimatedThisMount.current) return;
     hasAnimatedThisMount.current = true;
     hasAnimatedBySlot[animationSlot] = true;
@@ -107,7 +114,32 @@ export function ScoreRing({
     return () => {
       animValue.removeAllListeners();
     };
-  }, [animateOnSessionStart, animationSlot, target]);
+  }, [animateOnSessionStart, animationSlot, target, useManualTrigger, animValue]);
+
+  // Manual re-triggered animation, used by Home tab presses
+  useEffect(() => {
+    if (!useManualTrigger) return;
+    animValue.setValue(0);
+    setDisplayPercent(0);
+
+    const listenerId = animValue.addListener(({ value: v }) => {
+      setDisplayPercent(Math.round(v));
+    });
+
+    Animated.timing(animValue, {
+      toValue: target,
+      duration: ANIM_DURATION_MS,
+      easing: ANIM_EASING,
+      useNativeDriver: false,
+    }).start(() => {
+      animValue.removeListener(listenerId);
+      setDisplayPercent(target);
+    });
+
+    return () => {
+      animValue.removeAllListeners();
+    };
+  }, [animationTrigger, target, useManualTrigger, animValue]);
 
   const strokeDashoffset = animValue.interpolate({
     inputRange: [0, 100],

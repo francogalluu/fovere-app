@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import * as Haptics from 'expo-haptics';
 import type { TabParamList } from './types';
 import { homeScrollToTopRef } from './homeScrollToTopRef';
+import { homeHeroAnimationRef } from './homeHeroAnimationRef';
 
 import { useTheme } from '@/context/ThemeContext';
 import { useSettingsStore } from '@/store/settingsStore';
@@ -58,6 +59,7 @@ export default function TabNavigator() {
         listeners={({ navigation }) => ({
           tabPress: (e) => {
             onTabPress();
+            homeHeroAnimationRef.current?.();
             if (navigation.isFocused()) {
               e.preventDefault();
               homeScrollToTopRef.current?.();

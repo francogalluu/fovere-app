@@ -41,6 +41,9 @@ interface SettingsState {
   /** Compact home screen layout (smaller hero and habit cards for faster scanning). */
   compactHomeView: boolean;
 
+  /** True after the user has completed onboarding (first launch flow); prevents showing it again. */
+  hasCompletedOnboarding: boolean;
+
   /** Dark mode (app-wide appearance). */
   darkMode: boolean;
 
@@ -55,6 +58,7 @@ interface SettingsState {
   setDailyReminderTime: (hhmm: string) => void;
   setDailyReminderNotificationId: (id: string | null) => void;
   setCompactHomeView: (enabled: boolean) => void;
+  setHasCompletedOnboarding: (completed: boolean) => void;
   setDarkMode: (enabled: boolean) => void;
   setLanguage: (lang: Language) => void;
 }
@@ -86,6 +90,7 @@ export const useSettingsStore = create<SettingsState>()(
       dailyReminderTime: '20:00',          // 8:00 PM local time
       dailyReminderNotificationId: null,
       compactHomeView: false,
+      hasCompletedOnboarding: false,
       darkMode: false,
       language: undefined,
 
@@ -96,6 +101,7 @@ export const useSettingsStore = create<SettingsState>()(
       setDailyReminderTime: (hhmm) => set({ dailyReminderTime: hhmm }),
       setDailyReminderNotificationId: (id) => set({ dailyReminderNotificationId: id }),
       setCompactHomeView: (enabled) => set({ compactHomeView: enabled }),
+      setHasCompletedOnboarding: (completed) => set({ hasCompletedOnboarding: completed }),
       setDarkMode: (enabled) => set({ darkMode: enabled }),
       setLanguage: (lang) => set({ language: lang }),
     }),
@@ -123,6 +129,7 @@ export const useSettingsStore = create<SettingsState>()(
         const ws = Number(state.weekStartsOn);
         state.weekStartsOn = (ws === 0 || ws === 1 ? ws : 1) as WeekStartDay;
         state.compactHomeView = toBoolean(state.compactHomeView, false);
+        state.hasCompletedOnboarding = toBoolean((state as any).hasCompletedOnboarding, false);
         state.darkMode = toBoolean(state.darkMode, false);
         const lang = (state as any).language;
         if (lang !== 'en' && lang !== 'es') {

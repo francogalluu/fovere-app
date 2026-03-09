@@ -32,6 +32,7 @@ import { today, isFuture, getWeekDates, getWeeksRange, formatDateTitle, addDays 
 import { useTheme } from '@/context/ThemeContext';
 import type { RootStackParamList } from '@/navigation/types';
 import { homeScrollToTopRef } from '@/navigation/homeScrollToTopRef';
+import { homeHeroAnimationRef } from '@/navigation/homeHeroAnimationRef';
 import type { Habit } from '@/types/habit';
 
 import { WeekCalendar } from '@/components/WeekCalendar';
@@ -52,6 +53,7 @@ function HomeDayContent({
   colors,
   selectedDate,
   registerScrollRef,
+  heroAnimationKey,
 }: {
   date: string;
   onJumpToToday: () => void;
@@ -60,6 +62,7 @@ function HomeDayContent({
   colors: ReturnType<typeof useTheme>['colors'];
   selectedDate: string;
   registerScrollRef: (d: string, ref: ScrollView | null) => void;
+  heroAnimationKey?: number;
 }) {
   const scrollRef = useRef<ScrollView>(null);
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
@@ -267,6 +270,7 @@ function HomeDayContent({
           overLimit={overLimitCount}
           onPress={() => setSummaryVisible(true)}
           compact={compact}
+          animationTrigger={heroAnimationKey}
         />
       </View>
 
@@ -492,6 +496,8 @@ export default function HomeScreen() {
     setSelectedDate(today());
   }, []);
 
+  const [heroAnimationKey, setHeroAnimationKey] = useState(0);
+
   const viewabilityConfig = useRef({
     itemVisiblePercentThreshold: 50,
   }).current;
@@ -553,6 +559,17 @@ export default function HomeScreen() {
       homeScrollToTopRef.current = null;
     };
   }, [todayStr, todayIndex, setSelectedDate]);
+
+  // Register hero animation restart handler for Home tab presses
+  useEffect(() => {
+    const restartHero = () => {
+      setHeroAnimationKey((k) => k + 1);
+    };
+    homeHeroAnimationRef.current = restartHero;
+    return () => {
+      homeHeroAnimationRef.current = null;
+    };
+  }, []);
 
   useEffect(() => {
     selectedDateRef.current = selectedDate;
@@ -659,6 +676,7 @@ export default function HomeScreen() {
               colors={colors}
               selectedDate={selectedDate}
               registerScrollRef={registerScrollRef}
+              heroAnimationKey={heroAnimationKey}
             />
           </View>
         )}

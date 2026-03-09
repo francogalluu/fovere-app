@@ -1,3 +1,5 @@
+import type { OnboardingCategory } from '@/navigation/types';
+
 /**
  * Predetermined habits shown in "Add a new habit" picker.
  * Tapping one pre-fills the create-habit wizard.
@@ -20,6 +22,16 @@ export interface PredeterminedCategory {
   titleKey: string;
   habits: PredeterminedHabit[];
 }
+
+const ONBOARDING_CATEGORY_TO_CATS: Record<OnboardingCategory, string[]> = {
+  'health-fitness': ['predetermined.cat.healthy', 'predetermined.cat.fitness'],
+  'mind-mood': ['predetermined.cat.mind', 'predetermined.cat.screen', 'predetermined.cat.food', 'predetermined.cat.substances'],
+  'career-study': ['predetermined.cat.productivity', 'predetermined.cat.mind'],
+  'home-organization': ['predetermined.cat.productivity'],
+  'finances': ['predetermined.cat.substances', 'predetermined.cat.productivity'],
+  'relationships': ['predetermined.cat.social'],
+  'creativity-hobbies': ['predetermined.cat.social', 'predetermined.cat.mind'],
+};
 
 export const PREDETERMINED_CATEGORIES: PredeterminedCategory[] = [
   {
@@ -149,6 +161,7 @@ export function searchPredetermined(
   query: string,
   goalType: 'build' | 'break' | undefined,
   t: (key: string) => string,
+  onboardingCategory?: OnboardingCategory,
 ): PredeterminedCategory[] {
   const q = query.trim().toLowerCase();
   let source = PREDETERMINED_CATEGORIES;
@@ -160,7 +173,30 @@ export function searchPredetermined(
       }))
       .filter(cat => cat.habits.length > 0);
   }
-  if (!q) return source;
+
+  if (!q) {
+    if (!onboardingCategory) return source;
+    const preferred = ONBOARDING_CATEGORY_TO_CATS[onboardingCategory] ?? [];
+    if (preferred.length === 0) return source;
+
+    const byTitleKey = new Map(source.map(cat => [cat.titleKey, cat] as const));
+    const ordered: PredeterminedCategory[] = [];
+
+    for (const key of preferred) {
+      const cat = byTitleKey.get(key);
+      if (cat) {
+        ordered.push(cat);
+        byTitleKey.delete(key);
+      }
+    }
+
+    for (const [, cat] of byTitleKey) {
+      ordered.push(cat);
+    }
+
+    return ordered;
+  }
+
   const result: PredeterminedCategory[] = [];
   for (const cat of source) {
     const titleLower = t(cat.titleKey).toLowerCase();

@@ -34,18 +34,23 @@ type Props = NativeStackScreenProps<WizardStackParamList, 'HabitSource'>;
 export default function HabitSourceStep({ navigation, route }: Props) {
   const { colors } = useTheme();
   const { t } = useTranslation();
-  const { reset, loadPredetermined, setGoalType } = useWizardStore();
+  const { reset, loadPredetermined, setGoalType, setFromOnboarding } = useWizardStore();
   const [query, setQuery] = useState('');
   const goalType = route.params?.goalType;
+  const onboardingCategory = route.params?.onboardingCategory;
 
   const categories = useMemo(
-    () => searchPredetermined(query, goalType, t),
-    [query, goalType, t],
+    () => searchPredetermined(query, goalType, t, onboardingCategory),
+    [query, goalType, t, onboardingCategory],
   );
 
   useEffect(() => {
     if (goalType) setGoalType(goalType);
   }, [goalType, setGoalType]);
+
+  useEffect(() => {
+    setFromOnboarding(!!onboardingCategory);
+  }, [onboardingCategory, setFromOnboarding]);
 
   const handleCancel = useCallback(() => {
     reset();

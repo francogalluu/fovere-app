@@ -24,8 +24,12 @@ interface WizardState {
   /** For monthly: day of month 1–31. Default 1. */
   reminderDayOfMonth: number;
 
+  /** True when NewHabit was opened from onboarding (Onboarding5); used to navigate to Home on save */
+  fromOnboarding: boolean;
+
   // ── Setters ────────────────────────────────────────────────────────────────
   reset: () => void;
+  setFromOnboarding: (v: boolean) => void;
   loadHabit: (habit: Habit) => void;
   /** Pre-fill wizard from a predetermined habit (no habitId). */
   loadPredetermined: (draft: {
@@ -52,7 +56,7 @@ interface WizardState {
 }
 
 const DEFAULTS: Omit<WizardState, keyof Pick<WizardState,
-  'reset' | 'loadHabit' | 'loadPredetermined' | 'setGoalType' | 'setName' | 'setIcon' | 'setDescription' |
+  'reset' | 'setFromOnboarding' | 'loadHabit' | 'loadPredetermined' | 'setGoalType' | 'setName' | 'setIcon' | 'setDescription' |
   'setKind' | 'setFrequency' | 'setTarget' | 'setUnit' |
   'setReminderEnabled' | 'setReminderTime' | 'setReminderWeekdays' | 'setReminderDayOfMonth'
 >> = {
@@ -69,12 +73,15 @@ const DEFAULTS: Omit<WizardState, keyof Pick<WizardState,
   reminderTime:       '08:00',
   reminderWeekdays:   [1],
   reminderDayOfMonth: 1,
+  fromOnboarding:     false,
 };
 
 export const useWizardStore = create<WizardState>()((set) => ({
   ...DEFAULTS,
 
-  reset: () => set(DEFAULTS),
+  reset: () => set({ ...DEFAULTS, fromOnboarding: false }),
+
+  setFromOnboarding: (fromOnboarding) => set({ fromOnboarding }),
 
   loadHabit: (habit) => set({
     habitId:            habit.id,
