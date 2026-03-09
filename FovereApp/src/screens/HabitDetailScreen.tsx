@@ -6,7 +6,6 @@ import {
   Pressable,
   Alert,
   StyleSheet,
-  TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -95,8 +94,6 @@ export default function HabitDetailScreen({ route, navigation }: Props) {
   }, [habit, navigation, accentColor]);
 
   const [showConfetti, setShowConfetti] = useState(false);
-  const [breakInputText, setBreakInputText] = useState('');
-  const [breakInputFocused, setBreakInputFocused] = useState(false);
 
   const handleToggle = useCallback(() => {
     if (!habit || isViewingFuture) return;
@@ -137,29 +134,10 @@ export default function HabitDetailScreen({ route, navigation }: Props) {
     if (!habit || isViewingFuture) return;
     const maxVal = isBreak ? 99999 : habit.target;
     const clamped = Math.max(0, Math.min(value, maxVal));
-    if (haptic && clamped >= habit.target) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    if (haptic && !isBreak && clamped >= habit.target) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     logEntry(habit.id, viewDate, clamped);
     if (!isBreak && clamped >= habit.target) setShowConfetti(true);
   }, [habit, isBreak, logEntry, viewDate, isViewingFuture, haptic]);
-
-  // Sync break-habit number field from store when not focused
-  const isNumericBreak = habit?.kind === 'numeric' && isBreak;
-  useEffect(() => {
-    if (isNumericBreak && !breakInputFocused) setBreakInputText(String(currentValue));
-  }, [isNumericBreak, currentValue, breakInputFocused]);
-
-  const handleBreakInputBlur = useCallback(() => {
-    setBreakInputFocused(false);
-    if (!habit || habit.kind !== 'numeric' || !isBreak) return;
-    const parsed = parseInt(breakInputText, 10);
-    if (!Number.isNaN(parsed)) {
-      const clamped = Math.max(0, Math.min(parsed, 99999));
-      handleSetQuantity(clamped);
-      setBreakInputText(String(clamped));
-    } else {
-      setBreakInputText(String(currentValue));
-    }
-  }, [habit, isBreak, breakInputText, currentValue, handleSetQuantity]);
 
   const handlePause = () => {
     if (!habit) return;
@@ -262,37 +240,12 @@ export default function HabitDetailScreen({ route, navigation }: Props) {
               </Text>
             </Pressable>
           </View>
-        ) : isBreak ? (
-          <View style={s.breakQuantitySection}>
-            <Text style={[s.breakQuantityLabel, { color: colors.text2 }]}>{t('habitDetail.amountToday')}</Text>
-            <TextInput
-              style={[s.breakQuantityInput, { color: colors.text1, borderColor: colors.separator, backgroundColor: colors.bgCard }]}
-              value={breakInputText}
-              onChangeText={(t) => setBreakInputText(t.replace(/[^0-9]/g, ''))}
-              onFocus={() => setBreakInputFocused(true)}
-              onBlur={handleBreakInputBlur}
-              keyboardType="number-pad"
-              editable={!isViewingFuture}
-              placeholder="0"
-              placeholderTextColor={colors.text3}
-              maxLength={5}
-            />
-            {habit.unit ? <Text style={[s.breakQuantityUnit, { color: colors.text2 }]}>{habit.unit}</Text> : null}
-            <View style={s.breakLimitRow}>
-              <Text style={[s.breakLimitText, { color: colors.text2 }]}>Limit: {habit.target}{habit.unit ? ` ${habit.unit}` : ''}</Text>
-              {currentValue > habit.target && (
-                <Text style={[s.breakExceededText, { color: colors.danger }]}>
-                  {t('habitDetail.exceededBy', { count: currentValue - habit.target })}
-                </Text>
-              )}
-            </View>
-          </View>
         ) : (
           <InteractiveQuantityRing
             value={currentValue}
             target={habit.target}
             unit={habit.unit}
-            isBreak={false}
+            isBreak={isBreak}
             disabled={isViewingFuture}
             strokeColor={ringStrokeColor}
             onValueChange={handleSetQuantity}
@@ -413,46 +366,6 @@ const s = StyleSheet.create({
   },
   futureDateNote: {
     fontSize: 15, color: '#8E8E93', textAlign: 'center', marginBottom: 16,
-  },
-
-  // Break-habit number field
-  breakQuantitySection: {
-    alignItems: 'center',
-    paddingVertical: 24,
-    paddingHorizontal: 16,
-  },
-  breakQuantityLabel: {
-    fontSize: 15,
-    marginBottom: 10,
-  },
-  breakQuantityInput: {
-    fontSize: 36,
-    fontWeight: '300',
-    borderWidth: 2,
-    borderRadius: 16,
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    minWidth: 120,
-    textAlign: 'center',
-  },
-  breakQuantityUnit: {
-    fontSize: 16,
-    marginTop: 8,
-  },
-  breakLimitRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 16,
-    marginTop: 16,
-    flexWrap: 'wrap',
-  },
-  breakLimitText: {
-    fontSize: 15,
-  },
-  breakExceededText: {
-    fontSize: 15,
-    fontWeight: '600',
   },
 
   // Boolean toggle

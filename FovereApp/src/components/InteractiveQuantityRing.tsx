@@ -21,6 +21,9 @@ const CENTER_X = RING_SIZE / 2;
 const CENTER_Y = RING_SIZE / 2;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
+/** Break habits: max value = 10× limit; one full 360° = one limit, ring resets each lap */
+const BREAK_MAX_MULTIPLIER = 10;
+
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 export interface InteractiveQuantityRingProps {
@@ -49,6 +52,8 @@ export function InteractiveQuantityRing({
   const lastDragValue = useSharedValue(value);
   const lastHapticValue = useSharedValue(Math.round(value));
   const strokeColorShared = useSharedValue(strokeColor);
+  /** Break only: angle (0–360) at last gesture update, for rotation delta */
+  const prevAngle = useSharedValue(0);
   const [labelValue, setLabelValue] = useState(value);
 
   useEffect(() => {
@@ -86,13 +91,15 @@ export function InteractiveQuantityRing({
   const commitValue = useCallback(
     (v: number) => {
       const rounded = Math.max(0, Math.round(v));
-      onValueChange(isBreak ? rounded : Math.min(rounded, target));
+      const capped = isBreak
+        ? Math.min(rounded, target * BREAK_MAX_MULTIPLIER)
+        : Math.min(rounded, target);
+      onValueChange(capped);
     },
     [target, isBreak, onValueChange],
   );
 
-  // Break: allow exceeding so one full circle spans 0..target*4; makes 4,5,6… reachable (not just 0–3 at wrap)
-  const maxRingValue = isBreak ? targetNum * 4 : targetNum;
+  const maxBreakValue = isBreak ? targetNum * BREAK_MAX_MULTIPLIER : targetNum;
 
   const panGesture = Gesture.Pan()
     .enabled(!disabled)
@@ -101,12 +108,13 @@ export function InteractiveQuantityRing({
       const dx = e.x - CENTER_X;
       const dy = e.y - CENTER_Y;
       const angleDeg = (Math.atan2(dy, dx) * 180) / Math.PI;
-      const progressDeg = (angleDeg + 90 + 360) % 360;
+      let progressDeg = (angleDeg + 90 + 360) % 360;
+      if (progressDeg < 0) progressDeg += 360;
       const p = progressDeg / 360;
       let v: number;
       if (isBreak) {
-        v = p * maxRingValue;
-        v = Math.max(0, Math.min(maxRingValue, v));
+        prevAngle.value = progressDeg;
+        v = displayValue.value;
       } else {
         v = p * targetNum;
         v = Math.max(0, Math.min(targetNum, v));
@@ -130,13 +138,19 @@ export function InteractiveQuantityRing({
       const dx = e.x - CENTER_X;
       const dy = e.y - CENTER_Y;
       const angleDeg = (Math.atan2(dy, dx) * 180) / Math.PI;
-      const progressDeg = (angleDeg + 90 + 360) % 360;
-      const p = progressDeg / 360;
+      let progressDeg = (angleDeg + 90 + 360) % 360;
+      if (progressDeg < 0) progressDeg += 360;
       let v: number;
       if (isBreak) {
-        v = p * maxRingValue;
-        v = Math.max(0, Math.min(maxRingValue, v));
+        let delta = progressDeg - prevAngle.value;
+        if (delta === -360) delta = 360;
+        else if (delta > 180) delta -= 360;
+        else if (delta < -180) delta += 360;
+        v = displayValue.value + (delta / 360) * targetNum;
+        v = Math.max(0, Math.min(maxBreakValue, v));
+        prevAngle.value = progressDeg;
       } else {
+        const p = progressDeg / 360;
         v = p * targetNum;
         const prev = lastDragValue.value;
         if (prev >= targetNum * 0.95 && v < targetNum * 0.5) v = targetNum;
@@ -158,9 +172,11 @@ export function InteractiveQuantityRing({
       runOnJS(commitValue)(displayValue.value);
     });
 
+  // Build: fill = value/target (cap 1). Break: fill = (value/limit)%1 so one full circle = one limit, ring resets each lap.
   const animatedProgressProps = useAnimatedProps(() => {
     'worklet';
-    const p = Math.min(1, displayValue.value / targetNum);
+    const ratio = targetNum > 0 ? displayValue.value / targetNum : 0;
+    const p = isBreak ? ratio - Math.floor(ratio) : Math.min(1, ratio);
     return {
       strokeDashoffset: CIRCUMFERENCE * (1 - p),
       stroke: strokeColorShared.value,
@@ -169,8 +185,9 @@ export function InteractiveQuantityRing({
 
   const animatedThumbProps = useAnimatedProps(() => {
     'worklet';
-    const progressForThumb = isBreak ? Math.min(4, displayValue.value / targetNum) : Math.min(1, displayValue.value / targetNum);
-    const angleRad = progressForThumb * 2 * Math.PI;
+    const ratio = targetNum > 0 ? displayValue.value / targetNum : 0;
+    const p = isBreak ? ratio - Math.floor(ratio) : Math.min(1, ratio);
+    const angleRad = p * 2 * Math.PI;
     return {
       cx: CENTER_X + RADIUS * Math.cos(angleRad),
       cy: CENTER_Y + RADIUS * Math.sin(angleRad),
@@ -183,16 +200,7 @@ export function InteractiveQuantityRing({
       <GestureDetector gesture={panGesture}>
         <View style={styles.ringWrap}>
           <Svg width={RING_SIZE} height={RING_SIZE} viewBox={`0 0 ${RING_SIZE} ${RING_SIZE}`} style={styles.svg}>
-            {/* Track */}
-            <Circle
-              cx={CENTER_X}
-              cy={CENTER_Y}
-              r={RADIUS}
-              fill="none"
-              stroke={colors.ring}
-              strokeWidth={STROKE_WIDTH}
-            />
-            {/* Progress arc (animated on UI thread; stroke color updates live during drag) */}
+            <Circle cx={CENTER_X} cy={CENTER_Y} r={RADIUS} fill="none" stroke={colors.ring} strokeWidth={STROKE_WIDTH} />
             <AnimatedCircle
               cx={CENTER_X}
               cy={CENTER_Y}
@@ -203,7 +211,6 @@ export function InteractiveQuantityRing({
               strokeLinecap="round"
               animatedProps={animatedProgressProps}
             />
-            {/* Draggable marker (animated on UI thread; fill color updates live during drag) */}
             {!disabled && (
               <AnimatedCircle
                 r={THUMB_R}
