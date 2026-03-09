@@ -26,6 +26,12 @@ export const entryValue = (entries: HabitEntry[], habitId: string, date: string)
 
 // ─── Habit-level value for a given date/period ────────────────────────────────
 
+/** Optional clamp so analytics only count up to this date (no future). */
+export interface HabitValueOptions {
+  /** When set, weekly/monthly only sum entries for days d <= maxDate. */
+  maxDate?: string;
+}
+
 /**
  * Returns the progress value for a habit on a given anchor date,
  * taking frequency into account:
@@ -34,6 +40,9 @@ export const entryValue = (entries: HabitEntry[], habitId: string, date: string)
  * - weekly:  sum of entries across the week containing the date
  * - monthly: sum of entries across the full calendar month of the date
  *
+ * When options.maxDate is set (e.g. for analytics), weekly/monthly only
+ * include days d <= maxDate so future days are not counted.
+ *
  * This is the "current" value shown in HabitCard and HabitDetail.
  */
 export const getHabitCurrentValue = (
@@ -41,22 +50,24 @@ export const getHabitCurrentValue = (
   entries: HabitEntry[],
   date: string,
   weekStartsOn: WeekStartDay,
+  options?: HabitValueOptions,
 ): number => {
+  const maxDate = options?.maxDate;
   if (habit.frequency === 'weekly') {
     const weekDates = getWeekDates(date, weekStartsOn);
-    return weekDates.reduce((sum, d) => sum + entryValue(entries, habit.id, d), 0);
+    const days = maxDate ? weekDates.filter(d => d <= maxDate) : weekDates;
+    return days.reduce((sum, d) => sum + entryValue(entries, habit.id, d), 0);
   }
   if (habit.frequency === 'monthly') {
     const [year, month] = date.split('-').map(Number);
     const daysInMonth = new Date(year, month, 0).getDate();
     const from = `${year}-${String(month).padStart(2, '0')}-01`;
     const to = `${year}-${String(month).padStart(2, '0')}-${String(daysInMonth).padStart(2, '0')}`;
-    return datesInRange(from, to).reduce(
-      (sum, d) => sum + entryValue(entries, habit.id, d),
-      0,
-    );
+    const range = datesInRange(from, to);
+    const days = maxDate ? range.filter(d => d <= maxDate) : range;
+    return days.reduce((sum, d) => sum + entryValue(entries, habit.id, d), 0);
   }
-  // daily (and boolean)
+  // daily (and boolean): ignore maxDate for single-day value
   return entryValue(entries, habit.id, date);
 };
 
@@ -68,14 +79,18 @@ export const getHabitCurrentValue = (
  *   - Boolean (Yes/No): "completed" = user did not do the bad thing (value === 0).
  *     Value 1 = failed (did the bad thing). No entry or 0 = okay/success.
  *   - Numeric: current value is within the limit (≤ target).
+ *
+ * When options.maxDate is set (e.g. for analytics), weekly/monthly completion
+ * is evaluated only over days <= maxDate so future days are not counted.
  */
 export const isHabitCompleted = (
   habit: Habit,
   entries: HabitEntry[],
   date: string,
   weekStartsOn: WeekStartDay,
+  options?: HabitValueOptions,
 ): boolean => {
-  const value = getHabitCurrentValue(habit, entries, date, weekStartsOn);
+  const value = getHabitCurrentValue(habit, entries, date, weekStartsOn, options);
   if (habit.goalType === 'break') {
     if (habit.kind === 'boolean') return value === 0; // only "okay" (no slip) counts as completed
     return value <= habit.target;
@@ -112,16 +127,18 @@ export const dailyOverLimitCount = (
 /**
  * Overall completion % (0–100) for all active habits on a given date.
  * Only habits that existed on `date` (createdAt <= date) are counted.
+ * When options.maxDate is set (e.g. analytics), weekly/monthly habits are evaluated only up to maxDate.
  */
 export const dailyCompletion = (
   habits: Habit[],
   entries: HabitEntry[],
   date: string,
   weekStartsOn: WeekStartDay,
+  options?: HabitValueOptions,
 ): number => {
   const active = habits.filter(h => isHabitActiveOnDate(h, date) && h.createdAt <= date);
   if (active.length === 0) return 0;
-  const completed = active.filter(h => isHabitCompleted(h, entries, date, weekStartsOn)).length;
+  const completed = active.filter(h => isHabitCompleted(h, entries, date, weekStartsOn, options)).length;
   return Math.round((completed / active.length) * 100);
 };
 
@@ -131,9 +148,10 @@ export const dailyCompletedCount = (
   entries: HabitEntry[],
   date: string,
   weekStartsOn: WeekStartDay,
+  options?: HabitValueOptions,
 ): { completed: number; total: number } => {
   const active = habits.filter(h => isHabitActiveOnDate(h, date) && h.createdAt <= date);
-  const completed = active.filter(h => isHabitCompleted(h, entries, date, weekStartsOn)).length;
+  const completed = active.filter(h => isHabitCompleted(h, entries, date, weekStartsOn, options)).length;
   return { completed, total: active.length };
 };
 
