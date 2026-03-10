@@ -211,6 +211,13 @@ export default function SettingsScreen() {
 
         {/* ── About ───────────────────────────────────────────────────── */}
         <Section title={t('settings.about')} icon={HelpCircle} colors={colors}>
+          <SettingRow
+            icon={FileText}
+            label={t('settings.habitsAndScoring')}
+            onPress={() => navigation.navigate('HabitsScoring')}
+            showChevron
+            colors={colors}
+          />
           <SettingRow icon={Info} label={t('settings.version')} value="1.0.0" colors={colors} />
           <SettingRow
             icon={BookOpen}

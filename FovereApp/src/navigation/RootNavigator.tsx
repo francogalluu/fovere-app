@@ -16,6 +16,7 @@ import HabitRemindersScreen from '@/screens/HabitRemindersScreen';
 import HabitReminderEditScreen from '@/screens/HabitReminderEditScreen';
 import PrivacyPolicyScreen from '@/screens/PrivacyPolicyScreen';
 import TermsOfServiceScreen from '@/screens/TermsOfServiceScreen';
+import HabitsScoringScreen from '@/screens/HabitsScoringScreen';
 import OnboardingFlow from '@/screens/onboarding/OnboardingFlow';
 import Onboarding4 from '@/screens/onboarding/Onboarding4';
 import Onboarding5 from '@/screens/onboarding/Onboarding5';
@@ -160,6 +161,18 @@ export default function RootNavigator() {
           headerStyle: { backgroundColor: colors.bgSecondary },
           headerShadowVisible: false,
           headerTitle: t('nav.termsOfService'),
+        }}
+      />
+      <Stack.Screen
+        name="HabitsScoring"
+        component={HabitsScoringScreen}
+        options={{
+          headerShown: true,
+          headerBackTitle: t('common.back'),
+          headerTintColor: colors.teal,
+          headerStyle: { backgroundColor: colors.bgSecondary },
+          headerShadowVisible: false,
+          headerTitle: t('habitsScoring.title'),
         }}
       />
 

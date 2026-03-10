@@ -34,6 +34,7 @@ export type RootStackParamList = {
   DeletedHabits: undefined;
   PrivacyPolicy: undefined;
   TermsOfService: undefined;
+  HabitsScoring: undefined;
   Onboarding1: undefined;
   Onboarding4: undefined;
   Onboarding5: undefined;

@@ -54,6 +54,7 @@
   },
   "settings": {
     "title": "Ajustes",
+    "habitsAndScoring": "Hábitos y puntuación",
     "preferences": "Preferencias",
     "data": "Datos",
     "about": "Acerca de",
@@ -405,5 +406,31 @@
   },
   "charts": {
     "noData": "Sin datos"
+  },
+  "habitsScoring": {
+    "title": "Hábitos y puntuación",
+    "pointsTitle": "Sistema de puntos",
+    "pointsIntro": "Tu puntuación diaria va de 0 a 100. Los 100 puntos se reparten por igual entre todos tus hábitos activos. La parte de cada hábito es su \"peso\".",
+    "pointsGood": "Hábitos a construir (buenos): ganas el peso del hábito cuando lo completas ese día, y 0 si no lo haces.",
+    "pointsBad": "Hábitos a romper (malos): ganas el peso del hábito por defecto. Si te pasas del límite ese día, el exceso se penaliza y reduce tu parte (ver Penalizaciones).",
+    "badHabitsTitle": "Hábitos a romper",
+    "badHabitsIntro": "Los hábitos a romper te ayudan a no superar un límite — por ejemplo \"máximo 2 cafés\" o \"no fumar\".",
+    "badHabitsDaily": "Límite diario: defines un máximo al día (ej. 1 = no lo hice, o 3 = hasta 3 veces). \"Completas\" el hábito cuando te mantienes en o por debajo del límite ese día.",
+    "badHabitsWeekly": "Límite semanal: defines un máximo para toda la semana. Tu progreso es la suma de lo que registraste cada día de esa semana. Lo completas cuando el total de la semana está en o por debajo del límite.",
+    "badHabitsMonthly": "Límite mensual: igual para el mes. El progreso es la suma de entradas de ese mes; lo completas cuando el total está en o por debajo del límite.",
+    "badHabitsBoolean": "Hábitos Sí/No a romper: o hiciste la cosa (fallo) o no (éxito). Sin entrada o \"Bien\" cuenta como éxito.",
+    "penaltiesTitle": "Penalizaciones por hábitos a romper",
+    "penaltiesIntro": "Cuando superas tu límite en un hábito a romper, solo el exceso de ese día concreto se penaliza. Los días pasados no se penalizan de nuevo.",
+    "penaltiesFormula": "Por cada unidad que te pases del límite ese día, pierdes una unidad de tu parte de los 100 puntos. Tu contribución nunca baja de 0.",
+    "penaltiesExample": "Ejemplo: si tienes 4 hábitos, cada uno tiene peso 25. Tu hábito \"Limitar cafeína\" permite 2 tazas; tomaste 4 hoy. Obtienes 25 − (2 × 25) = 0 puntos de ese hábito para el día (2 unidades de exceso × peso completo).",
+    "weeklyHabitsTitle": "Hábitos semanales",
+    "weeklyHabitsIntro": "Los hábitos semanales son metas que quieres cumplir al menos una vez por semana (ej. \"Gimnasio 2 veces\", \"Leer 3 veces\").",
+    "weeklyHabitsProgress": "El progreso es la suma de lo que registraste cada día de la semana actual. El hábito se completa cuando ese total alcanza o supera tu meta (construir) o se mantiene en o por debajo de tu límite (romper).",
+    "weeklyHabitsReminder": "Puedes elegir qué días de la semana recibir un recordatorio (ej. Lun, Mié, Vie).",
+    "monthlyHabitsTitle": "Hábitos mensuales",
+    "monthlyHabitsIntro": "Los hábitos mensuales funcionan igual para el mes natural. El progreso es la suma de entradas de ese mes; completas el hábito cuando el total cumple tu meta (construir) o se mantiene dentro del límite (romper).",
+    "dailyHabitsTitle": "Hábitos diarios",
+    "dailyHabitsIntro": "Los hábitos diarios se comprueban cada día. Construir: completas cuando alcanzas tu meta ese día. Romper: completas cuando te mantienes en o por debajo del límite ese día.",
+    "homeRingNote": "El anillo de completado en Inicio solo cuenta los hábitos diarios de ese día. Los hábitos semanales y mensuales se muestran en sus propias secciones y en Estadísticas."
   }
 }

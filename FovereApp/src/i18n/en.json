@@ -54,6 +54,7 @@
   },
   "settings": {
     "title": "Settings",
+    "habitsAndScoring": "Habits & scoring",
     "preferences": "Preferences",
     "data": "Data",
     "about": "About",
@@ -405,5 +406,31 @@
   },
   "charts": {
     "noData": "No data"
+  },
+  "habitsScoring": {
+    "title": "Habits & scoring",
+    "pointsTitle": "Points system",
+    "pointsIntro": "Your daily score is on a 0–100 scale. The 100 points are shared equally among all your active habits. Each habit's share is its \"weight.\"",
+    "pointsGood": "Build habits (good habits): you earn your habit's weight when you complete the habit that day, and 0 if you don't.",
+    "pointsBad": "Break habits (bad habits): you earn your habit's weight by default. If you go over your limit on that day, the overflow is penalized and reduces your share (see Penalties below).",
+    "badHabitsTitle": "Bad habits (break habits)",
+    "badHabitsIntro": "Break habits help you stay within a limit — for example \"no more than 2 coffees\" or \"no smoking.\"",
+    "badHabitsDaily": "Daily limit: you set a maximum per day (e.g. 1 = did not do it, or 3 = up to 3 times). You \"complete\" the habit when you stay at or under the limit for that day.",
+    "badHabitsWeekly": "Weekly limit: you set a maximum for the whole week. Your progress is the sum of what you logged each day in that week. You complete it when the week's total is at or under the limit.",
+    "badHabitsMonthly": "Monthly limit: same idea over the calendar month. Progress is the sum of entries in that month; you complete it when the total is at or under the limit.",
+    "badHabitsBoolean": "Yes/No break habits: you either did the thing (fail) or didn't (success). No entry or \"Okay\" counts as success.",
+    "penaltiesTitle": "Penalties for break habits",
+    "penaltiesIntro": "When you exceed your limit on a break habit, only the overflow on that specific day is penalized. Past days are never penalized again.",
+    "penaltiesFormula": "For each unit you're over the limit on that day, you lose one unit of your habit's share of the 100 points. Your contribution is never reduced below 0.",
+    "penaltiesExample": "Example: if you have 4 habits, each has weight 25. Your \"Limit caffeine\" habit allows 2 cups; you had 4 today. You get 25 − (2 × 25) = 0 points from that habit for the day (2 overflow units × full weight).",
+    "weeklyHabitsTitle": "Weekly habits",
+    "weeklyHabitsIntro": "Weekly habits are goals you want to hit at least once per week (e.g. \"Gym 2 times,\" \"Read 3 times\").",
+    "weeklyHabitsProgress": "Progress is the sum of what you logged on each day of the current week. The habit is completed when that total reaches or exceeds your target (for build) or stays at or under your limit (for break).",
+    "weeklyHabitsReminder": "You can set which weekdays to get a reminder (e.g. Mon, Wed, Fri).",
+    "monthlyHabitsTitle": "Monthly habits",
+    "monthlyHabitsIntro": "Monthly habits work the same way over the calendar month. Progress is the sum of entries in that month; you complete the habit when the total meets your target (build) or stays within your limit (break).",
+    "dailyHabitsTitle": "Daily habits",
+    "dailyHabitsIntro": "Daily habits are checked each day. Build: you complete when you reach your target for that day. Break: you complete when you stay at or under your limit for that day.",
+    "homeRingNote": "The completion ring on Home counts only daily habits for that day. Weekly and monthly habits are shown in their own sections and in Analytics."
   }
 }
