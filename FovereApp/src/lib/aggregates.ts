@@ -186,6 +186,48 @@ export const dailyOnlyCompletion = (
   return total === 0 ? 0 : Math.round((completed / total) * 100);
 };
 
+/**
+ * Progress toward goal as 0–100 for one habit (for weighted completion).
+ * Build boolean: 100 or 0. Build numeric: min(100, (value/target)*100). Break: 100 or 0.
+ */
+function habitProgressPct(
+  habit: Habit,
+  entries: HabitEntry[],
+  date: string,
+  weekStartsOn: WeekStartDay,
+): number {
+  const value = getHabitCurrentValue(habit, entries, date, weekStartsOn);
+  if (habit.goalType === 'break') {
+    if (habit.kind === 'boolean') return value === 0 ? 100 : 0;
+    return value <= habit.target ? 100 : 0;
+  }
+  if (habit.kind === 'boolean') return value >= habit.target ? 100 : 0;
+  const target = habit.target;
+  if (target <= 0) return value >= target ? 100 : 0;
+  return Math.min(100, Math.round((value / target) * 100));
+}
+
+/**
+ * Weighted completion % (0–100) for daily habits: partial progress counts
+ * (e.g. 10/15 reading → ~67% for that habit). Used for main score card when not in strict mode.
+ */
+export const dailyOnlyCompletionWeighted = (
+  habits: Habit[],
+  entries: HabitEntry[],
+  date: string,
+  weekStartsOn: WeekStartDay,
+): number => {
+  const active = habits.filter(
+    h => isHabitActiveOnDate(h, date) && h.createdAt <= date && h.frequency === 'daily',
+  );
+  if (active.length === 0) return 0;
+  const sum = active.reduce(
+    (acc, h) => acc + habitProgressPct(h, entries, date, weekStartsOn),
+    0,
+  );
+  return Math.round(sum / active.length);
+};
+
 /** Completed vs. total weekly-frequency habits for the week containing `date`. */
 export const weeklyHabitProgress = (
   habits: Habit[],

@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   ChevronRight,
   SlidersHorizontal,
+  Target,
   Trash2,
   Database,
   Download,
@@ -68,6 +69,7 @@ export default function SettingsScreen() {
     hapticFeedback,     setHapticFeedback,
     weekStartsOn,       setWeekStartsOn,
     darkMode,           setDarkMode,
+    strictScoreMode,    setStrictScoreMode,
     language,
     setLanguage,
     dailyReminderEnabled,
@@ -93,6 +95,18 @@ export default function SettingsScreen() {
       [
         { text: t('settings.english'), onPress: () => { setLanguage('en'); i18n.changeLanguage('en'); }, style: 'default' },
         { text: t('settings.spanish'), onPress: () => { setLanguage('es'); i18n.changeLanguage('es'); }, style: 'default' },
+        { text: t('common.cancel'), style: 'cancel' },
+      ],
+    );
+  };
+
+  const handleStrictScoreModePress = () => {
+    Alert.alert(
+      t('settings.strictScoreMode'),
+      t('settings.strictScoreModeDescription'),
+      [
+        { text: t('settings.on'), onPress: () => setStrictScoreMode(true), style: 'default' },
+        { text: t('settings.off'), onPress: () => setStrictScoreMode(false), style: 'default' },
         { text: t('common.cancel'), style: 'cancel' },
       ],
     );
@@ -177,6 +191,14 @@ export default function SettingsScreen() {
                 thumbColor={colors.white}
               />
             }
+            colors={colors}
+          />
+          <SettingRow
+            icon={Target}
+            label={t('settings.strictScoreMode')}
+            value={strictScoreMode ? t('settings.on') : t('settings.off')}
+            onPress={handleStrictScoreModePress}
+            showChevron
             colors={colors}
           />
           <SettingRow

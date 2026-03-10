@@ -10,6 +10,8 @@ interface ProgressHeroProps {
   completed: number;
   total: number;
   overLimit?: number;
+  /** When set, used for the ring % instead of (completed/total)*100 (e.g. weighted completion). */
+  percentage?: number;
   onPress?: () => void;
   /** Smaller layout for compact home view */
   compact?: boolean;
@@ -22,13 +24,15 @@ export function ProgressHero({
   completed,
   total,
   overLimit = 0,
+  percentage,
   onPress,
   compact = false,
   animationTrigger,
 }: ProgressHeroProps) {
   const { colors } = useTheme();
   const { t } = useTranslation();
-  const targetPercentage = total > 0 ? Math.round((completed / total) * 100) : 0;
+  const targetPercentage =
+    percentage != null ? percentage : (total > 0 ? Math.round((completed / total) * 100) : 0);
   const title = isToday(selectedDate) ? t('home.completedToday') : formatDateTitle(selectedDate);
   const cardShadow = {
     shadowColor: colors.shadowColorHero,

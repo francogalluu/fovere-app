@@ -47,6 +47,12 @@ interface SettingsState {
   /** Dark mode (app-wide appearance). */
   darkMode: boolean;
 
+  /**
+   * When true, main score card shows strict completion (only fully completed habits count).
+   * When false, main score card uses weighted completion (partial progress counts).
+   */
+  strictScoreMode: boolean;
+
   /** UI language: 'en' | 'es'. undefined = use device locale (set on first app load). */
   language: Language | undefined;
 
@@ -60,6 +66,7 @@ interface SettingsState {
   setCompactHomeView: (enabled: boolean) => void;
   setHasCompletedOnboarding: (completed: boolean) => void;
   setDarkMode: (enabled: boolean) => void;
+  setStrictScoreMode: (enabled: boolean) => void;
   setLanguage: (lang: Language) => void;
 }
 
@@ -92,6 +99,7 @@ export const useSettingsStore = create<SettingsState>()(
       compactHomeView: false,
       hasCompletedOnboarding: false,
       darkMode: false,
+      strictScoreMode: false,
       language: undefined,
 
       setHapticFeedback: (enabled) => set({ hapticFeedback: enabled }),
@@ -103,6 +111,7 @@ export const useSettingsStore = create<SettingsState>()(
       setCompactHomeView: (enabled) => set({ compactHomeView: enabled }),
       setHasCompletedOnboarding: (completed) => set({ hasCompletedOnboarding: completed }),
       setDarkMode: (enabled) => set({ darkMode: enabled }),
+      setStrictScoreMode: (enabled) => set({ strictScoreMode: enabled }),
       setLanguage: (lang) => set({ language: lang }),
     }),
     {
@@ -131,6 +140,7 @@ export const useSettingsStore = create<SettingsState>()(
         state.compactHomeView = toBoolean(state.compactHomeView, false);
         state.hasCompletedOnboarding = toBoolean((state as any).hasCompletedOnboarding, false);
         state.darkMode = toBoolean(state.darkMode, false);
+        state.strictScoreMode = toBoolean((state as any).strictScoreMode, false);
         const lang = (state as any).language;
         if (lang !== 'en' && lang !== 'es') {
           (state as any).language = undefined;

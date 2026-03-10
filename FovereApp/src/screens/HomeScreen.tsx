@@ -23,6 +23,7 @@ import { useSettingsStore } from '@/store/settingsStore';
 import { getDaySummary } from '@/lib/daySummary';
 import {
   dailyOnlyCompletedCount,
+  dailyOnlyCompletionWeighted,
   dailyOverLimitCount,
   getHabitCurrentValue,
   isHabitActiveOnDate,
@@ -68,6 +69,7 @@ function HomeDayContent({
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const { t } = useTranslation();
   const haptic = Boolean(useSettingsStore(s => s.hapticFeedback));
+  const strictScoreMode = useSettingsStore(s => s.strictScoreMode);
   const rawHabits = useHabitStore(s => s.habits);
   const entries = useHabitStore(s => s.entries);
   const logEntry = useHabitStore(s => s.logEntry);
@@ -98,6 +100,11 @@ function HomeDayContent({
 
   const { completed, total } = useMemo(
     () => dailyOnlyCompletedCount(rawHabits, entries, date, weekStartsOn),
+    [rawHabits, entries, date, weekStartsOn],
+  );
+
+  const weightedPct = useMemo(
+    () => dailyOnlyCompletionWeighted(rawHabits, entries, date, weekStartsOn),
     [rawHabits, entries, date, weekStartsOn],
   );
 
@@ -268,6 +275,7 @@ function HomeDayContent({
           completed={completed}
           total={total}
           overLimit={overLimitCount}
+          percentage={strictScoreMode ? undefined : weightedPct}
           onPress={() => setSummaryVisible(true)}
           compact={compact}
           animationTrigger={heroAnimationKey}
