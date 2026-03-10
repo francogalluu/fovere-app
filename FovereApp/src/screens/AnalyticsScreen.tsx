@@ -293,6 +293,8 @@ function getCompletionByWeekday(
     }
   } else {
     for (const d of periodDates) {
+      const activeOnDay = habits.filter(h => isHabitActiveOnDate(h, d) && h.createdAt <= d);
+      if (activeOnDay.length === 0) continue;
       const col = getDayOfWeekColumnIndex(d, weekStartsOn);
       const pct = dailyCompletion(habits, entries, d, weekStartsOn, opts);
       byDow[col].push(pct);
@@ -429,8 +431,6 @@ export default function AnalyticsScreen() {
       };
     }
     if (allHabits.length === 0) return { completionPct: 0, completionText: t('analytics.zeroHabits'), completionTitle: getPeriodLabel(timeRange, t) };
-    const scores   = periodDates.map(d => dailyCompletion(allHabits, entries, d, weekStartsOn, analyticsOptions));
-    const pct      = Math.round(scores.reduce((a, b) => a + b, 0) / (scores.length || 1));
     let totalPossible = 0;
     for (const d of periodDates) {
       totalPossible += allHabits.filter(h => isHabitActiveOnDate(h, d) && h.createdAt <= d).length;
@@ -440,6 +440,7 @@ export default function AnalyticsScreen() {
       const active = allHabits.filter(h => isHabitActiveOnDate(h, d) && h.createdAt <= d);
       totalCompleted += active.filter(h => isHabitCompleted(h, entries, d, weekStartsOn, analyticsOptions)).length;
     }
+    const pct = totalPossible > 0 ? Math.round((totalCompleted / totalPossible) * 100) : 0;
     return {
       completionPct:   pct,
       completionText:  t('analytics.habitsCompletion', { completed: String(totalCompleted), total: String(totalPossible) }),
