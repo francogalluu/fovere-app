@@ -134,6 +134,24 @@ function aggregateCompletions(
 ): { completed: number; target: number; averagePercent?: number }[] {
   const analyticsOptions = { maxDate: todayStr };
   return buckets.map(bucket => {
+    // Weekly habit + month bucket (e.g. yearly view): count completed weeks in that month
+    if (habitFilter?.frequency === 'weekly' && !bucket.dates) {
+      const monthDays = datesInRange(bucket.start, bucket.end).filter(d => d <= todayStr);
+      const weekStartsInMonth = new Set<string>();
+      for (const d of monthDays) {
+        weekStartsInMonth.add(getWeekDates(d, weekStartsOn)[0]);
+      }
+      let completed = 0;
+      let target = 0;
+      for (const weekStart of weekStartsInMonth) {
+        if (habitFilter.createdAt > addDays(weekStart, 6)) continue;
+        target += 1;
+        if (isHabitCompleted(habitFilter, entries, weekStart, weekStartsOn, analyticsOptions)) completed += 1;
+      }
+      const avgPct = target > 0 ? (completed / target) * 100 : undefined;
+      return { completed, target, averagePercent: avgPct };
+    }
+
     const rawDays = bucket.dates ?? datesInRange(bucket.start, bucket.end);
     const days = rawDays.filter(d => d <= todayStr);
     let completed = 0;
@@ -185,7 +203,8 @@ function safePercent(percent: number | null | undefined): number {
 }
 
 function buildChartBars(habits: Habit[], entries: HabitEntry[], range: TimeRange, endDate: string, habitFilter: Habit | null, weekStartsOn: 0 | 1, t: TFunction): ChartBar[] {
-  const useWeekBuckets = habitFilter?.frequency === 'weekly';
+  /** Weekly habits use week buckets for day/week/month/6month; year uses monthly buckets like other habits. */
+  const useWeekBuckets = habitFilter?.frequency === 'weekly' && range !== 'year';
   const buckets = getBuckets(range, endDate, weekStartsOn, t, useWeekBuckets);
   const agg = aggregateCompletions(habits, entries, buckets, habitFilter, weekStartsOn, endDate);
   const bars = buckets.map((b, i) => {
@@ -306,10 +325,9 @@ function formatXAxisLabel(range: TimeRange, bar: ChartBar, index: number): strin
   return bar.label;
 }
 
-/** Indices where a vertical gridline should be drawn. Month: same sparse ticks as x-axis; Year: between months. */
+/** Indices where a vertical gridline should be drawn. Month only; year has no gridlines. */
 function getVerticalGridlineIndices(range: TimeRange, bars: ChartBar[]): number[] {
   if (range === 'month') return getXAxisTicks(range, bars);
-  if (range === 'year') return bars.map((_, i) => i).filter(i => i > 0);
   return [];
 }
 
@@ -620,8 +638,8 @@ export default function AnalyticsScreen() {
               style={[s.timeRangeSeg, timeRange === r && [s.timeRangeSegActive, { backgroundColor: colors.bgCard }]]}
             >
               <Text style={[s.timeRangeSegText, { color: colors.text2 }, timeRange === r && { color: colors.text1 }]}>
-                {selectedHabit?.frequency === 'weekly'
-                  ? (r === 'week' ? t('analytics.timeRange7W') : r === 'month' ? t('analytics.timeRange4W') : r === '6month' ? t('analytics.timeRange26W') : t('analytics.timeRange1Y'))
+                {selectedHabit?.frequency === 'weekly' && r !== 'year'
+                  ? (r === 'week' ? t('analytics.timeRange7W') : r === 'month' ? t('analytics.timeRange4W') : t('analytics.timeRange26W'))
                   : (r === 'week' ? t('analytics.timeRange7D') : r === 'month' ? t('analytics.timeRange30D') : r === '6month' ? t('analytics.timeRange6M') : t('analytics.timeRangeY'))}
               </Text>
             </Pressable>
@@ -672,13 +690,13 @@ export default function AnalyticsScreen() {
                 todayIndex={timeRange === 'week' ? chartBars.length - 1 : null}
                 emptyMessage={t('analytics.noDataForPeriod')}
                 renderTopContent={
-                  timeRange === 'month' || timeRange === 'year'
+                  timeRange === 'month'
                     ? layout => (
                         <ChartGridlines
                           range={timeRange}
                           barCount={chartBars.length}
                           chartWidth={layout.width}
-                          chartHeight={timeRange === 'month' ? 240 : 220}
+                          chartHeight={240}
                           gridlineIndices={verticalGridlineIndices}
                         />
                       )
