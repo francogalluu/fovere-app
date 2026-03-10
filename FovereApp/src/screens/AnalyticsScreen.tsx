@@ -277,12 +277,17 @@ function getCompletionByWeekday(
   const opts = { maxDate: todayStr };
   const byDow: number[][] = [[], [], [], [], [], [], []];
   if (habitFilter) {
-    const t = habitFilter.target || 1;
     for (const d of periodDates) {
       if (habitFilter.createdAt > d) continue;
       const col = getDayOfWeekColumnIndex(d, weekStartsOn);
-      const value = getHabitCurrentValue(habitFilter, entries, d, weekStartsOn, opts);
-      const pct = Math.min(100, Math.round((value / t) * 100));
+      let pct: number;
+      if (habitFilter.goalType === 'break') {
+        pct = isHabitCompleted(habitFilter, entries, d, weekStartsOn, opts) ? 100 : 0;
+      } else {
+        const t = habitFilter.target || 1;
+        const value = getHabitCurrentValue(habitFilter, entries, d, weekStartsOn, opts);
+        pct = Math.min(100, Math.round((value / t) * 100));
+      }
       byDow[col].push(pct);
     }
   } else {
@@ -578,8 +583,12 @@ export default function AnalyticsScreen() {
       let pct = 0;
       if (!future) {
         if (selectedHabit) {
-          const val = getHabitCurrentValue(selectedHabit, entries, dateStr, weekStartsOn);
-          pct = Math.round((val / (selectedHabit.target || 1)) * 100);
+          if (selectedHabit.goalType === 'break') {
+            pct = isHabitCompleted(selectedHabit, entries, dateStr, weekStartsOn) ? 100 : 0;
+          } else {
+            const val = getHabitCurrentValue(selectedHabit, entries, dateStr, weekStartsOn);
+            pct = Math.round((val / (selectedHabit.target || 1)) * 100);
+          }
         } else {
           pct = dailyCompletion(habits, entries, dateStr, weekStartsOn);
         }
