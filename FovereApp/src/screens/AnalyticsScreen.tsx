@@ -208,8 +208,9 @@ function buildChartBars(habits: Habit[], entries: HabitEntry[], range: TimeRange
   const buckets = getBuckets(range, endDate, weekStartsOn, t, useWeekBuckets);
   const agg = aggregateCompletions(habits, entries, buckets, habitFilter, weekStartsOn, endDate);
   const bars = buckets.map((b, i) => {
+    // For "all habits", use overall completed/target so bar % matches tooltip "X of Y". For single habit, use average daily %.
     const raw =
-      agg[i].averagePercent != null
+      habitFilter != null && agg[i].averagePercent != null
         ? agg[i].averagePercent
         : computePercent(agg[i].completed, agg[i].target);
     return {
@@ -351,14 +352,15 @@ function computeStreak(habits: Habit[], entries: HabitEntry[], todayStr: string,
   return streak;
 }
 
-/** Streak for a single habit. Only counts completion up to today (no future). */
+/** Streak for a single habit. "Current streak" = consecutive completed days ending today; if today is not completed, returns 0. */
 function computeHabitStreak(habit: Habit, entries: HabitEntry[], todayStr: string, weekStartsOn: 0 | 1): number {
   const dates = datesInRange(habit.createdAt, todayStr);
   const opts = { maxDate: todayStr };
+  const lastIdx = dates.length - 1;
+  if (lastIdx < 0) return 0;
+  if (!isHabitCompleted(habit, entries, dates[lastIdx], weekStartsOn, opts)) return 0;
   let streak = 0;
-  let startIdx = dates.length - 1;
-  if (!isHabitCompleted(habit, entries, dates[startIdx], weekStartsOn, opts)) startIdx--;
-  for (let i = startIdx; i >= 0; i--) {
+  for (let i = lastIdx; i >= 0; i--) {
     if (isHabitCompleted(habit, entries, dates[i], weekStartsOn, opts)) streak++;
     else break;
   }
@@ -498,7 +500,7 @@ export default function AnalyticsScreen() {
           const value = eligible.reduce((sum, d) => sum + entryValue(entries, habit.id, d), 0);
           const expected = targetPerPeriod * eligible.length;
           const pct = expected > 0 ? Math.min(100, Math.round((value / expected) * 100)) : 0;
-          const displayPct = isBreak ? (value <= expected ? 100 : Math.min(100, Math.round((value / expected) * 100))) : pct;
+          const displayPct = isBreak ? (value <= expected ? 100 : 0) : pct;
           return { habit, value, expected, pct: displayPct, label: `${value}/${expected} ${unit}` };
         }
 
@@ -515,7 +517,7 @@ export default function AnalyticsScreen() {
           }
           const expected = targetPerPeriod * weekKeys.size;
           const pct = expected > 0 ? Math.min(100, Math.round((value / expected) * 100)) : 0;
-          const displayPct = isBreak ? (value <= expected ? 100 : Math.min(100, Math.round((value / expected) * 100))) : pct;
+          const displayPct = isBreak ? (value <= expected ? 100 : 0) : pct;
           return { habit, value, expected, pct: displayPct, label: `${value}/${expected} ${unit}` };
         }
 
@@ -534,7 +536,7 @@ export default function AnalyticsScreen() {
         }
         const expected = targetPerPeriod * monthKeys.size;
         const pct = expected > 0 ? Math.min(100, Math.round((value / expected) * 100)) : 0;
-        const displayPct = isBreak ? (value <= expected ? 100 : Math.min(100, Math.round((value / expected) * 100))) : pct;
+        const displayPct = isBreak ? (value <= expected ? 100 : 0) : pct;
         return { habit, value, expected, pct: displayPct, label: `${value}/${expected} ${unit}` };
       });
     const build = list.filter(x => x.habit.goalType !== 'break').sort((a, b) => b.pct - a.pct);
