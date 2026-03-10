@@ -4,8 +4,8 @@
  * For monthly habits: also pick day of month (1–31).
  * UI matches NotificationSettingsScreen: iOS uses DateTimePicker spinner, Android uses +/- steppers.
  */
-import React, { useLayoutEffect, useMemo } from 'react';
-import { View, Text, Pressable, StyleSheet, Platform, ScrollView } from 'react-native';
+import React, { useLayoutEffect, useMemo, useState } from 'react';
+import { View, Text, Pressable, StyleSheet, Platform, ScrollView, Modal, FlatList } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -21,6 +21,16 @@ type Props = NativeStackScreenProps<WizardStackParamList, 'Reminder'>;
 const WEEKDAY_KEYS = ['weekdaySun', 'weekdayMon', 'weekdayTue', 'weekdayWed', 'weekdayThu', 'weekdayFri', 'weekdaySat'] as const;
 
 function pad(n: number) { return String(n).padStart(2, '0'); }
+
+/** Format day of month as ordinal: 1 → "1st", 2 → "2nd", 31 → "31st". */
+function dayOrdinal(day: number): string {
+  if (day >= 11 && day <= 13) return `${day}th`;
+  const last = day % 10;
+  if (last === 1) return `${day}st`;
+  if (last === 2) return `${day}nd`;
+  if (last === 3) return `${day}rd`;
+  return `${day}th`;
+}
 
 function parseTime(hhmm: string): { h: number; m: number } {
   const [hStr, mStr] = hhmm.split(':');
@@ -43,6 +53,7 @@ export default function ReminderStep({ navigation }: Props) {
   const setReminderTime   = useWizardStore(s => s.setReminderTime);
   const setReminderWeekdays = useWizardStore(s => s.setReminderWeekdays);
   const setReminderDayOfMonth = useWizardStore(s => s.setReminderDayOfMonth);
+  const [dayPickerVisible, setDayPickerVisible] = useState(false);
 
   const { h, m } = parseTime(reminderTime);
   const { h12, ampm } = formatDisplay(h);
@@ -89,8 +100,7 @@ export default function ReminderStep({ navigation }: Props) {
       return t('wizard.reminderWeeklyPreview', { days: dayLabels, time: formattedTime });
     }
     if (frequency === 'monthly') {
-      const day = reminderDayOfMonth;
-      return t('wizard.reminderMonthlyPreview', { day: String(day), time: formattedTime });
+      return t('wizard.reminderMonthlyPreview', { day: dayOrdinal(reminderDayOfMonth), time: formattedTime });
     }
     return t('wizard.reminderAt', { time: formattedTime });
   }, [frequency, reminderWeekdays, reminderDayOfMonth, formattedTime, t]);
@@ -209,21 +219,55 @@ export default function ReminderStep({ navigation }: Props) {
         {frequency === 'monthly' && (
           <View style={[s.monthDaySection, { borderColor: colors.separator }]}>
             <Text style={[s.monthDayLabel, { color: colors.text1 }]}>{t('wizard.reminderDayOfMonthLabel')}</Text>
-            <View style={s.monthDayRow}>
-              <Pressable
-                onPress={() => setReminderDayOfMonth(Math.max(1, reminderDayOfMonth - 1))}
-                style={[s.monthDayBtn, { backgroundColor: colors.bgCard }]}
-              >
-                <Text style={[s.monthDayBtnText, { color: colors.teal }]}>−</Text>
+            <Pressable
+              onPress={() => setDayPickerVisible(true)}
+              style={[s.monthDayDropdown, { backgroundColor: colors.bgCard }]}
+            >
+              <Text style={[s.monthDayDropdownText, { color: colors.teal }]}>
+                {dayOrdinal(reminderDayOfMonth)}
+              </Text>
+              <ChevronDown size={20} color={colors.text2} strokeWidth={2.5} />
+            </Pressable>
+            <Modal
+              visible={dayPickerVisible}
+              transparent
+              animationType="fade"
+              onRequestClose={() => setDayPickerVisible(false)}
+            >
+              <Pressable style={s.modalOverlay} onPress={() => setDayPickerVisible(false)}>
+                <Pressable style={[s.modalContent, { backgroundColor: colors.bgCard }]} onPress={() => {}}>
+                  <View style={[s.modalHeader, { borderBottomColor: colors.separator }]}>
+                    <Text style={[s.modalTitle, { color: colors.text1 }]}>
+                      {t('wizard.reminderDayOfMonthLabel')}
+                    </Text>
+                  </View>
+                  <FlatList
+                    data={Array.from({ length: 31 }, (_, i) => i + 1)}
+                    keyExtractor={(d) => String(d)}
+                    style={s.dayList}
+                    renderItem={({ item: day }) => (
+                      <Pressable
+                        onPress={() => {
+                          setReminderDayOfMonth(day);
+                          setDayPickerVisible(false);
+                        }}
+                        style={[s.dayOption, { borderBottomColor: colors.separator }]}
+                      >
+                        <Text
+                          style={[
+                            s.dayOptionText,
+                            { color: reminderDayOfMonth === day ? colors.teal : colors.text1 },
+                            reminderDayOfMonth === day && s.dayOptionTextSelected,
+                          ]}
+                        >
+                          {dayOrdinal(day)}
+                        </Text>
+                      </Pressable>
+                    )}
+                  />
+                </Pressable>
               </Pressable>
-              <Text style={[s.monthDayValue, { color: colors.text1 }]}>{reminderDayOfMonth}</Text>
-              <Pressable
-                onPress={() => setReminderDayOfMonth(Math.min(31, reminderDayOfMonth + 1))}
-                style={[s.monthDayBtn, { backgroundColor: colors.bgCard }]}
-              >
-                <Text style={[s.monthDayBtnText, { color: colors.teal }]}>+</Text>
-              </Pressable>
-            </View>
+            </Modal>
           </View>
         )}
 
@@ -350,10 +394,40 @@ const s = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
   },
   monthDayLabel: { fontSize: 16, fontWeight: '600', marginBottom: 12 },
-  monthDayRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 20 },
-  monthDayBtn: { paddingVertical: 12, paddingHorizontal: 24, borderRadius: 12 },
-  monthDayBtnText: { fontSize: 22, fontWeight: '700' },
-  monthDayValue: { fontSize: 28, fontWeight: '700', minWidth: 48, textAlign: 'center' },
+  monthDayDropdown: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+  },
+  monthDayDropdownText: { fontSize: 17, fontWeight: '600' },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  modalContent: {
+    borderRadius: 16,
+    maxHeight: '70%',
+    overflow: 'hidden',
+  },
+  modalHeader: {
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  modalTitle: { fontSize: 17, fontWeight: '600' },
+  dayList: { maxHeight: 320 },
+  dayOption: {
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  dayOptionText: { fontSize: 17 },
+  dayOptionTextSelected: { fontWeight: '600' },
   preview: {
     textAlign: 'center',
     marginTop: 24,

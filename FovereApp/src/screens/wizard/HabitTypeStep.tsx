@@ -22,19 +22,11 @@ import { useHabitStore } from '@/store';
 import { useWizardStore } from '@/store/wizardStore';
 import { useSettingsStore } from '@/store/settingsStore';
 import { useTheme } from '@/context/ThemeContext';
+import { formatReminderSummary } from '@/lib/reminderFormat';
 
 type Props = NativeStackScreenProps<WizardStackParamList, 'HabitType'>;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function formatReminderTime(hhmm: string): string {
-  const [hStr, mStr] = hhmm.split(':');
-  const h = parseInt(hStr, 10);
-  const m = parseInt(mStr, 10);
-  const ampm = h < 12 ? 'AM' : 'PM';
-  const h12  = h === 0 ? 12 : h > 12 ? h - 12 : h;
-  return `${h12}:${String(m).padStart(2, '0')} ${ampm}`;
-}
 
 function measureByLabel(kind: 'boolean' | 'numeric', target: number, unit: string, t: (k: string) => string): string {
   if (kind === 'boolean') return t('wizard.completion');
@@ -229,7 +221,7 @@ export default function HabitTypeStep({ navigation }: Props) {
           {reminderEnabled && (
             <Row
               label={t('wizard.timeLabel')}
-              value={formatReminderTime(reminderTime)}
+              value={formatReminderSummary(reminderTime, frequency, reminderWeekdays, reminderDayOfMonth, t)}
               onPress={() => navigation.navigate('Reminder')}
               last
             />
