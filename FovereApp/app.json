@@ -25,6 +25,12 @@
           "color": "#008080"
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "8ef11bfa-1d39-4146-b1ba-dc6316438807"
+      }
+    },
+    "owner": "franco-galluzzo"
   }
 }
