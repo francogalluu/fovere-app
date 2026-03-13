@@ -1,4 +1,24 @@
 {
+  "onboarding": {
+    "next": "Siguiente",
+    "getStarted": "Comenzar",
+    "step4Title": "Crea hábitos que realmente perduren",
+    "step4Tip1Title": "Empieza pequeño",
+    "step4Tip1Body": "Elige un hábito tan fácil que no puedas decir que no. Cuanto más pequeño el inicio, más sólida la base.",
+    "step4Tip2Title": "Presente, no perfecto",
+    "step4Tip2Body": "Faltar una vez está bien. Faltar dos se convierte en patrón. La constancia gana a la intensidad siempre.",
+    "step4Tip3Title": "Déjalo crecer",
+    "step4Tip3Body": "Cada registro suma. En unas semanas mirarás atrás y te sorprenderá tu progreso.",
+    "step4Button": "Estoy listo",
+    "step5Title": "¿Qué área de tu vida pide un poco de atención?",
+    "categoryHealthFitness": "Salud y fitness",
+    "categoryMindMood": "Mente y bienestar",
+    "categoryCareerStudy": "Carrera y estudio",
+    "categoryHomeOrganization": "Hogar y organización",
+    "categoryFinances": "Finanzas",
+    "categoryRelationships": "Relaciones",
+    "categoryCreativityHobbies": "Creatividad y hobbies"
+  },
   "common": {
     "back": "Atrás",
     "save": "Guardar",

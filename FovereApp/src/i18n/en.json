@@ -1,4 +1,24 @@
 {
+  "onboarding": {
+    "next": "Next",
+    "getStarted": "Get Started",
+    "step4Title": "Build habits that actually last",
+    "step4Tip1Title": "Start small",
+    "step4Tip1Body": "Pick one habit so easy you can't say no. The smaller the start, the stronger the foundation.",
+    "step4Tip2Title": "Show up, not perfect",
+    "step4Tip2Body": "Missing once is okay. Missing twice becomes a pattern. Consistency beats intensity every time.",
+    "step4Tip3Title": "Let it grow",
+    "step4Tip3Body": "Every check-in compounds. In a few weeks you'll look back and be surprised by your progress.",
+    "step4Button": "I'm ready",
+    "step5Title": "What area of your life is calling for a little attention?",
+    "categoryHealthFitness": "Health & Fitness",
+    "categoryMindMood": "Mind & Mood",
+    "categoryCareerStudy": "Career & Study",
+    "categoryHomeOrganization": "Home & Organization",
+    "categoryFinances": "Finances",
+    "categoryRelationships": "Relationships",
+    "categoryCreativityHobbies": "Creativity & Hobbies"
+  },
   "common": {
     "back": "Back",
     "save": "Save",

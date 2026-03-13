@@ -4,6 +4,7 @@ import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ChevronLeft } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 
 import type { RootStackParamList } from '@/navigation/types';
 import { C, F, R } from '@/lib/tokens';
@@ -12,6 +13,7 @@ type Nav = NativeStackNavigationProp<RootStackParamList, 'Onboarding4'>;
 
 export default function Onboarding4() {
   const navigation = useNavigation<Nav>();
+  const { t } = useTranslation();
 
   return (
     <SafeAreaView style={s.safe} edges={['top', 'bottom']}>
@@ -34,17 +36,15 @@ export default function Onboarding4() {
         </View>
 
         <View style={s.content}>
-          <Text style={s.title}>Build habits that actually last</Text>
+          <Text style={s.title}>{t('onboarding.step4Title')}</Text>
 
           <View style={s.tip}>
             <View style={s.bulletCircle}>
               <Text style={s.bulletNumber}>1</Text>
             </View>
             <View style={s.tipTextWrap}>
-              <Text style={s.tipTitle}>Start small</Text>
-              <Text style={s.tipBody}>
-                Pick one habit so easy you can&apos;t say no. The smaller the start, the stronger the foundation.
-              </Text>
+              <Text style={s.tipTitle}>{t('onboarding.step4Tip1Title')}</Text>
+              <Text style={s.tipBody}>{t('onboarding.step4Tip1Body')}</Text>
             </View>
           </View>
 
@@ -53,10 +53,8 @@ export default function Onboarding4() {
               <Text style={s.bulletNumber}>2</Text>
             </View>
             <View style={s.tipTextWrap}>
-              <Text style={s.tipTitle}>Show up, not perfect</Text>
-              <Text style={s.tipBody}>
-                Missing once is okay. Missing twice becomes a pattern. Consistency beats intensity every time.
-              </Text>
+              <Text style={s.tipTitle}>{t('onboarding.step4Tip2Title')}</Text>
+              <Text style={s.tipBody}>{t('onboarding.step4Tip2Body')}</Text>
             </View>
           </View>
 
@@ -65,10 +63,8 @@ export default function Onboarding4() {
               <Text style={s.bulletNumber}>3</Text>
             </View>
             <View style={s.tipTextWrap}>
-              <Text style={s.tipTitle}>Let it grow</Text>
-              <Text style={s.tipBody}>
-                Every check‑in compounds. In a few weeks you&apos;ll look back and be surprised by your progress.
-              </Text>
+              <Text style={s.tipTitle}>{t('onboarding.step4Tip3Title')}</Text>
+              <Text style={s.tipBody}>{t('onboarding.step4Tip3Body')}</Text>
             </View>
           </View>
         </View>
@@ -78,7 +74,7 @@ export default function Onboarding4() {
             onPress={() => navigation.navigate('Onboarding5')}
             style={({ pressed }) => [s.primaryButton, pressed && s.primaryButtonPressed]}
           >
-            <Text style={s.primaryButtonText}>I&apos;m ready</Text>
+            <Text style={s.primaryButtonText}>{t('onboarding.step4Button')}</Text>
           </Pressable>
         </View>
       </View>

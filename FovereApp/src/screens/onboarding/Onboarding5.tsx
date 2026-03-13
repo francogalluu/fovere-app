@@ -4,24 +4,36 @@ import { View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ChevronLeft } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 
 import type { RootStackParamList, OnboardingCategory } from '@/navigation/types';
 import { C, F, R, S } from '@/lib/tokens';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'Onboarding5'>;
 
-const CATEGORIES: { key: OnboardingCategory; label: string; emoji: string }[] = [
-  { key: 'health-fitness', label: 'Health & Fitness', emoji: '❤️' },
-  { key: 'mind-mood', label: 'Mind & Mood', emoji: '🧘' },
-  { key: 'career-study', label: 'Career & Study', emoji: '🎯' },
-  { key: 'home-organization', label: 'Home & Organization', emoji: '🏠' },
-  { key: 'finances', label: 'Finances', emoji: '💰' },
-  { key: 'relationships', label: 'Relationships', emoji: '👥' },
-  { key: 'creativity-hobbies', label: 'Creativity & Hobbies', emoji: '🎨' },
+const CATEGORY_KEYS: Record<OnboardingCategory, string> = {
+  'health-fitness': 'onboarding.categoryHealthFitness',
+  'mind-mood': 'onboarding.categoryMindMood',
+  'career-study': 'onboarding.categoryCareerStudy',
+  'home-organization': 'onboarding.categoryHomeOrganization',
+  finances: 'onboarding.categoryFinances',
+  relationships: 'onboarding.categoryRelationships',
+  'creativity-hobbies': 'onboarding.categoryCreativityHobbies',
+};
+
+const CATEGORIES: { key: OnboardingCategory; emoji: string }[] = [
+  { key: 'health-fitness', emoji: '❤️' },
+  { key: 'mind-mood', emoji: '🧘' },
+  { key: 'career-study', emoji: '🎯' },
+  { key: 'home-organization', emoji: '🏠' },
+  { key: 'finances', emoji: '💰' },
+  { key: 'relationships', emoji: '👥' },
+  { key: 'creativity-hobbies', emoji: '🎨' },
 ];
 
 export default function Onboarding5() {
   const navigation = useNavigation<Nav>();
+  const { t } = useTranslation();
 
   const handleSelect = useCallback(
     (category: OnboardingCategory) => {
@@ -56,7 +68,7 @@ export default function Onboarding5() {
         </View>
 
         <View style={s.content}>
-          <Text style={s.title}>What area of your life is calling for a little attention?</Text>
+          <Text style={s.title}>{t('onboarding.step5Title')}</Text>
 
           <ScrollView
             style={s.scroll}
@@ -70,7 +82,7 @@ export default function Onboarding5() {
                 style={({ pressed }) => [s.card, pressed && s.cardPressed]}
               >
                 <Text style={s.cardEmoji}>{cat.emoji}</Text>
-                <Text style={s.cardLabel}>{cat.label}</Text>
+                <Text style={s.cardLabel}>{t(CATEGORY_KEYS[cat.key])}</Text>
               </Pressable>
             ))}
           </ScrollView>

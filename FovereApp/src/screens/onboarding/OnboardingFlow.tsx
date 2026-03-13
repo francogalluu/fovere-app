@@ -1,4 +1,4 @@
-import React, { useRef, useState, useCallback } from 'react';
+import React, { useRef, useState, useCallback, useMemo } from 'react';
 import {
   View,
   Image,
@@ -9,14 +9,22 @@ import {
   useWindowDimensions,
   NativeSyntheticEvent,
   NativeScrollEvent,
+  ImageSourcePropType,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 
-const SLIDES = [
+const SLIDES_EN: readonly ImageSourcePropType[] = [
   require('@/assets/images/onboarding/AAFF0E19-53BD-43E8-87C3-7CC448A5B715_1_201_a.jpeg'),
   require('@/assets/images/onboarding/A02B0F31-51D7-41C6-98E7-1F96962A123C_1_201_a.jpeg'),
   require('@/assets/images/onboarding/7DB6FD4D-C29D-4E4D-B39A-D9074C39A31B_1_201_a.jpeg'),
-] as const;
+];
+
+const SLIDES_ES: readonly ImageSourcePropType[] = [
+  require('@/assets/images/onboarding/Main Spanish.png'),
+  require('@/assets/images/onboarding/Calendar Spanish.png'),
+  require('@/assets/images/onboarding/Analisis Spanish.png'),
+];
 
 type OnboardingFlowProps = {
   onComplete?: () => void;
@@ -24,17 +32,22 @@ type OnboardingFlowProps = {
 
 export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   const { width } = useWindowDimensions();
+  const { t, i18n } = useTranslation();
   const flatListRef = useRef<FlatList>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const isLastSlide = currentIndex === SLIDES.length - 1;
+  const slides = useMemo(
+    () => (i18n.language === 'es' ? SLIDES_ES : SLIDES_EN),
+    [i18n.language],
+  );
+  const isLastSlide = currentIndex === slides.length - 1;
 
   const handleScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const offsetX = e.nativeEvent.contentOffset.x;
     const index = Math.round(offsetX / e.nativeEvent.layoutMeasurement.width);
-    if (index >= 0 && index < SLIDES.length) {
+    if (index >= 0 && index < slides.length) {
       setCurrentIndex(index);
     }
-  }, []);
+  }, [slides.length]);
 
   const handleMomentumScrollEnd = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const offsetX = e.nativeEvent.contentOffset.x;
@@ -54,7 +67,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   }, [currentIndex, isLastSlide, onComplete]);
 
   const renderSlide = useCallback(
-    ({ item }: { item: (typeof SLIDES)[number] }) => (
+    ({ item }: { item: ImageSourcePropType }) => (
       <View style={[s.slide, { width }]}>
         <View style={s.imageWrap}>
           <Image source={item} style={s.image} resizeMode="contain" />
@@ -68,7 +81,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
     <SafeAreaView style={s.safe} edges={['top', 'bottom']}>
       <FlatList
         ref={flatListRef}
-        data={SLIDES}
+        data={slides}
         renderItem={renderSlide}
         keyExtractor={(_, i) => String(i)}
         horizontal
@@ -96,7 +109,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
 
       <View style={s.overlay} pointerEvents="box-none">
         <View style={s.dots}>
-          {SLIDES.map((_, i) => (
+          {slides.map((_, i) => (
             <View key={i} style={[s.dot, i === currentIndex && s.dotActive]} />
           ))}
         </View>
@@ -104,7 +117,9 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
           onPress={handleNext}
           style={({ pressed }) => [s.button, pressed && s.buttonPressed]}
         >
-          <Text style={s.buttonText}>{isLastSlide ? 'Get Started' : 'Next'}</Text>
+          <Text style={s.buttonText}>
+            {isLastSlide ? t('onboarding.getStarted') : t('onboarding.next')}
+          </Text>
         </Pressable>
       </View>
     </SafeAreaView>
