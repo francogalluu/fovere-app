@@ -4,6 +4,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NavigationContainer } from '@react-navigation/native';
 import * as Notifications from 'expo-notifications';
 import { ThemeProvider } from './src/context/ThemeContext';
+import { ErrorBoundary } from './src/components/ErrorBoundary';
 import RootNavigator from './src/navigation/RootNavigator';
 import { i18n, getDeviceLocale } from './src/i18n';
 import { useSettingsStore } from './src/store/settingsStore';
@@ -56,12 +57,14 @@ export default function App() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <ThemeProvider>
-          <LanguageSync>
-            <NotificationSync />
-            <NavigationContainer>
-              <RootNavigator />
-            </NavigationContainer>
-          </LanguageSync>
+          <ErrorBoundary>
+            <LanguageSync>
+              <NotificationSync />
+              <NavigationContainer>
+                <RootNavigator />
+              </NavigationContainer>
+            </LanguageSync>
+          </ErrorBoundary>
         </ThemeProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

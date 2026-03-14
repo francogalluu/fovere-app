@@ -19,6 +19,11 @@
     "categoryRelationships": "Relationships",
     "categoryCreativityHobbies": "Creativity & Hobbies"
   },
+  "errorBoundary": {
+    "title": "Something went wrong",
+    "message": "The app hit an unexpected error. You can try again or restart the app.",
+    "tryAgain": "Try again"
+  },
   "common": {
     "back": "Back",
     "save": "Save",

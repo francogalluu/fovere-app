@@ -19,6 +19,11 @@
     "categoryRelationships": "Relaciones",
     "categoryCreativityHobbies": "Creatividad y hobbies"
   },
+  "errorBoundary": {
+    "title": "Algo salió mal",
+    "message": "La app tuvo un error inesperado. Puedes intentar de nuevo o reiniciar la app.",
+    "tryAgain": "Intentar de nuevo"
+  },
   "common": {
     "back": "Atrás",
     "save": "Guardar",
