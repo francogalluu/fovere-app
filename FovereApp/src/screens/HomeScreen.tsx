@@ -285,7 +285,10 @@ function HomeDayContent({
       {dailyBuildHabitsOnDate.length > 0 && (
         <View style={[s.section, compact && s.sectionCompact]}>
           <View style={s.sectionTitleRow}>
-            <Text style={[s.sectionTitleText, compact && s.sectionTitleCompact, { color: colors.text1 }]}>{dailySectionLabel}</Text>
+            <View style={s.sectionTitleWithLine}>
+              <View style={[s.sectionTitleLine, { backgroundColor: colors.teal }]} />
+              <Text style={[s.sectionTitleText, compact && s.sectionTitleCompact, { color: colors.text1 }]}>{dailySectionLabel}</Text>
+            </View>
             {!isTodayDate && (
               <View style={[s.sectionBadge, { backgroundColor: colors.bgSecondary }]}>
                 <Text style={[s.sectionBadgeText, { color: colors.text2 }]}>{isReadOnly ? t('home.upcoming') : t('home.past')}</Text>
@@ -301,7 +304,10 @@ function HomeDayContent({
       {allBreakHabitsOnDate.length > 0 && (
         <View style={[s.section, compact && s.sectionCompact]}>
           <View style={s.sectionTitleRow}>
-            <Text style={[s.sectionTitleText, compact && s.sectionTitleCompact, { color: colors.text1 }]}>{t('home.breakHabits')}</Text>
+            <View style={s.sectionTitleWithLine}>
+              <View style={[s.sectionTitleLine, { backgroundColor: colors.danger }]} />
+              <Text style={[s.sectionTitleText, compact && s.sectionTitleCompact, { color: colors.text1 }]}>{t('home.breakHabits')}</Text>
+            </View>
             {!isTodayDate && (
               <View style={[s.sectionBadge, { backgroundColor: colors.bgSecondary }]}>
                 <Text style={[s.sectionBadgeText, { color: colors.text2 }]}>{isReadOnly ? t('home.upcoming') : t('home.past')}</Text>
@@ -317,7 +323,10 @@ function HomeDayContent({
       {weeklyBuildHabitsOnDate.length > 0 && (
         <View style={[s.section, compact && s.sectionCompact]}>
           <View style={s.sectionTitleRow}>
-            <Text style={[s.sectionTitleText, compact && s.sectionTitleCompact, { color: colors.text1 }]}>{t('home.weeklyHabits')}</Text>
+            <View style={s.sectionTitleWithLine}>
+              <View style={[s.sectionTitleLine, { backgroundColor: colors.success }]} />
+              <Text style={[s.sectionTitleText, compact && s.sectionTitleCompact, { color: colors.text1 }]}>{t('home.weeklyHabits')}</Text>
+            </View>
             {weeklyBuildTotal > 0 && (
               <Text style={[s.sectionMeta, { color: colors.text2 }]}>
                 {t('home.percentThisWeek', { pct: String(Math.round((weeklyBuildCompleted / weeklyBuildTotal) * 100)) })}
@@ -333,7 +342,10 @@ function HomeDayContent({
       {monthlyBuildHabitsOnDate.length > 0 && (
         <View style={[s.section, compact && s.sectionCompact]}>
           <View style={s.sectionTitleRow}>
-            <Text style={[s.sectionTitleText, compact && s.sectionTitleCompact, { color: colors.text1 }]}>{t('home.monthlyHabits')}</Text>
+            <View style={s.sectionTitleWithLine}>
+              <View style={[s.sectionTitleLine, { backgroundColor: colors.warning }]} />
+              <Text style={[s.sectionTitleText, compact && s.sectionTitleCompact, { color: colors.text1 }]}>{t('home.monthlyHabits')}</Text>
+            </View>
             {monthlyBuildTotal > 0 && (
               <Text style={[s.sectionMeta, { color: colors.text2 }]}>
                 {t('home.percentThisMonth', { pct: String(Math.round((monthlyBuildCompleted / monthlyBuildTotal) * 100)) })}
@@ -371,7 +383,10 @@ function HomeDayContent({
       {isTodayDate && pausedHabits.length > 0 && (
         <View style={[s.section, compact && s.sectionCompact]}>
           <View style={s.sectionTitleRow}>
-            <Text style={[s.sectionTitleText, compact && s.sectionTitleCompact, { color: colors.text1 }]}>{t('home.paused')}</Text>
+            <View style={s.sectionTitleWithLine}>
+              <View style={[s.sectionTitleLine, { backgroundColor: colors.text3 }]} />
+              <Text style={[s.sectionTitleText, compact && s.sectionTitleCompact, { color: colors.text1 }]}>{t('home.paused')}</Text>
+            </View>
           </View>
           <View style={s.pausedList}>
             {pausedHabits.map(h => (
@@ -814,6 +829,17 @@ const s = StyleSheet.create({
     justifyContent: 'space-between',
     minHeight: 32,
     marginBottom: space.space12,
+  },
+  sectionTitleWithLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  sectionTitleLine: {
+    width: 4,
+    borderRadius: 2,
+    alignSelf: 'stretch',
+    minHeight: 22,
   },
   sectionTitleText: {
     fontSize: 20,
