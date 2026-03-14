@@ -241,15 +241,20 @@ export default function HabitDetailScreen({ route, navigation }: Props) {
             </Pressable>
           </View>
         ) : (
-          <InteractiveQuantityRing
-            value={currentValue}
-            target={habit.target}
-            unit={habit.unit}
-            isBreak={isBreak}
-            disabled={isViewingFuture}
-            strokeColor={ringStrokeColor}
-            onValueChange={handleSetQuantity}
-          />
+          <>
+            <InteractiveQuantityRing
+              value={currentValue}
+              target={habit.target}
+              unit={habit.unit}
+              isBreak={isBreak}
+              disabled={isViewingFuture}
+              strokeColor={ringStrokeColor}
+              onValueChange={handleSetQuantity}
+            />
+            {!isViewingFuture && (
+              <Text style={[s.ringHint, { color: colors.text3 }]}>{t('habitDetail.ringDragHint')}</Text>
+            )}
+          </>
         )}
 
         {/* ── Info rows ─────────────────────────────────────────────────── */}
@@ -366,6 +371,9 @@ const s = StyleSheet.create({
   },
   futureDateNote: {
     fontSize: 15, color: '#8E8E93', textAlign: 'center', marginBottom: 16,
+  },
+  ringHint: {
+    fontSize: 14, textAlign: 'center', marginTop: -32, marginBottom: 8,
   },
 
   // Boolean toggle

@@ -219,7 +219,8 @@
     "target": "Target",
     "limit": "Limit",
     "description": "Description",
-    "reminder": "Reminder"
+    "reminder": "Reminder",
+    "ringDragHint": "Drag the dot on the ring to set your progress"
   },
   "daySummary": {
     "completion": "Completion",
